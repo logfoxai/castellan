@@ -442,3 +442,141 @@ button:hover {
   font-size: 0.85rem;
   padding: 4px 0;
 }
+
+@media (max-width: 768px) {
+  :root {
+    --gap: 16px;
+  }
+
+  .header-content {
+    flex-wrap: wrap;
+    gap: 12px;
+  }
+
+  .header-brand {
+    flex: 1 1 auto;
+    min-width: 0;
+  }
+
+  .header-controls {
+    flex: 1 1 100%;
+    justify-content: flex-end;
+  }
+
+  .theme-select,
+  .token-input {
+    min-width: auto;
+    flex: 1;
+  }
+
+  main.container {
+    gap: 16px;
+    padding: 16px 0;
+  }
+
+  .panel {
+    padding: 16px;
+    gap: 12px;
+  }
+
+  .status-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .actions {
+    flex-direction: column;
+  }
+
+  .actions button {
+    width: 100%;
+    text-align: center;
+  }
+
+  .docker-item {
+    padding: 10px 0;
+  }
+
+  .history-item {
+    grid-template-columns: 1fr;
+    gap: 4px;
+    align-items: flex-start;
+    padding: 10px 0;
+  }
+
+  .history-item time {
+    font-size: 0.75rem;
+  }
+
+  .history-item span:last-child {
+    text-align: left;
+  }
+
+  .log-viewer {
+    padding: 16px;
+  }
+
+  .status-meta code {
+    word-break: break-all;
+  }
+}
+
+@media (max-width: 480px) {
+  .header-content {
+    gap: 10px;
+  }
+
+  .header-controls {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .header h1 {
+    font-size: 1.1rem;
+  }
+
+  .docker-item {
+    flex-wrap: wrap;
+    gap: 6px;
+  }
+
+  .header-tagline {
+    font-size: 0.75rem;
+  }
+
+  .header-logo {
+    width: 32px;
+    height: 32px;
+  }
+
+  .panel h2 {
+    font-size: 0.7rem;
+  }
+
+  .status-card {
+    padding: 12px;
+  }
+
+  .status-card-header strong {
+    font-size: 0.95rem;
+  }
+
+  .status-meta {
+    font-size: 0.7rem;
+  }
+
+  .status-badge {
+    font-size: 0.65rem;
+  }
+
+  .state {
+    font-size: 0.65rem;
+  }
+
+  .log-viewer pre {
+    font-size: 0.75rem;
+  }
+
+  .history-item {
+    font-size: 0.75rem;
+  }
+}

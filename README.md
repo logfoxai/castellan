@@ -28,6 +28,12 @@
   <img src="assets/screenshot-light.png" alt="Castellan dashboard in light mode" width="100%" />
 </p>
 
+<p align="center">
+  <img src="assets/screenshot-mobile.png" alt="Castellan dashboard on a phone" width="360px" />
+</p>
+
+<p align="center"><em>Works on your desktop, tablet, and phone. Check deployments from anywhere.</em></p>
+
 ## Why Castellan?
 
 [Watchtower](https://containrrr.dev/watchtower/) is deprecated. Castellan is the modern, drop-in replacement:
@@ -36,6 +42,7 @@
 - **Safer updates** — rolling restarts and health verification, not blind restarts.
 - **Automatic rollback** — if a new image fails health checks, Castellan reverts to the last known-good digest like an ECS circuit breaker.
 - **Built-in observability** — live dashboard, deployment history, container logs, and health status in one place.
+- **Works on your phone** — the dashboard is fully responsive, so you can check deployments from anywhere without pinching or zooming.
 - **Extensible** — HTTP API, Bearer auth, YAML/JSON config, and ECR-first registry support.
 
 ### What you get beyond Watchtower
@@ -51,6 +58,7 @@
 | HTTP API + CLI integration | ❌ | ✅ |
 | Digest-based change detection | ❌ | ✅ |
 | ECR rate-limit protection | ❌ | ✅ |
+| Mobile-responsive dashboard | ❌ | ✅ |
 
 ## Features
 
@@ -69,6 +77,7 @@
 - **Container list** — see every container Castellan can see, with live state and one-click log viewing.
 - **Deployment history timeline** — check, deploy, rollback, and failure events with timestamps.
 - **Health status** — green/yellow/red state badges and detailed HTTP/Docker health verification.
+- **Mobile responsive** — check deployments, logs, and container status from your phone without pinching or zooming.
 
 ### Integration & compatibility
 
@@ -213,6 +222,7 @@ The dashboard is built into the image and served at `/`. It gives you:
 - Docker container list with live state and one-click log viewing.
 - Deployment / rollback / failure history timeline.
 - Optional Bearer token input for authenticated APIs.
+- Fully responsive — works on phones, tablets, and desktops.
 
 ## How it works
 
