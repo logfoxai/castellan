@@ -21,7 +21,11 @@
 </p>
 
 <p align="center">
-  <img src="assets/screenshot.png" alt="Castellan dashboard showing service status, containers, and deployment history" width="100%" />
+  <img src="assets/screenshot.png" alt="Castellan dashboard in dark mode" width="100%" />
+</p>
+
+<p align="center">
+  <img src="assets/screenshot-light.png" alt="Castellan dashboard in light mode" width="100%" />
 </p>
 
 ## Why Castellan?
