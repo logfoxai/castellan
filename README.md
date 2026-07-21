@@ -1,7 +1,7 @@
 # Castellan
 
 <p align="center">
-  <img src="assets/castellan-logo.svg" alt="Castellan logo" width="120" />
+  <img src="assets/castellan-logo.png" alt="Castellan logo" width="120" />
 </p>
 
 <p align="center">
@@ -13,19 +13,15 @@
   <a href="https://github.com/mhweiner/autorel"><img src="https://img.shields.io/badge/%F0%9F%9A%80%20AutoRel-2D4DDE" alt="AutoRel" /></a>
 </p>
 
-<h3 align="center">A drop-in Watchtower replacement with superpowers.</h3>
+<h3 align="center">The drop-in Watchtower replacement — with rollback, zero-downtime, and a dashboard.</h3>
 
 <p align="center">
-  <strong>Open-source, registry-aware deployment watchdog for docker-compose.</strong><br />
-  Drop it in as a sidecar, keep your existing labels, and instantly get zero-downtime rollouts, automatic rollback, health monitoring, and a beautiful Docker observability dashboard.
+  <strong>Keep your existing <code>com.centurylinklabs.watchtower.enable=true</code> labels. Swap the sidecar. Done.</strong><br />
+  Castellan polls your registry, rolls your services safely, verifies health, and rolls back if anything breaks — plus a built-in Docker observability dashboard you can check from your phone.
 </p>
 
 <p align="center">
   <img src="assets/screenshot.png" alt="Castellan dashboard in dark mode" width="100%" />
-</p>
-
-<p align="center">
-  <img src="assets/screenshot-light.png" alt="Castellan dashboard in light mode" width="100%" />
 </p>
 
 <p align="center">
@@ -36,14 +32,35 @@
 
 ## Why Castellan?
 
-[Watchtower](https://containrrr.dev/watchtower/) is deprecated. Castellan is the modern, drop-in replacement:
+[Watchtower](https://containrrr.dev/watchtower/) was archived in December 2025. Most tools marketed as "alternatives" aren't drop-in replacements — they want new labels, new config, or a completely different workflow (notify-only, manual updates, GitOps PRs). Castellan is different:
 
-- **Same labels, zero config** — if you already use `com.centurylinklabs.watchtower.enable=true`, Castellan will manage those containers immediately.
+- **True drop-in** — uses the same `com.centurylinklabs.watchtower.enable=true` labels. Remove Watchtower, add Castellan, keep everything else.
 - **Safer updates** — rolling restarts and health verification, not blind restarts.
 - **Automatic rollback** — if a new image fails health checks, Castellan reverts to the last known-good digest like an ECS circuit breaker.
 - **Built-in observability** — live dashboard, deployment history, container logs, and health status in one place.
 - **Works on your phone** — the dashboard is fully responsive, so you can check deployments from anywhere without pinching or zooming.
 - **Extensible** — HTTP API, Bearer auth, YAML/JSON config, and ECR-first registry support.
+
+### Drop-in compatibility: Castellan vs the field
+
+Most Watchtower "successors" require migration work. Here's how they actually compare:
+
+| Tool | Drop-in? | Auto-update | Rollback | Zero-downtime | Dashboard |
+|---|---|---|---|---|---|
+| **Castellan** | ✅ same labels | ✅ | ✅ | ✅ | ✅ |
+| [Watchtower](https://github.com/containrrr/watchtower) (archived) | — | ✅ | ❌ | ❌ | ❌ |
+| [nickfedor/watchtower](https://github.com/nicholas-fedor/watchtower) | ✅ swap image | ✅ | ❌ | ❌ | ❌ |
+| [openserbia/watchtower](https://github.com/openserbia/watchtower) | ✅ swap image | ✅ | ❌ | ❌ | ❌ |
+| [Lighthouse](https://github.com/grioghar/lighthouse) | ✅ `WATCHTOWER_*` + labels | ✅ | ❌ | ❌ | ❌ |
+| [DockWarden](https://github.com/emon5122/dockwarden) | ⚠️ env var remap | ✅ | ❌ | ❌ | optional |
+| [WatchWarden](https://github.com/watchwarden-labs/watchwarden) | ⚠️ env var remap | ✅ | ✅ | partial | ✅ |
+| [WUD](https://github.com/getwud/wud) | ❌ new `wud.*` labels | optional | ❌ | ❌ | ✅ |
+| [Diun](https://github.com/crazy-max/diun) | ❌ notify-only | ❌ | ❌ | ❌ | ❌ |
+| [freshdock](https://github.com/Turbootzz/freshdock) | ❌ `freshdock.*` labels | ✅ | ✅ | ❌ | ❌ |
+
+**Drop-in** means you can swap the container image and keep your existing Watchtower labels or environment variables with no config rewrite. Tools marked ⚠️ require remapping env vars. Tools marked ❌ need new labels, a new config model, or don't auto-update at all.
+
+Castellan is the only option that is label-compatible **and** adds rollback, zero-downtime rolling restarts, and a mobile-friendly observability dashboard.
 
 ### What you get beyond Watchtower
 
@@ -223,6 +240,7 @@ The dashboard is built into the image and served at `/`. It gives you:
 - Deployment / rollback / failure history timeline.
 - Optional Bearer token input for authenticated APIs.
 - Fully responsive — works on phones, tablets, and desktops.
+- Light and dark mode with system preference detection.
 
 ## How it works
 
