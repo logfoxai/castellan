@@ -1,7 +1,7 @@
 # Castellan
 
 <p align="center">
-  <img src="assets/castellan-logo.png" alt="Castellan logo" width="120" />
+  <img src="assets/castellan-logo.svg" alt="Castellan logo" width="120" />
 </p>
 
 <p align="center">

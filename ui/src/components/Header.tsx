@@ -13,7 +13,7 @@ export function Header(): JSX.Element {
     return (
         <header className="header">
             <div className="container header-content">
-                <img src="/assets/castellan-logo.png" alt="Castellan" className="header-logo" />
+                <img src="/assets/castellan-logo.svg" alt="Castellan" className="header-logo" />
                 <div className="header-brand">
                     <h1>Castellan</h1>
                     <p className="header-tagline">Deployment watchdog for docker-compose</p>
