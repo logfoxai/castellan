@@ -390,7 +390,7 @@ button:hover {
 
 .docker-table {
   display: grid;
-  grid-template-columns: minmax(0, 2.4fr) 0.9fr 1.3fr 0.9fr auto;
+  grid-template-columns: minmax(0, 2.6fr) 1fr 1.5fr 0.9fr;
   column-gap: 16px;
 }
 
@@ -438,7 +438,7 @@ button:hover {
   padding: 0;
   display: flex;
   flex-direction: column;
-  gap: 1px;
+  gap: 3px;
   min-width: 0;
   text-align: left;
 }
@@ -450,6 +450,11 @@ button:hover {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+.docker-state {
+  align-self: flex-start;
+  font-size: 0.72rem;
 }
 
 .docker-image {
@@ -482,6 +487,59 @@ button:hover {
   font-style: normal;
   font-size: 0.72rem;
   margin-left: 6px;
+}
+
+.docker-metric {
+  display: inline-flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.docker-metric-value {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 0;
+}
+
+.usage-ring {
+  display: inline-flex;
+  flex-shrink: 0;
+  width: 18px;
+  height: 18px;
+}
+
+.usage-ring svg {
+  width: 18px;
+  height: 18px;
+  transform: rotate(-90deg);
+}
+
+.usage-ring-track,
+.usage-ring-fill {
+  fill: none;
+  stroke-width: 3;
+}
+
+.usage-ring-track {
+  stroke: var(--border);
+}
+
+.usage-ring-fill {
+  stroke-linecap: round;
+  transition: stroke-dashoffset 0.25s ease;
+}
+
+.usage-ring-cpu .usage-ring-fill {
+  stroke: var(--accent);
+}
+
+.usage-ring-memory .usage-ring-fill {
+  stroke: #7c9cff;
+}
+
+html[data-theme="light"] .usage-ring-memory .usage-ring-fill {
+  stroke: #4f6fd8;
 }
 
 .mlabel {
@@ -647,7 +705,7 @@ button:hover {
   }
 
   .docker-table {
-    grid-template-columns: 1fr 1fr 1fr;
+    grid-template-columns: 1fr 1fr;
     column-gap: 10px;
     row-gap: 8px;
   }
@@ -657,18 +715,18 @@ button:hover {
   }
 
   .docker-name {
-    grid-column: 1 / span 2;
-    grid-row: 1;
-  }
-
-  .docker-row .right {
-    grid-column: 3;
+    grid-column: 1 / -1;
     grid-row: 1;
   }
 
   .docker-row .num {
     grid-row: 2;
     text-align: left;
+    justify-self: start;
+  }
+
+  .docker-metric {
+    justify-content: flex-start;
   }
 
   .mlabel {
