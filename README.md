@@ -75,7 +75,7 @@ Castellan is the only option that is label-compatible **and** adds rollback, zer
 
 - **Self-hosted React dashboard** — live status, controls, and Docker inspection in one dark, fast UI.
 - **Service status cards** — current vs desired image digests, last check time, and last error.
-- **Container list** — see every container Castellan can see, with live state and one-click log viewing.
+- **Container metrics table** — every container with live CPU, memory (usage + %), disk (writable layer size), state, and one-click log viewing.
 - **Deployment history timeline** — check, deploy, rollback, and failure events with timestamps.
 - **Health status** — green/yellow/red state badges and detailed HTTP/Docker health verification.
 - **Mobile responsive** — check deployments, logs, and container status from your phone without pinching or zooming.
@@ -226,7 +226,7 @@ The dashboard is built into the image and served at `/`. It gives you:
 
 -  Live service status with current vs desired image digests.
 - One-click **Force check**, **Pause**, and **Resume** controls.
-- Docker container list with live state and one-click log viewing.
+- Docker container table with live CPU, memory, disk usage, state, and one-click log viewing.
 - Deployment / rollback / failure history timeline.
 - Zero-config auth — authenticates via a same-site session cookie, no token to paste.
 - Fully responsive — works on phones, tablets, and desktops.

@@ -1,6 +1,7 @@
 import {Router, type Request, type Response, type NextFunction} from 'express';
-import type {DockerClient} from './docker.js';
+import type {DockerClient, ContainerInfoWithSize} from './docker.js';
 import type {Roller} from './roller.js';
+import {formatBytes} from './stats.js';
 
 export type ApiMethod =
     | 'status'
@@ -15,6 +16,7 @@ export type ApiMethod =
     | 'dockerVolumes'
     | 'dockerLogs'
     | 'dockerStats'
+    | 'dockerStatsAll'
     | 'dockerInfo'
     | 'dockerEvents';
 
@@ -160,7 +162,9 @@ async function dispatchDocker(method: ApiMethod, docker: DockerClient, args: unk
     switch (method) {
 
         case 'dockerContainers':
-            return {containers: await docker.listContainers()};
+            return {containers: (await docker.listContainers()).map(toContainerRow)};
+        case 'dockerStatsAll':
+            return {stats: await docker.getAllStats()};
         case 'dockerImages':
             return {images: await docker.listImages()};
         case 'dockerNetworks':
@@ -179,6 +183,28 @@ async function dispatchDocker(method: ApiMethod, docker: DockerClient, args: unk
             throw new Error(`Unknown method: ${method}`);
 
 }
+
+}
+
+export type ContainerRow = {
+    id: string;
+    name: string;
+    image: string;
+    state: string;
+    status: string;
+    disk: string;
+};
+
+function toContainerRow(container: ContainerInfoWithSize): ContainerRow {
+
+    return {
+        id: container.Id,
+        name: (container.Names?.[0] ?? '').replace(/^\//, '') || container.Id.slice(0, 12),
+        image: container.Image,
+        state: container.State,
+        status: container.Status,
+        disk: formatBytes(container.SizeRw ?? 0),
+    };
 
 }
 

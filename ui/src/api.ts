@@ -14,6 +14,22 @@ export type DeploymentEvent = {
     message: string;
 };
 
+export type ContainerRow = {
+    id: string;
+    name: string;
+    image: string;
+    state: string;
+    status: string;
+    disk: string;
+};
+
+export type ContainerStat = {
+    name: string;
+    cpu: string;
+    mem: string;
+    memPerc: string;
+};
+
 export type API = {
     status(): { services: ServiceStatus[]; paused: boolean };
     forceCheck(): { ok: boolean };
@@ -21,7 +37,8 @@ export type API = {
     resume(): { paused: boolean };
     rollback(input: { service: string }): { ok: boolean };
     history(): { events: DeploymentEvent[] };
-    dockerContainers(): { containers: unknown[] };
+    dockerContainers(): { containers: ContainerRow[] };
+    dockerStatsAll(): { stats: ContainerStat[] };
     dockerImages(): { images: unknown[] };
     dockerNetworks(): { networks: unknown[] };
     dockerVolumes(): { volumes: unknown[] };
