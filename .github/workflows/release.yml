@@ -1,11 +1,12 @@
 name: Release
 
+# Triggered by CI completing successfully on main/next. CI is the gate; release
+# never runs unless CI passed. This catches admin force-pushes that bypass checks.
 on:
-  push:
-    branches:
-      - main
-      - next
-  workflow_dispatch:
+  workflow_run:
+    workflows: [CI]
+    types: [completed]
+    branches: [main, next]
 
 permissions:
   id-token: write
@@ -15,24 +16,28 @@ permissions:
 jobs:
   release:
     name: Release
+    if: >-
+      github.event.workflow_run.event == 'push'
+      && github.event.workflow_run.conclusion == 'success'
+      && github.event.workflow_run.head_repository.full_name == github.repository
     runs-on: ubuntu-latest
     concurrency:
-      group: deploy-${{github.ref}}
+      group: deploy-${{ github.event.workflow_run.head_branch }}
       cancel-in-progress: true
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
         with:
+          ref: ${{ github.event.workflow_run.head_sha }}
           fetch-depth: 0
           fetch-tags: true
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v6
         with:
-          node-version: '24'
-          registry-url: 'https://registry.npmjs.org'
-          cache: 'npm'
+          node-version: 24
+          registry-url: https://registry.npmjs.org
+          cache: npm
 
       - run: npm ci
-      - run: npm run validate
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
@@ -41,8 +46,8 @@ jobs:
         uses: docker/login-action@v3
         with:
           registry: ghcr.io
-          username: ${{github.actor}}
-          password: ${{secrets.GITHUB_TOKEN}}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Build and push Docker image
         uses: docker/build-push-action@v6
@@ -52,11 +57,11 @@ jobs:
           platforms: linux/amd64,linux/arm64
           tags: |
             ghcr.io/logfoxai/castellan:latest
-            ghcr.io/logfoxai/castellan:${{github.sha}}
+            ghcr.io/logfoxai/castellan:${{ github.event.workflow_run.head_sha }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
       - run: npx autorel@^2 --publish
         env:
-          GITHUB_TOKEN: ${{secrets.GITHUB_TOKEN}}
-          NODE_AUTH_TOKEN: ${{secrets.NPM_TOKEN}}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}

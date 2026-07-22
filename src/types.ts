@@ -20,6 +20,8 @@ export type RollbackConfig = {
 };
 
 export type ApiConfig = {
+    enabled: boolean;
+    dashboard: boolean;
     port: number;
     authToken?: string;
 };
