@@ -1,5 +1,8 @@
 export type ServiceStatus = {
     name: string;
+    registry: string;
+    repository: string;
+    tag: string;
     state: 'idle' | 'checking' | 'updating' | 'verifying' | 'stable' | 'rollback' | 'failed';
     currentDigest: string | null;
     desiredDigest: string | null;

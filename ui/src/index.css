@@ -355,6 +355,25 @@ button:hover {
 .status-rollback .status-badge { color: var(--error); }
 .status-idle .status-badge { color: var(--muted); }
 
+.status-version {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.status-image-ref {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-size: 0.92rem;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.status-version-note {
+  font-size: 0.76rem;
+  color: var(--muted);
+  text-transform: lowercase;
+}
+
 .status-meta {
   font-size: 0.78rem;
   color: var(--muted);
@@ -373,6 +392,56 @@ button:hover {
   font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
   color: var(--text);
   font-size: 0.74rem;
+  overflow-wrap: anywhere;
+}
+
+.status-error {
+  color: var(--error);
+}
+
+.status-details {
+  font-size: 0.74rem;
+  color: var(--muted);
+}
+
+.status-details summary {
+  cursor: pointer;
+  user-select: none;
+  color: var(--muted);
+}
+
+.status-details summary:hover {
+  color: var(--text);
+}
+
+.status-details dl {
+  margin: 10px 0 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.status-details dl > div {
+  display: grid;
+  grid-template-columns: 7.5rem minmax(0, 1fr);
+  gap: 8px;
+  align-items: baseline;
+}
+
+.status-details dt {
+  margin: 0;
+  color: var(--muted);
+}
+
+.status-details dd {
+  margin: 0;
+  min-width: 0;
+}
+
+.status-details code {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  color: var(--text);
+  font-size: 0.72rem;
   overflow-wrap: anywhere;
 }
 
