@@ -404,6 +404,7 @@ button:hover {
 
 .docker-head {
   padding: 0 12px 10px;
+  margin: 0 -12px;
   font-size: 0.68rem;
   font-weight: 650;
   text-transform: uppercase;
@@ -411,13 +412,9 @@ button:hover {
   color: var(--muted);
 }
 
-.docker-head > span:first-child {
+.docker-head > span {
   justify-self: start;
-}
-
-.docker-head .num {
-  justify-self: end;
-  text-align: right;
+  text-align: left;
 }
 
 .docker-row {
