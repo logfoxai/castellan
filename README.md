@@ -8,8 +8,6 @@
   <p><strong>Lightweight deployment control &amp; monitoring for docker-compose</strong></p>
 
   <p>
-    <a href="https://github.com/logfoxai/castellan/actions/workflows/release.yml"><img src="https://img.shields.io/github/actions/workflow/status/logfoxai/castellan/release.yml?branch=main&label=prod" alt="prod" /></a>
-    <a href="https://github.com/logfoxai/castellan/actions/workflows/release.yml"><img src="https://img.shields.io/github/actions/workflow/status/logfoxai/castellan/release.yml?branch=next&label=next" alt="next" /></a>
     <img src="https://img.shields.io/badge/SemVer-2.0.0-blue" alt="SemVer" />
     <img src="https://img.shields.io/badge/Conventional%20Commits-1.0.0-yellow.svg" alt="Conventional Commits" />
     <a href="https://github.com/mhweiner/autorel"><img src="https://img.shields.io/badge/%F0%9F%9A%80%20AutoRel-2D4DDE" alt="AutoRel" /></a>
@@ -83,7 +81,7 @@ Optional — requires `api.enabled: true` and `api.dashboard: true` (see [Operat
 - **Supported registries** — Amazon ECR, Docker Hub, GHCR, and other OCI Distribution v2 hosts (see [Supported registries](#supported-registries)).
 - **API secret auth** — shared API key for scripts/CLI; dashboard auth is automatic (see [Access & API auth](#access--api-auth)).
 - **YAML and JSON config** — use whichever format you prefer.
-- **Lightweight sidecar** — TypeScript, MIT licensed, published to [Docker Hub](https://hub.docker.com/r/logfoxai/castellan); dashboard and API ship in the same image but can be turned off independently.
+- **Lightweight sidecar** — TypeScript, MIT licensed, published to [GHCR](https://github.com/logfoxai/castellan/pkgs/container/castellan); dashboard and API ship in the same image but can be turned off independently.
 
 # Operating modes
 
@@ -124,14 +122,14 @@ Need another registry? [Open a PR](https://github.com/logfoxai/castellan/pulls) 
 
 # Quick start
 
-Castellan runs as a Docker sidecar — pull `logfoxai/castellan:latest` (or a release tag from GitHub). There is no npm package; the container is the distribution.
+Castellan runs as a Docker sidecar — pull `ghcr.io/logfoxai/castellan:latest` (or a release tag from GitHub). There is no npm package; the container is the distribution.
 
 Add Castellan to your `docker-compose.yml`:
 
 ```yaml
 services:
   castellan:
-    image: logfoxai/castellan:latest
+    image: ghcr.io/logfoxai/castellan:latest
     restart: unless-stopped
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
@@ -241,7 +239,7 @@ Remove your Watchtower service and add Castellan. No config file needed for basi
 ```yaml
 services:
   castellan:
-    image: logfoxai/castellan:latest
+    image: ghcr.io/logfoxai/castellan:latest
     restart: unless-stopped
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
