@@ -1,10 +1,18 @@
-# Castellan
-
 <p align="center">
-  <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="assets/castellan-logo-dark.png" />
-    <img src="assets/castellan-logo-light.png" alt="Castellan logo" width="120" />
-  </picture>
+  <table>
+    <tr>
+      <td valign="middle" style="padding-right: 16px;">
+        <picture>
+          <source media="(prefers-color-scheme: dark)" srcset="assets/castellan-logo-dark.png" />
+          <img src="assets/castellan-logo-light.png" alt="" width="80" />
+        </picture>
+      </td>
+      <td valign="middle" align="left">
+        <h1 style="margin: 0; line-height: 1.1;">Castellan</h1>
+        <strong>Deployment control &amp; monitoring for docker-compose.</strong>
+      </td>
+    </tr>
+  </table>
 </p>
 
 <p align="center">
@@ -16,8 +24,6 @@
   <a href="https://github.com/mhweiner/autorel"><img src="https://img.shields.io/badge/%F0%9F%9A%80%20AutoRel-2D4DDE" alt="AutoRel" /></a>
 </p>
 
-<h3 align="center">Deployment control &amp; monitoring for docker-compose.</h3>
-
 <p align="center">
   Polls your registry, rolls out updates safely, verifies health, rolls back on failure — with a built-in dashboard.
 </p>
@@ -28,7 +34,7 @@
 
 > **Beta.** Castellan is actively developed and dogfooded by [Logfox](https://logfox.ai), but it has not seen wide production use outside our own stacks yet. Test in staging before trusting it with critical workloads. APIs and config may change before v1.0.
 
-## What is Castellan?
+# What is Castellan?
 
 Castellan is a **single-container sidecar** that sits beside your docker-compose stack. It:
 
@@ -40,7 +46,7 @@ Castellan is a **single-container sidecar** that sits beside your docker-compose
 
 One image. No database. No separate controller. Dashboard included.
 
-## Castellan vs Watchtower
+# Castellan vs Watchtower
 
 [Watchtower](https://containrrr.dev/watchtower/) was archived in December 2025. It was a **simple auto-updater**: poll the registry, pull new images, restart containers. That worked, but it had no health verification, no rollback, no zero-downtime strategy, and no UI.
 
@@ -61,7 +67,7 @@ Castellan is **not a clone of Watchtower**. It is a **safety-first deployment co
 
 **Starting fresh?** Skip the Watchtower labels entirely and use JSON/YAML config — that is the recommended path for new deployments.
 
-## Why Castellan?
+# Why Castellan?
 
 - **Compose-native rollouts** — restarts grouped services one at a time via `docker compose pull/up`, not blind container recreation.
 - **Automatic rollback** — failed health checks trigger revert to the last known-good digest; bad digests are remembered.
@@ -70,7 +76,7 @@ Castellan is **not a clone of Watchtower**. It is a **safety-first deployment co
 - **Small footprint** — one TypeScript sidecar, MIT licensed, no PostgreSQL or multi-service stack.
 - **Watchtower label compat** — optional; reads `com.centurylinklabs.watchtower.enable=true` for drop-in migration.
 
-### How alternatives compare
+## How alternatives compare
 
 Most tools marketed as "Watchtower replacements" solve a different problem or require a heavier stack. This table is honest about trade-offs — not every checkmark means "better for everyone."
 
@@ -91,7 +97,7 @@ Most tools marketed as "Watchtower replacements" solve a different problem or re
 - **Zero-downtime** varies: Castellan does compose-service rolling; WatchWarden does per-container blue-green (falls back to stop-first when ports conflict).
 - **Dashboard** — Castellan's ships in the same container. WatchWarden's dashboard requires the managed stack (controller + PostgreSQL + UI); solo agent mode has no UI.
 
-### Castellan vs WatchWarden (the serious alternative)
+## Castellan vs WatchWarden (the serious alternative)
 
 [WatchWarden](https://github.com/watchwarden-labs/watchwarden) is the most feature-complete Watchtower successor — multi-host management, Trivy scanning, cosign verification, notifications, update groups, and a rich WebSocket dashboard. Worth evaluating if you need a fleet controller.
 
@@ -107,7 +113,7 @@ Castellan targets a different sweet spot:
 
 We built Castellan because we wanted a **small, MIT-licensed, compose-native controller** we fully own — not a multi-service platform. If you need fleet management and don't mind BSL + Postgres, WatchWarden may be the better fit.
 
-### What you get beyond Watchtower
+## What you get beyond Watchtower
 
 | | Watchtower | Castellan |
 |---|---|---|
@@ -122,9 +128,9 @@ We built Castellan because we wanted a **small, MIT-licensed, compose-native con
 | Mobile-responsive dashboard | ❌ | ✅ |
 
 
-## Features
+# Features
 
-### Deployment safety
+## Deployment safety
 
 - **Registry polling** with tunable intervals, jitter, and ECR rate-limit protection.
 - **Digest-based change detection** — only restarts when the image digest actually changes, eliminating false pulls.
@@ -132,7 +138,7 @@ We built Castellan because we wanted a **small, MIT-licensed, compose-native con
 - **Automatic rollback** on health-check failure with a persisted known-good digest and a bad-digest list.
 - **Manual controls** — check now, pause/resume polling, or trigger a rollback from the UI or API.
 
-### Observability hub
+## Observability hub
 
 - **Self-hosted React dashboard** — live status, controls, and Docker inspection in one dark, fast UI.
 - **Service status cards** — current vs desired image digests, last check time, and last error.
@@ -141,7 +147,7 @@ We built Castellan because we wanted a **small, MIT-licensed, compose-native con
 - **Health status** — green/yellow/red state badges and detailed HTTP/Docker health verification.
 - **Mobile responsive** — check deployments, logs, and container status from your phone without pinching or zooming.
 
-### Integration & compatibility
+## Integration & compatibility
 
 - **Internal HTTP API** — typed RPC for dashboard, CLI, or automation.
 - **Watchtower compatibility mode** — optional label-based discovery for migration; config file recommended for full features.
@@ -150,7 +156,7 @@ We built Castellan because we wanted a **small, MIT-licensed, compose-native con
 - **YAML and JSON config** — use whichever format you prefer.
 - **Small, fast sidecar** — TypeScript, MIT licensed, published to npm and GHCR.
 
-## Quick start
+# Quick start
 
 Add Castellan as a sidecar in your `docker-compose.yml`:
 
@@ -196,7 +202,7 @@ Create `castellan-config.json` (or `castellan-config.yaml`):
 
 Open the dashboard at `http://castellan:3003/` (or map a port to your host).
 
-## Migrating from Watchtower
+# Migrating from Watchtower
 
 Castellan can read the same `com.centurylinklabs.watchtower.enable=true` labels Watchtower used. Swap the sidecar and Castellan discovers labeled containers automatically.
 
@@ -225,7 +231,7 @@ Castellan discovers every container carrying the Watchtower label and manages it
 
 For grouped services (e.g. multiple API replicas that need zero-downtime rolling restarts), add a config file — see [Configuration reference](#configuration-reference).
 
-## Configuration reference
+# Configuration reference
 
 ```json
 {
@@ -265,7 +271,7 @@ For grouped services (e.g. multiple API replicas that need zero-downtime rolling
 - `composeServices` is a list; when more than one is present, Castellan restarts them one at a time, waiting for health before proceeding.
 - YAML configs are supported — just use `config.yaml` or `config.yml` instead of `config.json`.
 
-## API
+# API
 
 Castellan exposes an internal HTTP API on port `3003`:
 
@@ -281,7 +287,7 @@ Castellan exposes an internal HTTP API on port `3003`:
 
 Set `api.authToken` in your config to require authentication. External clients (CLI, automation) send `Authorization: Bearer <token>`. The built-in dashboard authenticates automatically via a same-site session cookie the server sets when it serves the page — no token is ever entered in the browser.
 
-## Dashboard
+# Dashboard
 
 The dashboard is built into the image and served at `/`. It gives you:
 
@@ -293,7 +299,7 @@ The dashboard is built into the image and served at `/`. It gives you:
 - Fully responsive — works on phones, tablets, and desktops.
 - Light and dark mode with system preference detection.
 
-## How it works
+# How it works
 
 1. Castellan loads your config (or discovers Watchtower-labeled containers).
 2. On every poll interval it fetches the manifest for each configured image, respecting per-image TTL and global jitter.
@@ -302,7 +308,7 @@ The dashboard is built into the image and served at `/`. It gives you:
 5. If health checks fail, it rolls back to the last known-good digest and marks the failing digest as bad.
 6. State is persisted atomically to a JSON file so restarts are safe.
 
-## Roadmap
+# Roadmap
 
 Castellan is beta — these are planned next, informed by what heavier alternatives like WatchWarden already ship:
 
@@ -316,11 +322,11 @@ Castellan is beta — these are planned next, informed by what heavier alternati
 
 Have an idea? Open an issue or discussion.
 
-## Security
+# Security
 
 Castellan controls the Docker socket and can restart any container it manages. **Treat it as highly privileged infrastructure** — never expose it on the public internet.
 
-### Keep it internal (recommended)
+## Keep it internal (recommended)
 
 The safest deployment is **VPN-only access** with no public DNS or port mapping:
 
@@ -346,7 +352,7 @@ http://castellan.int.logfox.ai:8443 {
 
 Split DNS (Tailscale, CoreDNS, etc.) resolves `*.int.logfox.ai` to your compose host's Tailscale IP. Without VPN membership, the hostname does not resolve and the port is not reachable.
 
-### Require a Bearer token (defense in depth)
+## Require a Bearer token (defense in depth)
 
 Even on a private network, set `api.authToken` so every API request requires authentication:
 
@@ -365,17 +371,17 @@ Even on a private network, set `api.authToken` so every API request requires aut
 
 In production, store the token in a secrets manager and inject it at deploy time (Logfox uses AWS Secrets Manager via `host-config.json`).
 
-### Other hardening
+## Other hardening
 
 - Mount the Docker socket read-only if your runtime supports it; Castellan only needs the API surface it uses.
 - Run Castellan on an isolated Docker network; do not expose it alongside public-facing services without the internal edge pattern above.
 - Rotate `authToken` if it is ever leaked — Castellan reads config at startup.
 
-## Built by the team behind [Logfox](https://logfox.ai)
+# Built by the team behind [Logfox](https://logfox.ai)
 
 We build observability and deployment tools we actually want to use. If you like Castellan, star the repo and tell your friends.
 
-## More open-source tools from Logfox
+# More open-source tools from Logfox
 
 Castellan is part of a family of MIT-licensed tools we ship and dogfood. Same vibe: sharp CLIs, great TUIs, built for real ops work.
 
@@ -390,6 +396,6 @@ Castellan is part of a family of MIT-licensed tools we ship and dogfood. Same vi
 
 All published to npm, released with [AutoRel](https://github.com/mhweiner/autorel), and designed to be useful outside Logfox too.
 
-## License
+# License
 
 MIT — see [LICENSE](LICENSE).

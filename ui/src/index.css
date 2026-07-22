@@ -388,16 +388,17 @@ button:hover {
 /* ---------- Containers table ---------- */
 
 .docker-table {
-  display: flex;
-  flex-direction: column;
+  display: grid;
+  grid-template-columns: minmax(0, 2.4fr) 0.9fr 1.3fr 0.9fr auto;
+  column-gap: 16px;
 }
 
 .docker-head,
 .docker-row {
   display: grid;
-  grid-template-columns: minmax(0, 2.4fr) 0.9fr 1.3fr 0.9fr auto;
+  grid-template-columns: subgrid;
+  grid-column: 1 / -1;
   align-items: center;
-  column-gap: 16px;
 }
 
 .docker-head {
@@ -407,6 +408,15 @@ button:hover {
   text-transform: uppercase;
   letter-spacing: 0.07em;
   color: var(--muted);
+}
+
+.docker-head > span:first-child {
+  justify-self: start;
+}
+
+.docker-head .num {
+  justify-self: end;
+  text-align: right;
 }
 
 .docker-row {
@@ -461,15 +471,12 @@ button:hover {
 }
 
 .docker-row .num {
+  justify-self: end;
   font-variant-numeric: tabular-nums;
   font-size: 0.82rem;
   color: var(--text);
   text-align: right;
   white-space: nowrap;
-}
-
-.docker-head .num {
-  text-align: right;
 }
 
 .docker-row .num em {
@@ -485,7 +492,7 @@ button:hover {
 
 .docker-head .right,
 .docker-row .right {
-  justify-self: end;
+  justify-self: start;
 }
 
 .state {
@@ -641,10 +648,13 @@ button:hover {
     display: none;
   }
 
-  .docker-row {
+  .docker-table {
     grid-template-columns: 1fr 1fr 1fr;
     column-gap: 10px;
     row-gap: 8px;
+  }
+
+  .docker-row {
     padding: 12px;
   }
 
