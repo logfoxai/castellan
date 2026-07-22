@@ -108,13 +108,21 @@ body {
 .header-content {
   display: flex;
   align-items: center;
+  justify-content: space-between;
   gap: 16px;
-  padding: 20px 28px;
+  padding: 12px 28px;
+}
+
+.header-lockup {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
 }
 
 .header-logo {
-  width: 48px;
-  height: 48px;
+  width: 32px;
+  height: 32px;
   flex-shrink: 0;
   object-fit: contain;
 }
@@ -131,25 +139,13 @@ html[data-theme="dark"] .header-logo.logo-dark {
   display: block;
 }
 
-.header-brand {
-  display: flex;
-  flex-direction: column;
-  flex: 1;
-  min-width: 0;
-}
-
 .header h1 {
   margin: 0;
-  font-size: 1.15rem;
+  font-size: 1.05rem;
   font-weight: 650;
   letter-spacing: -0.02em;
-  line-height: 1.2;
-}
-
-.header-tagline {
-  margin: 0;
-  font-size: 0.82rem;
-  color: var(--muted);
+  line-height: 1;
+  white-space: nowrap;
 }
 
 .header-controls {
@@ -734,19 +730,16 @@ html[data-theme="light"] .usage-ring-memory .usage-ring-fill {
   }
 
   .header-content {
-    flex-wrap: wrap;
     gap: 12px;
-    padding: 16px 18px;
+    padding: 12px 18px;
   }
 
   .header-controls {
-    flex: 1 1 100%;
-    justify-content: flex-end;
+    flex-shrink: 0;
   }
 
   .theme-select {
     min-width: 0;
-    flex: 1;
   }
 
   main.container {
@@ -809,12 +802,11 @@ html[data-theme="light"] .usage-ring-memory .usage-ring-fill {
 }
 
 @media (max-width: 480px) {
-  .header-controls {
-    flex-direction: column;
-    align-items: stretch;
+  .header h1 {
+    font-size: 1rem;
   }
 
-  .header h1 {
-    font-size: 1.05rem;
+  .theme-select {
+    min-width: 88px;
   }
 }
