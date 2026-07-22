@@ -119,7 +119,7 @@ body {
 .header-lockup {
   display: inline-flex;
   align-items: center;
-  gap: 5px;
+  gap: 3px;
   min-width: 0;
 }
 
@@ -161,6 +161,7 @@ html[data-theme="dark"] .header-logo.logo-dark {
   letter-spacing: -0.03em;
   line-height: 1;
   white-space: nowrap;
+  transform: translateY(2px);
 }
 
 .header-controls {
@@ -839,7 +840,7 @@ html[data-theme="light"] .usage-ring-memory .usage-ring-fill {
   }
 
   .header-lockup {
-    gap: 4px;
+    gap: 3px;
   }
 
   .theme-select {
