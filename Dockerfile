@@ -6,7 +6,7 @@ WORKDIR /app
 COPY package*.json ./
 COPY ui/package*.json ./ui/
 
-RUN npm ci
+RUN npm ci --ignore-scripts
 
 COPY . .
 
