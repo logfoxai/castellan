@@ -10,6 +10,8 @@ export type ManagedService = {
 };
 
 export type PollConfig = {
+    /** When false or intervalMs is 0, periodic polling is off; use API forceCheck for deploys. */
+    enabled: boolean;
     intervalMs: number;
     jitterMs: number;
 };
