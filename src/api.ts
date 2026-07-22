@@ -61,28 +61,67 @@ export function createRouter(roller: Roller, docker: DockerClient, authToken?: s
 
 }
 
+export const SESSION_COOKIE = 'castellan_session';
+
+export function readCookie(header: string | undefined, name: string): string | undefined {
+
+    if (!header) {
+
+        return undefined;
+
+}
+
+    for (const part of header.split(';')) {
+
+        const [key, ...rest] = part.trim().split('=');
+
+        if (key === name) {
+
+            return decodeURIComponent(rest.join('='));
+
+}
+
+}
+
+    return undefined;
+
+}
+
+export function isAuthorized(
+    authToken: string | undefined,
+    headers: {authorization?: string; cookie?: string},
+): boolean {
+
+    if (!authToken) {
+
+        return true;
+
+}
+
+    const bearer = (headers.authorization ?? '').replace(/^Bearer\s+/i, '');
+
+    if (bearer === authToken) {
+
+        return true;
+
+}
+
+    return readCookie(headers.cookie, SESSION_COOKIE) === authToken;
+
+}
+
 function requireAuth(authToken: string | undefined) {
 
     return (req: Request, res: Response, next: NextFunction): void => {
 
-        if (!authToken) {
+        if (isAuthorized(authToken, {authorization: req.headers.authorization, cookie: req.headers.cookie})) {
 
             next();
             return;
 
 }
 
-        const header = req.headers.authorization ?? '';
-        const token = header.replace(/^Bearer\s+/i, '');
-
-        if (token !== authToken) {
-
-            res.status(401).json({error: 'Unauthorized'});
-            return;
-
-}
-
-        next();
+        res.status(401).json({error: 'Unauthorized'});
 
 };
 

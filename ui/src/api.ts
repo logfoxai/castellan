@@ -31,36 +31,17 @@ export type API = {
     dockerEvents(input: { since?: number }): { events: unknown[] };
 };
 
-let authToken = '';
-
-export function setAuthToken(token: string): void {
-
-    authToken = token;
-
-}
-
-export function getAuthToken(): string {
-
-    return authToken;
-
-}
-
 export async function rpc<T extends keyof API>(
     method: T,
     ...args: Parameters<API[T]>
 ): Promise<ReturnType<API[T]>> {
 
-    const headers: Record<string, string> = {'Content-Type': 'application/json'};
-
-    if (authToken) {
-
-        headers.Authorization = `Bearer ${authToken}`;
-
-}
-
+    // Auth is handled by the same-origin session cookie the server sets when it
+    // serves the dashboard; fetch includes it automatically for same-origin
+    // requests. No token is entered or stored in the browser.
     const response = await fetch('/v1', {
         method: 'POST',
-        headers,
+        headers: {'Content-Type': 'application/json'},
         body: JSON.stringify({method, args}),
     });
 

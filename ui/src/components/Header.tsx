@@ -1,16 +1,7 @@
-import {useState} from 'react';
-import {getAuthToken, setAuthToken} from '../api.js';
 import {useTheme} from '../hooks/useTheme.js';
 
 export function Header(): JSX.Element {
-    const [token, setToken] = useState(getAuthToken());
     const {theme, setTheme} = useTheme();
-
-    const handleChange = (event: React.ChangeEvent<HTMLInputElement>): void => {
-        const value = event.target.value;
-        setToken(value);
-        setAuthToken(value);
-    };
 
     return (
         <header className="header">
@@ -31,13 +22,6 @@ export function Header(): JSX.Element {
                         <option value="light">Light</option>
                         <option value="dark">Dark</option>
                     </select>
-                    <input
-                        type="password"
-                        className="token-input"
-                        placeholder="API token (optional)"
-                        value={token}
-                        onChange={handleChange}
-                    />
                 </div>
             </div>
         </header>

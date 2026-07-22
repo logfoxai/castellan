@@ -157,8 +157,7 @@ html[data-theme="dark"] .header-logo.logo-dark {
   gap: 10px;
 }
 
-.theme-select,
-.token-input {
+.theme-select {
   background: var(--surface-2);
   border: 1px solid transparent;
   color: var(--text);
@@ -166,19 +165,11 @@ html[data-theme="dark"] .header-logo.logo-dark {
   padding: 8px 12px;
   font-size: 0.85rem;
   transition: border-color 0.15s ease;
-}
-
-.theme-select {
   cursor: pointer;
   min-width: 104px;
 }
 
-.token-input {
-  min-width: 200px;
-}
-
-.theme-select:focus,
-.token-input:focus {
+.theme-select:focus {
   outline: none;
   border-color: var(--accent);
 }
@@ -528,8 +519,7 @@ button:hover {
     justify-content: flex-end;
   }
 
-  .theme-select,
-  .token-input {
+  .theme-select {
     min-width: 0;
     flex: 1;
   }

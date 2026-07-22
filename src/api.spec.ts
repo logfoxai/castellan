@@ -1,5 +1,5 @@
 import {test} from 'kizu';
-import {dispatch} from './api.js';
+import {dispatch, isAuthorized, readCookie, SESSION_COOKIE} from './api.js';
 import type {DockerClient} from './docker.js';
 import type {DeploymentEvent} from './types.js';
 import type {Roller, RollerStatus} from './roller.js';
@@ -116,5 +116,45 @@ test('dispatch dockerContainers returns empty list', async (assert) => {
     const result = await dispatch({method: 'dockerContainers'}, roller, docker);
 
     assert.equal(result, {containers: []});
+
+});
+
+test('readCookie extracts a named cookie value', (assert) => {
+
+    assert.equal(readCookie('a=1; castellan_session=abc123; b=2', SESSION_COOKIE), 'abc123');
+
+});
+
+test('readCookie returns undefined when cookie or header is absent', (assert) => {
+
+    assert.equal(readCookie(undefined, SESSION_COOKIE), undefined);
+    assert.equal(readCookie('other=1', SESSION_COOKIE), undefined);
+
+});
+
+test('isAuthorized allows any request when no token is configured', (assert) => {
+
+    assert.equal(isAuthorized(undefined, {}), true);
+    assert.equal(isAuthorized('', {}), true);
+
+});
+
+test('isAuthorized accepts a matching Bearer token', (assert) => {
+
+    assert.equal(isAuthorized('secret', {authorization: 'Bearer secret'}), true);
+    assert.equal(isAuthorized('secret', {authorization: 'Bearer nope'}), false);
+
+});
+
+test('isAuthorized accepts a matching session cookie', (assert) => {
+
+    assert.equal(isAuthorized('secret', {cookie: `${SESSION_COOKIE}=secret`}), true);
+    assert.equal(isAuthorized('secret', {cookie: `${SESSION_COOKIE}=wrong`}), false);
+
+});
+
+test('isAuthorized rejects when neither Bearer nor cookie is present', (assert) => {
+
+    assert.equal(isAuthorized('secret', {}), false);
 
 });

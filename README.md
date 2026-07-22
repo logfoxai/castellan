@@ -1,30 +1,14 @@
 # Castellan
 
-<p align="center">
-  <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="assets/castellan-logo-dark.png" />
-    <img src="assets/castellan-logo-light.png" alt="Castellan logo" width="120" />
-  </picture>
-</p>
 
-<p align="center">
-  <a href="https://github.com/logfoxai/castellan/actions/workflows/ci.yml"><img src="https://github.com/logfoxai/castellan/actions/workflows/ci.yml/badge.svg" alt="CI" /></a>
-  <a href="https://github.com/logfoxai/castellan/actions/workflows/release.yml"><img src="https://github.com/logfoxai/castellan/actions/workflows/release.yml/badge.svg" alt="Release" /></a>
-  <a href="https://www.npmjs.com/package/castellan"><img src="https://img.shields.io/npm/v/castellan.svg" alt="npm" /></a>
-  <a href="https://opensource.org/licenses/MIT"><img src="https://img.shields.io/badge/License-MIT-blue.svg" alt="License: MIT" /></a>
-  <a href="https://github.com/logfoxai/castellan"><img src="https://img.shields.io/badge/SemVer-2.0.0-blue" alt="SemVer" /></a>
-  <a href="https://github.com/mhweiner/autorel"><img src="https://img.shields.io/badge/%F0%9F%9A%80%20AutoRel-2D4DDE" alt="AutoRel" /></a>
-</p>
 
-<h3 align="center">The drop-in replacement for deprecated Watchtower.</h3>
 
-<p align="center">
-  Registry-aware deployments for docker-compose — with zero-downtime rollouts, automatic rollback, and a built-in observability dashboard.
-</p>
 
-<p align="center">
-  <img src="assets/screenshot.png" alt="Castellan dashboard" width="100%" />
-</p>
+### The drop-in replacement for deprecated Watchtower.
+
+Registry-aware deployments for docker-compose — with zero-downtime rollouts, automatic rollback, and a built-in observability dashboard.
+
+
 
 ## Why Castellan?
 
@@ -41,18 +25,20 @@
 
 Most Watchtower "successors" require migration work. Here's how they actually compare:
 
-| Tool | Drop-in? | Auto-update | Rollback | Zero-downtime | Dashboard |
-|---|---|---|---|---|---|
-| **Castellan** | ✅ same labels | ✅ | ✅ | ✅ | ✅ |
-| [Watchtower](https://github.com/containrrr/watchtower) (archived) | — | ✅ | ❌ | ❌ | ❌ |
-| [nickfedor/watchtower](https://github.com/nicholas-fedor/watchtower) | ✅ swap image | ✅ | ❌ | ❌ | ❌ |
-| [openserbia/watchtower](https://github.com/openserbia/watchtower) | ✅ swap image | ✅ | ❌ | ❌ | ❌ |
-| [Lighthouse](https://github.com/grioghar/lighthouse) | ✅ `WATCHTOWER_*` + labels | ✅ | ❌ | ❌ | ❌ |
-| [DockWarden](https://github.com/emon5122/dockwarden) | ⚠️ env var remap | ✅ | ❌ | ❌ | optional |
-| [WatchWarden](https://github.com/watchwarden-labs/watchwarden) | ⚠️ env var remap | ✅ | ✅ | partial | ✅ |
-| [WUD](https://github.com/getwud/wud) | ❌ new `wud.*` labels | optional | ❌ | ❌ | ✅ |
-| [Diun](https://github.com/crazy-max/diun) | ❌ notify-only | ❌ | ❌ | ❌ | ❌ |
-| [freshdock](https://github.com/Turbootzz/freshdock) | ❌ `freshdock.*` labels | ✅ | ✅ | ❌ | ❌ |
+
+| Tool                                                                 | Drop-in?                  | Auto-update | Rollback | Zero-downtime | Dashboard |
+| -------------------------------------------------------------------- | ------------------------- | ----------- | -------- | ------------- | --------- |
+| **Castellan**                                                        | ✅ same labels             | ✅           | ✅        | ✅             | ✅         |
+| [Watchtower](https://github.com/containrrr/watchtower) (archived)    | —                         | ✅           | ❌        | ❌             | ❌         |
+| [nickfedor/watchtower](https://github.com/nicholas-fedor/watchtower) | ✅ swap image              | ✅           | ❌        | ❌             | ❌         |
+| [openserbia/watchtower](https://github.com/openserbia/watchtower)    | ✅ swap image              | ✅           | ❌        | ❌             | ❌         |
+| [Lighthouse](https://github.com/grioghar/lighthouse)                 | ✅ `WATCHTOWER_*` + labels | ✅           | ❌        | ❌             | ❌         |
+| [DockWarden](https://github.com/emon5122/dockwarden)                 | ⚠️ env var remap          | ✅           | ❌        | ❌             | optional  |
+| [WatchWarden](https://github.com/watchwarden-labs/watchwarden)       | ⚠️ env var remap          | ✅           | ✅        | partial       | ✅         |
+| [WUD](https://github.com/getwud/wud)                                 | ❌ new `wud.*` labels      | optional    | ❌        | ❌             | ✅         |
+| [Diun](https://github.com/crazy-max/diun)                            | ❌ notify-only             | ❌           | ❌        | ❌             | ❌         |
+| [freshdock](https://github.com/Turbootzz/freshdock)                  | ❌ `freshdock.*` labels    | ✅           | ✅        | ❌             | ❌         |
+
 
 **Drop-in** means you can swap the container image and keep your existing Watchtower labels or environment variables with no config rewrite. Tools marked ⚠️ require remapping env vars. Tools marked ❌ need new labels, a new config model, or don't auto-update at all.
 
@@ -60,18 +46,20 @@ Castellan is the only option that is label-compatible **and** adds rollback, zer
 
 ### What you get beyond Watchtower
 
-| | Watchtower | Castellan |
-|---|---|---|
-| Drop-in label compatibility | ✅ | ✅ |
-| Zero-downtime rolling restart | ❌ | ✅ |
-| Automatic rollback on failure | ❌ | ✅ |
-| Health-check verification | ❌ | ✅ |
-| Self-hosted dashboard | ❌ | ✅ |
-| Container logs & inspection | ❌ | ✅ |
-| HTTP API + CLI integration | ❌ | ✅ |
-| Digest-based change detection | ❌ | ✅ |
-| ECR rate-limit protection | ❌ | ✅ |
-| Mobile-responsive dashboard | ❌ | ✅ |
+
+|                               | Watchtower | Castellan |
+| ----------------------------- | ---------- | --------- |
+| Drop-in label compatibility   | ✅          | ✅         |
+| Zero-downtime rolling restart | ❌          | ✅         |
+| Automatic rollback on failure | ❌          | ✅         |
+| Health-check verification     | ❌          | ✅         |
+| Self-hosted dashboard         | ❌          | ✅         |
+| Container logs & inspection   | ❌          | ✅         |
+| HTTP API + CLI integration    | ❌          | ✅         |
+| Digest-based change detection | ❌          | ✅         |
+| ECR rate-limit protection     | ❌          | ✅         |
+| Mobile-responsive dashboard   | ❌          | ✅         |
+
 
 ## Features
 
@@ -230,17 +218,17 @@ Castellan exposes an internal HTTP API on port `3003`:
   - `dockerContainers()`, `dockerImages()`, `dockerNetworks()`, `dockerVolumes()` — Docker inspection.
   - `dockerLogs({ containerId, tail })`, `dockerStats({ containerId })`, `dockerInfo()`, `dockerEvents({ since })` — logs and stats.
 
-Set `api.authToken` in your config to require a `Bearer` token on every request.
+Set `api.authToken` in your config to require authentication. External clients (CLI, automation) send `Authorization: Bearer <token>`. The built-in dashboard authenticates automatically via a same-site session cookie the server sets when it serves the page — no token is ever entered in the browser.
 
 ## Dashboard
 
 The dashboard is built into the image and served at `/`. It gives you:
 
-- Live service status with current vs desired image digests.
+-  Live service status with current vs desired image digests.
 - One-click **Force check**, **Pause**, and **Resume** controls.
 - Docker container list with live state and one-click log viewing.
 - Deployment / rollback / failure history timeline.
-- Optional Bearer token input for authenticated APIs.
+- Zero-config auth — authenticates via a same-site session cookie, no token to paste.
 - Fully responsive — works on phones, tablets, and desktops.
 - Light and dark mode with system preference detection.
 
@@ -284,9 +272,9 @@ The safest deployment is **VPN-only access** with no public DNS or port mapping:
 1. **Do not publish port 3003** to your public NIC. Bind Castellan to `127.0.0.1:3003` inside the host.
 2. **Reverse-proxy through an internal edge** (Caddy, nginx, Traefik) that listens only on your VPN interface — e.g. Tailscale IP or `127.0.0.1`.
 3. **Use private DNS** so the dashboard is reachable only when connected to your VPN:
-   - Prod: `http://castellan.int.logfox.ai:8443/`
-   - Local: `http://castellan.local.logfox.test:8443/`
-   - Other envs: `http://castellan.<env>.logfox.ai:8443/`
+  - Prod: `http://castellan.int.logfox.ai:8443/`
+  - Local: `http://castellan.local.logfox.test:8443/`
+  - Other envs: `http://castellan.<env>.logfox.ai:8443/`
 
 Example Caddy internal edge (binds to Tailscale IP, not the public NIC):
 
@@ -305,7 +293,7 @@ Split DNS (Tailscale, CoreDNS, etc.) resolves `*.int.logfox.ai` to your compose 
 
 ### Require a Bearer token (defense in depth)
 
-Even on a private network, set `api.authToken` so every API and dashboard request requires authentication:
+Even on a private network, set `api.authToken` so every API request requires authentication:
 
 ```json
 {
@@ -316,7 +304,9 @@ Even on a private network, set `api.authToken` so every API and dashboard reques
 }
 ```
 
-Clients send `Authorization: Bearer <token>`. The dashboard has a token input field that persists to `localStorage`.
+**External clients** (CLI, curl, automation) send `Authorization: Bearer <token>`.
+
+**The dashboard authenticates itself.** When Castellan serves the dashboard, it sets an `httpOnly`, `SameSite=Strict` session cookie so the browser's API calls are authorized automatically — the token stays purely a server-side config value and is never entered or stored in the browser. The cookie is not readable by JavaScript, and because it is same-site it cannot be used in cross-site requests. Access to the dashboard is therefore gated by network reachability (keep it VPN-only, per above).
 
 In production, store the token in a secrets manager and inject it at deploy time (Logfox uses AWS Secrets Manager via `host-config.json`).
 
@@ -334,12 +324,14 @@ We build observability and deployment tools we actually want to use. If you like
 
 Castellan is part of a family of MIT-licensed tools we ship and dogfood. Same vibe: sharp CLIs, great TUIs, built for real ops work.
 
-| Tool | What it does |
-|------|--------------|
-| [**open-prs**](https://github.com/logfoxai/open-prs) | Live TUI + CLI dashboard for every open PR in a GitHub org — CI status, deploy tracking, clickable links. |
-| [**ecswatch**](https://github.com/logfoxai/ecswatch) | ECS service watcher with CI streaming, interactive TUI, and one-shot `inspect` snapshots. Optional LLM root-cause analysis. |
-| [**composewatch**](https://github.com/logfoxai/composewatch) | Sibling of ecswatch for Docker Compose stacks over Tailscale SSH — watch Watchtower/Castellan rollouts, health, and digests. |
-| [**runtyp**](https://github.com/logfoxai/runtyp) | Lightning-fast, zero-dependency runtime type validation for TypeScript and JavaScript. |
+
+| Tool                                                         | What it does                                                                                                                 |
+| ------------------------------------------------------------ | ---------------------------------------------------------------------------------------------------------------------------- |
+| **[open-prs](https://github.com/logfoxai/open-prs)**         | Live TUI + CLI dashboard for every open PR in a GitHub org — CI status, deploy tracking, clickable links.                    |
+| **[ecswatch](https://github.com/logfoxai/ecswatch)**         | ECS service watcher with CI streaming, interactive TUI, and one-shot `inspect` snapshots. Optional LLM root-cause analysis.  |
+| **[composewatch](https://github.com/logfoxai/composewatch)** | Sibling of ecswatch for Docker Compose stacks over Tailscale SSH — watch Watchtower/Castellan rollouts, health, and digests. |
+| **[runtyp](https://github.com/logfoxai/runtyp)**             | Lightning-fast, zero-dependency runtime type validation for TypeScript and JavaScript.                                       |
+
 
 All published to npm, released with [AutoRel](https://github.com/mhweiner/autorel), and designed to be useful outside Logfox too.
 
