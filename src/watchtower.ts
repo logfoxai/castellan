@@ -2,7 +2,28 @@ import type {ContainerInfo} from 'dockerode';
 import type {DockerClient} from './docker.js';
 import type {ComposeConfig, Config, ManagedService} from './types.js';
 
-const WATCHTOWER_LABEL = 'com.centurylinklabs.watchtower.enable';
+/** Native Castellan opt-in label (reverse-DNS for logfox.ai). */
+export const CASTELLAN_AUTUPDATE_LABEL = 'ai.logfox.castellan.autoupdate';
+
+/** Legacy Watchtower opt-in label (`watchtower --label-enable`). */
+export const WATCHTOWER_ENABLE_LABEL = 'com.centurylinklabs.watchtower.enable';
+
+export const DISCOVERY_LABELS = [
+    CASTELLAN_AUTUPDATE_LABEL,
+    WATCHTOWER_ENABLE_LABEL,
+] as const;
+
+export function hasDiscoveryLabel(labels: Record<string, string> | undefined): boolean {
+
+    if (!labels) {
+
+        return false;
+
+}
+
+    return DISCOVERY_LABELS.some((key) => labels[key] === 'true');
+
+}
 
 export async function discoverConfig(
     docker: DockerClient,
@@ -14,7 +35,7 @@ export async function discoverConfig(
 
     for (const container of containers) {
 
-        if (container.Labels?.[WATCHTOWER_LABEL] !== 'true') {
+        if (!hasDiscoveryLabel(container.Labels)) {
 
             continue;
 
