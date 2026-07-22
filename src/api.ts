@@ -21,10 +21,29 @@ export type ApiMethod =
     | 'dockerInfo'
     | 'dockerEvents';
 
-export type ApiRequest = {
-    method: ApiMethod;
-    args?: unknown[];
-};
+const API_METHODS = new Set<ApiMethod>([
+    'status',
+    'forceCheck',
+    'pause',
+    'resume',
+    'rollback',
+    'history',
+    'dockerContainers',
+    'dockerImages',
+    'dockerNetworks',
+    'dockerVolumes',
+    'dockerLogs',
+    'dockerStats',
+    'dockerStatsAll',
+    'dockerInfo',
+    'dockerEvents',
+]);
+
+function isApiMethod(value: string): value is ApiMethod {
+
+    return API_METHODS.has(value as ApiMethod);
+
+}
 
 export function createRouter(roller: Roller, docker: DockerClient, authToken?: string): Router {
 
@@ -36,12 +55,20 @@ export function createRouter(roller: Roller, docker: DockerClient, authToken?: s
 
 });
 
-    router.post('/', requireAuth(authToken), async (req, res, next) => {
+    router.post('/:method', requireAuth(authToken), async (req, res, next) => {
 
         try {
 
-            const payload = req.body as ApiRequest;
-            const result = await dispatch(payload, roller, docker);
+            const {method} = req.params;
+
+            if (!isApiMethod(method)) {
+
+                res.status(404).json({error: `Unknown method: ${method}`});
+                return;
+
+}
+
+            const result = await dispatchMethod(method, req.body, roller, docker);
 
             res.json(result);
 
@@ -130,11 +157,26 @@ function requireAuth(authToken: string | undefined) {
 
 }
 
-export async function dispatch(payload: ApiRequest, roller: Roller, docker: DockerClient): Promise<unknown> {
+export async function dispatchMethod(
+    method: ApiMethod,
+    body: unknown,
+    roller: Roller,
+    docker: DockerClient,
+): Promise<unknown> {
 
-    const args = payload.args ?? [];
+    if (method.startsWith('docker')) {
 
-    switch (payload.method) {
+        return dispatchDocker(method, docker, body);
+
+}
+
+    return dispatchRoller(method, body, roller);
+
+}
+
+async function dispatchRoller(method: ApiMethod, body: unknown, roller: Roller): Promise<unknown> {
+
+    switch (method) {
 
         case 'status':
             return status(roller);
@@ -148,17 +190,17 @@ export async function dispatch(payload: ApiRequest, roller: Roller, docker: Dock
             roller.resume();
             return {paused: roller.getStatus().paused};
         case 'rollback':
-            return rollback(roller, args);
+            return rollback(roller, body);
         case 'history':
             return history(roller);
         default:
-            return dispatchDocker(payload.method, docker, args);
+            throw new Error(`Unknown method: ${method}`);
 
 }
 
 }
 
-async function dispatchDocker(method: ApiMethod, docker: DockerClient, args: unknown[]): Promise<unknown> {
+async function dispatchDocker(method: ApiMethod, docker: DockerClient, body: unknown): Promise<unknown> {
 
     switch (method) {
 
@@ -173,13 +215,13 @@ async function dispatchDocker(method: ApiMethod, docker: DockerClient, args: unk
         case 'dockerVolumes':
             return {volumes: await docker.listVolumes()};
         case 'dockerLogs':
-            return dockerLogs(docker, args);
+            return dockerLogs(docker, body);
         case 'dockerStats':
-            return dockerStats(docker, args);
+            return dockerStats(docker, body);
         case 'dockerInfo':
             return {info: await docker.getInfo()};
         case 'dockerEvents':
-            return dockerEvents(docker, args);
+            return dockerEvents(docker, body);
         default:
             throw new Error(`Unknown method: ${method}`);
 
@@ -227,17 +269,15 @@ function status(roller: Roller): {services: unknown[]; paused: boolean} {
 
 }
 
-async function rollback(roller: Roller, args: unknown[]): Promise<{ok: boolean}> {
+async function rollback(roller: Roller, body: unknown): Promise<{ok: boolean}> {
 
-    const input = args[0];
+    if (!body || typeof body !== 'object' || !('service' in body) || typeof body.service !== 'string') {
 
-    if (!input || typeof input !== 'object' || !('service' in input) || typeof input.service !== 'string') {
-
-        throw new Error('Expected args[0] to be an object with a string service property');
+        throw new Error('Expected body with a string service property');
 
 }
 
-    const ok = await roller.rollback(input.service);
+    const ok = await roller.rollback(body.service);
 
     return {ok};
 
@@ -254,25 +294,25 @@ function history(roller: Roller): {events: unknown[]} {
 
 }
 
-async function dockerLogs(docker: DockerClient, args: unknown[]): Promise<{logs: string}> {
+async function dockerLogs(docker: DockerClient, body: unknown): Promise<{logs: string}> {
 
-    const input = args[0] as {containerId: string; tail?: number};
+    const input = body as {containerId: string; tail?: number};
 
     return {logs: await docker.getContainerLogs(input.containerId, input.tail ?? 100)};
 
 }
 
-async function dockerStats(docker: DockerClient, args: unknown[]): Promise<{stats: unknown}> {
+async function dockerStats(docker: DockerClient, body: unknown): Promise<{stats: unknown}> {
 
-    const input = args[0] as {containerId: string};
+    const input = body as {containerId: string};
 
     return {stats: await docker.getContainerStats(input.containerId)};
 
 }
 
-async function dockerEvents(docker: DockerClient, args: unknown[]): Promise<{events: unknown[]}> {
+async function dockerEvents(docker: DockerClient, body: unknown): Promise<{events: unknown[]}> {
 
-    const input = args[0] as {since?: number};
+    const input = (body ?? {}) as {since?: number};
 
     return {events: await docker.getEvents(input.since ?? 300)};
 

@@ -1,6 +1,7 @@
 import type {ContainerInfo} from 'dockerode';
 import type {DockerClient} from './docker.js';
 import type {ComposeConfig, Config, ManagedService} from './types.js';
+import {mergeManagedServicesByImage} from './compose-targets.js';
 
 /** Native Castellan opt-in label (reverse-DNS for logfox.ai). */
 export const CASTELLAN_AUTUPDATE_LABEL = 'ai.logfox.castellan.autoupdate';
@@ -39,7 +40,7 @@ export async function discoverConfig(
 ): Promise<Config> {
 
     const containers = await docker.listContainers();
-    const services = new Map<string, ManagedService>();
+    const discovered: ManagedService[] = [];
 
     for (const container of containers) {
 
@@ -57,18 +58,12 @@ export async function discoverConfig(
 
 }
 
-        const existing = services.get(service.name);
-
-        if (!existing || container.State === 'running') {
-
-            services.set(service.name, service);
-
-}
+        discovered.push(service);
 
 }
 
     return {
-        managedServices: Array.from(services.values()),
+        managedServices: mergeManagedServicesByImage(discovered),
         compose,
         poll: {enabled: true, intervalMs: 60000, jitterMs: 5000},
         rollback: {healthTimeoutMs: 120000, maxAttempts: 1},
@@ -101,7 +96,6 @@ function buildService(container: ContainerInfo): ManagedService | null {
         registry: parsed.registry,
         repository: parsed.repository,
         tag: parsed.tag,
-        composeServices: [composeService],
         healthIntervalMs: 5000,
         healthRetries: 10,
     };

@@ -85,8 +85,8 @@ app.use(express.json());
 app.use('/assets', express.static(assetsDir));
 app.use(express.static(uiDir));
 
-app.post('/v1', (req, res) => {
-    const {method} = req.body;
+app.post('/v1/:method', (req, res) => {
+    const {method} = req.params;
 
     switch (method) {
         case 'status':
@@ -104,7 +104,7 @@ app.post('/v1', (req, res) => {
         case 'dockerVolumes':
             return res.json({volumes: []});
         case 'dockerLogs':
-            return res.json({logs: logsByContainer[req.body.args[0].containerId] ?? ''});
+            return res.json({logs: logsByContainer[req.body?.containerId] ?? ''});
         case 'dockerStats':
         case 'dockerInfo':
         case 'dockerEvents':

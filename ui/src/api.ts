@@ -60,10 +60,11 @@ export async function rpc<T extends keyof API>(
     // Auth is handled by the same-origin session cookie the server sets when it
     // serves the dashboard; fetch includes it automatically for same-origin
     // requests. No token is entered or stored in the browser.
-    const response = await fetch('/v1', {
+    const input = args.length > 0 ? args[0] : {};
+    const response = await fetch(`/v1/${method}`, {
         method: 'POST',
         headers: {'Content-Type': 'application/json'},
-        body: JSON.stringify({method, args}),
+        body: JSON.stringify(input),
     });
 
     if (!response.ok) {

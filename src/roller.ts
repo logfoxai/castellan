@@ -4,6 +4,7 @@ import {sleep, waitForHttpHealth} from './health.js';
 import {StateManager} from './state.js';
 import type {ContainerInfo} from 'dockerode';
 import type {Config, DeploymentEvent, ManagedService, ServiceRuntime} from './types.js';
+import {resolveComposeServicesFromContainers} from './compose-targets.js';
 
 export type RollerStatus = {
     paused: boolean;
@@ -448,6 +449,32 @@ export class Roller {
 
 }
 
+    private async resolveComposeServices(service: ManagedService): Promise<string[]> {
+
+        if (service.composeServices && service.composeServices.length > 0) {
+
+            return service.composeServices;
+
+}
+
+        const resolved = await resolveComposeServicesFromContainers(
+            this.docker,
+            service,
+            this.config.compose,
+        );
+
+        if (resolved.length === 0) {
+
+            throw new Error(
+                `No compose services found running ${service.registry}/${service.repository}:${service.tag}`,
+            );
+
+}
+
+        return resolved;
+
+}
+
     private async deployService(service: ManagedService, desiredDigest: string): Promise<void> {
 
         const runtime = this.getRuntime(service.name);
@@ -463,11 +490,13 @@ export class Roller {
         this.recordEvent('deploy', service.name, `Updating to ${desiredDigest}`);
 
         this.checkRollbackRequested(service.name);
-        await this.withComposeLock(() => this.docker.composePull(service.composeServices[0], this.config.compose));
+        const composeServices = await this.resolveComposeServices(service);
+
+        await this.withComposeLock(() => this.docker.composePull(composeServices[0], this.config.compose));
 
         try {
 
-            for (const composeService of service.composeServices) {
+            for (const composeService of composeServices) {
 
                 this.checkRollbackRequested(service.name);
                 await this.withComposeLock(() => this.docker.composeUp(composeService, this.config.compose));
@@ -656,7 +685,9 @@ export class Roller {
         await this.docker.pullImage(`${fullImage}@${knownGood}`);
         await this.docker.tagImage(`${fullImage}@${knownGood}`, `${fullImage}:${service.tag}`);
 
-        for (const composeService of service.composeServices) {
+        const composeServices = await this.resolveComposeServices(service);
+
+        for (const composeService of composeServices) {
 
             await this.withComposeLock(() => this.docker.composeUp(composeService, this.config.compose));
             await this.verifyServiceHealth(service, composeService);
