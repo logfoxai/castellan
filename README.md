@@ -13,36 +13,96 @@
   <a href="https://github.com/mhweiner/autorel"><img src="https://img.shields.io/badge/%F0%9F%9A%80%20AutoRel-2D4DDE" alt="AutoRel" /></a>
 </p>
 
-<h3 align="center">The deployment watchdog that never sleeps.</h3>
+<h3 align="center">The drop-in Watchtower replacement — with rollback, zero-downtime, and a dashboard.</h3>
 
 <p align="center">
-  <strong>Open-source, registry-aware, zero-downtime deployments for docker-compose.</strong><br />
-  Drop it in as a sidecar. Watch it poll your registry, roll your services, verify health, and rollback if anything breaks.
+  <strong>Keep your existing <code>com.centurylinklabs.watchtower.enable=true</code> labels. Swap the sidecar. Done.</strong><br />
+  Castellan polls your registry, rolls your services safely, verifies health, and rolls back if anything breaks — plus a built-in Docker observability dashboard you can check from your phone.
 </p>
 
 <p align="center">
-  <img src="assets/screenshot.png" alt="Castellan dashboard showing service status, containers, and deployment history" width="100%" />
+  <img src="assets/screenshot.png" alt="Castellan dashboard in dark mode" width="100%" />
 </p>
+
+<p align="center">
+  <img src="assets/screenshot-mobile.png" alt="Castellan dashboard on a phone" width="360px" />
+</p>
+
+<p align="center"><em>Works on your desktop, tablet, and phone. Check deployments from anywhere.</em></p>
 
 ## Why Castellan?
 
-[Watchtower](https://containrrr.dev/watchtower/) is deprecated. Other tools either pull blindly or restart everything at once. **Castellan** gives you the same hands-off experience, but with the safety and visibility you actually need:
+[Watchtower](https://containrrr.dev/watchtower/) was archived in December 2025. Most tools marketed as "alternatives" aren't drop-in replacements — they want new labels, new config, or a completely different workflow (notify-only, manual updates, GitOps PRs). Castellan is different:
 
-- **No-downtime rolling restarts** — restart one compose service at a time and wait for health before moving to the next.
+- **True drop-in** — uses the same `com.centurylinklabs.watchtower.enable=true` labels. Remove Watchtower, add Castellan, keep everything else.
+- **Safer updates** — rolling restarts and health verification, not blind restarts.
 - **Automatic rollback** — if a new image fails health checks, Castellan reverts to the last known-good digest like an ECS circuit breaker.
-- **Registry-aware polling** — tunable intervals, ECR rate-limit protection, and digest-based change detection (no false restarts).
-- **Self-hosted dashboard + API** — see status, inspect containers, view logs, and force a check from a beautiful dark UI or from your CLI.
-- **Watchtower compatibility** — label your containers and Castellan can manage them with zero config.
+- **Built-in observability** — live dashboard, deployment history, container logs, and health status in one place.
+- **Works on your phone** — the dashboard is fully responsive, so you can check deployments from anywhere without pinching or zooming.
+- **Extensible** — HTTP API, Bearer auth, YAML/JSON config, and ECR-first registry support.
+
+### Drop-in compatibility: Castellan vs the field
+
+Most Watchtower "successors" require migration work. Here's how they actually compare:
+
+| Tool | Drop-in? | Auto-update | Rollback | Zero-downtime | Dashboard |
+|---|---|---|---|---|---|
+| **Castellan** | ✅ same labels | ✅ | ✅ | ✅ | ✅ |
+| [Watchtower](https://github.com/containrrr/watchtower) (archived) | — | ✅ | ❌ | ❌ | ❌ |
+| [nickfedor/watchtower](https://github.com/nicholas-fedor/watchtower) | ✅ swap image | ✅ | ❌ | ❌ | ❌ |
+| [openserbia/watchtower](https://github.com/openserbia/watchtower) | ✅ swap image | ✅ | ❌ | ❌ | ❌ |
+| [Lighthouse](https://github.com/grioghar/lighthouse) | ✅ `WATCHTOWER_*` + labels | ✅ | ❌ | ❌ | ❌ |
+| [DockWarden](https://github.com/emon5122/dockwarden) | ⚠️ env var remap | ✅ | ❌ | ❌ | optional |
+| [WatchWarden](https://github.com/watchwarden-labs/watchwarden) | ⚠️ env var remap | ✅ | ✅ | partial | ✅ |
+| [WUD](https://github.com/getwud/wud) | ❌ new `wud.*` labels | optional | ❌ | ❌ | ✅ |
+| [Diun](https://github.com/crazy-max/diun) | ❌ notify-only | ❌ | ❌ | ❌ | ❌ |
+| [freshdock](https://github.com/Turbootzz/freshdock) | ❌ `freshdock.*` labels | ✅ | ✅ | ❌ | ❌ |
+
+**Drop-in** means you can swap the container image and keep your existing Watchtower labels or environment variables with no config rewrite. Tools marked ⚠️ require remapping env vars. Tools marked ❌ need new labels, a new config model, or don't auto-update at all.
+
+Castellan is the only option that is label-compatible **and** adds rollback, zero-downtime rolling restarts, and a mobile-friendly observability dashboard.
+
+### What you get beyond Watchtower
+
+| | Watchtower | Castellan |
+|---|---|---|
+| Drop-in label compatibility | ✅ | ✅ |
+| Zero-downtime rolling restart | ❌ | ✅ |
+| Automatic rollback on failure | ❌ | ✅ |
+| Health-check verification | ❌ | ✅ |
+| Self-hosted dashboard | ❌ | ✅ |
+| Container logs & inspection | ❌ | ✅ |
+| HTTP API + CLI integration | ❌ | ✅ |
+| Digest-based change detection | ❌ | ✅ |
+| ECR rate-limit protection | ❌ | ✅ |
+| Mobile-responsive dashboard | ❌ | ✅ |
 
 ## Features
 
+### Deployment safety
+
 - **Registry polling** with tunable intervals, jitter, and ECR rate-limit protection.
+- **Digest-based change detection** — only restarts when the image digest actually changes, eliminating false pulls.
 - **Zero-downtime rolling restarts** for grouped compose services (`api-1`, `api-2`, etc.).
-- **Automatic rollback** on health-check failure with a persisted known-good digest.
-- **Self-hosted React dashboard** — live status, Docker inspection, log viewer, and deployment history.
-- **Internal HTTP API** — dashboard/CLI integration, forced checks, pause/resume, and manual rollback.
-- **Watchtower compatibility mode** for simple drop-in migration.
-- **Registry-agnostic** — ECR first, Docker Hub and GHCR ready.
+- **Automatic rollback** on health-check failure with a persisted known-good digest and a bad-digest list.
+- **Manual controls** — force a check, pause/resume polling, or trigger a rollback from the UI or API.
+
+### Observability hub
+
+- **Self-hosted React dashboard** — live status, controls, and Docker inspection in one dark, fast UI.
+- **Service status cards** — current vs desired image digests, last check time, and last error.
+- **Container list** — see every container Castellan can see, with live state and one-click log viewing.
+- **Deployment history timeline** — check, deploy, rollback, and failure events with timestamps.
+- **Health status** — green/yellow/red state badges and detailed HTTP/Docker health verification.
+- **Mobile responsive** — check deployments, logs, and container status from your phone without pinching or zooming.
+
+### Integration & compatibility
+
+- **Internal HTTP API** — typed RPC for dashboard, CLI, or automation.
+- **Watchtower compatibility mode** — works with existing Watchtower labels, no config required.
+- **Registry-agnostic** — ECR first, with Docker Hub and GHCR support ready.
+- **Bearer token auth** — secure the API in shared environments.
+- **YAML and JSON config** — use whichever format you prefer.
 - **Small, fast sidecar** — TypeScript, MIT licensed, published to npm and GHCR.
 
 ## Quick start
@@ -90,6 +150,29 @@ Create `castellan-config.json` (or `castellan-config.yaml`):
 ```
 
 Open the dashboard at `http://castellan:3003/` (or map a port to your host).
+
+## Migrating from Watchtower
+
+If you already use Watchtower labels, just add Castellan and remove Watchtower. No config file needed:
+
+```yaml
+services:
+  castellan:
+    image: ghcr.io/logfoxai/castellan:latest
+    restart: unless-stopped
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - ./castellan-state:/app/state
+    networks:
+      - backend
+
+  my-service:
+    image: my-image:latest
+    labels:
+      - com.centurylinklabs.watchtower.enable=true
+```
+
+For grouped services (e.g. multiple API replicas), add a config file to enable rolling restarts.
 
 ## Configuration reference
 
@@ -153,12 +236,11 @@ The dashboard is built into the image and served at `/`. It gives you:
 
 - Live service status with current vs desired image digests.
 - One-click **Force check**, **Pause**, and **Resume** controls.
-- Docker container list with live logs and stats.
+- Docker container list with live state and one-click log viewing.
 - Deployment / rollback / failure history timeline.
-
-## Watchtower compatibility
-
-If no config is provided, Castellan discovers containers labeled `com.centurylinklabs.watchtower.enable=true` and manages them as single services. This is a simple drop-in replacement for basic Watchtower setups; grouped services still need explicit config for true rolling restart.
+- Optional Bearer token input for authenticated APIs.
+- Fully responsive — works on phones, tablets, and desktops.
+- Light and dark mode with system preference detection.
 
 ## How it works
 
@@ -168,6 +250,26 @@ If no config is provided, Castellan discovers containers labeled `com.centurylin
 4. It waits for Docker and/or HTTP health checks to pass.
 5. If health checks fail, it rolls back to the last known-good digest and marks the failing digest as bad.
 6. State is persisted atomically to a JSON file so restarts are safe.
+
+## Roadmap / ideas
+
+Castellan is already useful, but the sky is the limit. Ideas we are excited about:
+
+- **Container stats panel** — live CPU, memory, and network graphs for selected containers.
+- **Images, networks, and volumes views** — browse all Docker resources from the dashboard.
+- **Prometheus metrics export** — expose deployment counts, health results, and poll latency.
+- **Webhook / Slack / Discord notifications** — ping your team on deploy, rollback, or failure.
+- **CLI companion** — `castellan status`, `castellan force-check`, `castellan rollback <service>`.
+- **OpenAPI / REST spec** — a formal public API for integrations.
+- **Multi-host and Swarm support** — watch deployments across a fleet of nodes.
+- **Dry-run mode** — preview what would change without touching containers.
+- **Maintenance windows** — pause polling automatically during scheduled deploys.
+- **Image promotion & retention policies** — prune old images and keep only the last N known-good digests.
+- **Audit log** — immutable, exportable record of every deployment decision.
+- **Dark / light mode** and mobile-friendly dashboard.
+- **Alerting on health drift** — notify when a service has been unhealthy for too long.
+
+Have an idea? Open an issue or discussion.
 
 ## Security
 

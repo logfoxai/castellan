@@ -1,7 +1,7 @@
 {
   "name": "castellan",
   "version": "0.0.0",
-  "description": "Open-source deployment watchdog for docker-compose. Polls registries, restarts services with zero downtime, and rolls back on health-check failure.",
+  "description": "Drop-in Watchtower replacement for docker-compose. Polls registries, restarts services with zero downtime, rolls back on failure, and includes a built-in observability dashboard.",
   "keywords": [
     "docker",
     "docker-compose",
@@ -48,6 +48,7 @@
     "test": "c8 kizu -f 'src/**/*.spec.ts' && c8 report -r text -r html",
     "lint": "eslint . --fix",
     "lint:check": "eslint .",
+    "screenshots": "npm run build:ui && node scripts/capture-screenshots.mjs",
     "validate": "npm run build && npm run lint && npm test"
   },
   "dependencies": {
@@ -65,6 +66,7 @@
     "c8": "11.0.0",
     "eslint": "10.0.2",
     "kizu": "5.1.0",
+    "playwright": "1.61.1",
     "tsx": "4.20.5",
     "typescript": "5.8.3",
     "typescript-eslint": "8.56.1"
