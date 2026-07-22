@@ -35,30 +35,35 @@ async function capture() {
     const {chromium} = await import('playwright');
 
     const browser = await chromium.launch();
-    const page = await browser.newPage();
-
-    const shots = [
-        {file: 'screenshot.png', theme: 'dark', width: 1280, height: 900, fullPage: true},
-        {file: 'screenshot-light.png', theme: 'light', width: 1280, height: 900, fullPage: true},
-        {file: 'screenshot-mobile.png', theme: 'dark', width: 390, height: 844, fullPage: true},
-    ];
+    // Retina-quality context sized to the dashboard's max content width so the
+    // full-page capture never clips horizontally.
+    const context = await browser.newContext({
+        viewport: {width: 1440, height: 960},
+        deviceScaleFactor: 2,
+    });
+    const page = await context.newPage();
 
     await page.goto(`${baseUrl}/`, {waitUntil: 'networkidle'});
-    await sleep(500);
+    await sleep(600);
+
+    const shots = [
+        {file: 'screenshot.png', theme: 'dark'},
+        {file: 'screenshot-light.png', theme: 'light'},
+    ];
 
     for (const shot of shots) {
-        await page.setViewportSize({width: shot.width, height: shot.height});
         await page.evaluate((theme) => {
             document.documentElement.setAttribute('data-theme', theme);
         }, shot.theme);
         await sleep(300);
         await page.screenshot({
             path: path.join(assetsDir, shot.file),
-            fullPage: shot.fullPage,
+            fullPage: true,
         });
         console.log(`Saved ${shot.file}`);
     }
 
+    await context.close();
     await browser.close();
 }
 

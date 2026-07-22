@@ -2,8 +2,18 @@ import Docker, {ContainerInfo, ImageInfo, NetworkInspectInfo, VolumeInspectInfo}
 import {execFile} from 'child_process';
 import {promisify} from 'util';
 import type {ComposeConfig} from './types.js';
+import {parseStatsOutput, type ContainerStat} from './stats.js';
 
 const execFileAsync = promisify(execFile);
+
+/**
+ * dockerode's ContainerInfo type omits the size fields, which the daemon only
+ * returns when listing with `size: true`. Model the real response shape.
+ */
+export type ContainerInfoWithSize = ContainerInfo & {
+    SizeRw?: number;
+    SizeRootFs?: number;
+};
 
 export class DockerClient {
 
@@ -15,9 +25,30 @@ export class DockerClient {
 
 }
 
-    async listContainers(): Promise<ContainerInfo[]> {
+    async listContainers(): Promise<ContainerInfoWithSize[]> {
 
-        return this.docker.listContainers({all: true});
+        return this.docker.listContainers({all: true, size: true});
+
+}
+
+    async getAllStats(): Promise<ContainerStat[]> {
+
+        try {
+
+            const {stdout} = await execFileAsync('docker', [
+                'stats',
+                '--no-stream',
+                '--format', '{{json .}}',
+            ], {timeout: 30_000});
+
+            return parseStatsOutput(stdout);
+
+} catch (err) {
+
+            console.error('Failed to collect container stats:', err instanceof Error ? err.message : err);
+            return [];
+
+}
 
 }
 

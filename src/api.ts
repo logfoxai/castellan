@@ -1,6 +1,7 @@
 import {Router, type Request, type Response, type NextFunction} from 'express';
-import type {DockerClient} from './docker.js';
+import type {DockerClient, ContainerInfoWithSize} from './docker.js';
 import type {Roller} from './roller.js';
+import {formatBytes} from './stats.js';
 
 export type ApiMethod =
     | 'status'
@@ -15,6 +16,7 @@ export type ApiMethod =
     | 'dockerVolumes'
     | 'dockerLogs'
     | 'dockerStats'
+    | 'dockerStatsAll'
     | 'dockerInfo'
     | 'dockerEvents';
 
@@ -61,28 +63,67 @@ export function createRouter(roller: Roller, docker: DockerClient, authToken?: s
 
 }
 
+export const SESSION_COOKIE = 'castellan_session';
+
+export function readCookie(header: string | undefined, name: string): string | undefined {
+
+    if (!header) {
+
+        return undefined;
+
+}
+
+    for (const part of header.split(';')) {
+
+        const [key, ...rest] = part.trim().split('=');
+
+        if (key === name) {
+
+            return decodeURIComponent(rest.join('='));
+
+}
+
+}
+
+    return undefined;
+
+}
+
+export function isAuthorized(
+    authToken: string | undefined,
+    headers: {authorization?: string; cookie?: string},
+): boolean {
+
+    if (!authToken) {
+
+        return true;
+
+}
+
+    const bearer = (headers.authorization ?? '').replace(/^Bearer\s+/i, '');
+
+    if (bearer === authToken) {
+
+        return true;
+
+}
+
+    return readCookie(headers.cookie, SESSION_COOKIE) === authToken;
+
+}
+
 function requireAuth(authToken: string | undefined) {
 
     return (req: Request, res: Response, next: NextFunction): void => {
 
-        if (!authToken) {
+        if (isAuthorized(authToken, {authorization: req.headers.authorization, cookie: req.headers.cookie})) {
 
             next();
             return;
 
 }
 
-        const header = req.headers.authorization ?? '';
-        const token = header.replace(/^Bearer\s+/i, '');
-
-        if (token !== authToken) {
-
-            res.status(401).json({error: 'Unauthorized'});
-            return;
-
-}
-
-        next();
+        res.status(401).json({error: 'Unauthorized'});
 
 };
 
@@ -121,7 +162,9 @@ async function dispatchDocker(method: ApiMethod, docker: DockerClient, args: unk
     switch (method) {
 
         case 'dockerContainers':
-            return {containers: await docker.listContainers()};
+            return {containers: (await docker.listContainers()).map(toContainerRow)};
+        case 'dockerStatsAll':
+            return {stats: await docker.getAllStats()};
         case 'dockerImages':
             return {images: await docker.listImages()};
         case 'dockerNetworks':
@@ -140,6 +183,28 @@ async function dispatchDocker(method: ApiMethod, docker: DockerClient, args: unk
             throw new Error(`Unknown method: ${method}`);
 
 }
+
+}
+
+export type ContainerRow = {
+    id: string;
+    name: string;
+    image: string;
+    state: string;
+    status: string;
+    disk: string;
+};
+
+function toContainerRow(container: ContainerInfoWithSize): ContainerRow {
+
+    return {
+        id: container.Id,
+        name: (container.Names?.[0] ?? '').replace(/^\//, '') || container.Id.slice(0, 12),
+        image: container.Image,
+        state: container.State,
+        status: container.Status,
+        disk: formatBytes(container.SizeRw ?? 0),
+    };
 
 }
 

@@ -14,8 +14,8 @@ export function HistoryPanel(): JSX.Element {
                 <ul className="history-list">
                     {events.map((event, index) => (
                         <li key={index} className={`history-item history-${event.type}`}>
-                            <time>{new Date(event.at).toLocaleTimeString()}</time>
                             <span className="history-type">{event.type}</span>
+                            <time>{new Date(event.at).toLocaleTimeString([], {hour: 'numeric', minute: '2-digit'})}</time>
                             <span>{event.service} — {event.message}</span>
                         </li>
                     ))}

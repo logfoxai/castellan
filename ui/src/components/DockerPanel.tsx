@@ -1,11 +1,17 @@
 import {useState} from 'react';
 import {usePolling} from '../hooks/usePolling.js';
 import {rpc} from '../api.js';
+import type {ContainerStat} from '../api.js';
 
 export function DockerPanel(): JSX.Element {
-    const {data} = usePolling(() => rpc('dockerContainers'), 10000);
+    const {data: containerData} = usePolling(() => rpc('dockerContainers'), 10000);
+    const {data: statsData} = usePolling(() => rpc('dockerStatsAll'), 10000);
     const [selected, setSelected] = useState<string | null>(null);
-    const containers = (data?.containers ?? []) as {Id: string; Names?: string[]; State: string}[];
+
+    const containers = containerData?.containers ?? [];
+    const statsByName = new Map<string, ContainerStat>(
+        (statsData?.stats ?? []).map((stat) => [stat.name, stat]),
+    );
 
     return (
         <section className="panel docker-panel">
@@ -13,16 +19,35 @@ export function DockerPanel(): JSX.Element {
             {containers.length === 0 ? (
                 <p className="empty">No containers found.</p>
             ) : (
-                <ul className="docker-list">
-                    {containers.map((container) => (
-                        <li key={container.Id} className="docker-item">
-                            <button onClick={() => setSelected(container.Id)}>
-                                {container.Names?.[0]?.replace(/^\//, '') ?? container.Id.slice(0, 12)}
-                            </button>
-                            <span className={`state state-${container.State}`}>{container.State}</span>
-                        </li>
-                    ))}
-                </ul>
+                <div className="docker-table">
+                    <div className="docker-head">
+                        <span>Name</span>
+                        <span className="num">CPU</span>
+                        <span className="num">Memory</span>
+                        <span className="num">Disk</span>
+                        <span className="right">State</span>
+                    </div>
+                    {containers.map((container) => {
+                        const stat = statsByName.get(container.name);
+
+                        return (
+                            <div key={container.id} className="docker-row">
+                                <button className="docker-name" onClick={() => setSelected(container.id)}>
+                                    <span className="docker-name-main">{container.name}</span>
+                                    <span className="docker-image">{container.image}</span>
+                                </button>
+                                <span className="num"><i className="mlabel">CPU</i>{stat?.cpu ?? '—'}</span>
+                                <span className="num">
+                                    <i className="mlabel">Mem</i>
+                                    {stat ? stat.mem : '—'}
+                                    {stat && stat.memPerc !== '—' ? <em>{stat.memPerc}</em> : null}
+                                </span>
+                                <span className="num"><i className="mlabel">Disk</i>{container.disk}</span>
+                                <span className={`right state state-${container.state}`}>{container.state}</span>
+                            </div>
+                        );
+                    })}
+                </div>
             )}
             {selected && <LogViewer containerId={selected} />}
         </section>
