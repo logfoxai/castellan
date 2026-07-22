@@ -17,6 +17,7 @@ export type DeploymentEvent = {
 export type ContainerRow = {
     id: string;
     name: string;
+    displayName: string;
     image: string;
     state: string;
     status: string;

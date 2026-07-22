@@ -1,5 +1,6 @@
 import {Router, type Request, type Response, type NextFunction} from 'express';
 import type {DockerClient, ContainerInfoWithSize} from './docker.js';
+import {formatContainerDisplayName} from './container-display.js';
 import type {Roller} from './roller.js';
 import {formatBytes} from './stats.js';
 
@@ -189,6 +190,7 @@ async function dispatchDocker(method: ApiMethod, docker: DockerClient, args: unk
 export type ContainerRow = {
     id: string;
     name: string;
+    displayName: string;
     image: string;
     state: string;
     status: string;
@@ -197,9 +199,12 @@ export type ContainerRow = {
 
 function toContainerRow(container: ContainerInfoWithSize): ContainerRow {
 
+    const name = (container.Names?.[0] ?? '').replace(/^\//, '') || container.Id.slice(0, 12);
+
     return {
         id: container.Id,
-        name: (container.Names?.[0] ?? '').replace(/^\//, '') || container.Id.slice(0, 12),
+        name,
+        displayName: formatContainerDisplayName(name),
         image: container.Image,
         state: container.State,
         status: container.Status,
