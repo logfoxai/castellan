@@ -68,8 +68,25 @@ test('normalizeConfig parses managed services', async (assert) => {
 
     assert.equal(config.managedServices.length, 1);
     assert.equal(config.managedServices[0].name, 'api');
-    assert.equal(config.managedServices[0].composeServices.length, 2);
+    assert.equal(config.managedServices[0].composeServices?.length, 2);
     assert.equal(config.poll.intervalMs, 60000);
+
+});
+
+test('normalizeConfig allows omitting composeServices', async (assert) => {
+
+    const config = normalizeConfig({
+        managedServices: [
+            {
+                name: 'api',
+                registry: 'r.example.com',
+                repository: 'api',
+                tag: 'latest',
+            },
+        ],
+    });
+
+    assert.equal(config.managedServices[0].composeServices, undefined);
 
 });
 

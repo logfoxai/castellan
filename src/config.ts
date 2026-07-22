@@ -179,7 +179,7 @@ function normalizeServices(input: unknown): ManagedService[] {
             registry: getString(s, 'registry'),
             repository: getString(s, 'repository'),
             tag: getString(s, 'tag'),
-            composeServices: getStringArray(s, 'composeServices'),
+            composeServices: getOptionalStringArray(s, 'composeServices'),
             healthUrl: getOptionalString(s, 'healthUrl'),
             healthIntervalMs: getNumber(s, 'healthIntervalMs', 5000),
             healthRetries: getNumber(s, 'healthRetries', 10),
@@ -365,6 +365,20 @@ function getNumber(obj: Record<string, unknown>, key: string, defaultValue: numb
 }
 
     return value;
+
+}
+
+function getOptionalStringArray(obj: Record<string, unknown>, key: string): string[] | undefined {
+
+    const value = obj[key];
+
+    if (value === undefined) {
+
+        return undefined;
+
+}
+
+    return getStringArray(obj, key);
 
 }
 

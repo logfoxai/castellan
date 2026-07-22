@@ -54,7 +54,7 @@ Castellan supports **config file** mode and **label discovery** mode. You pick o
 | **Config file** | Not required | JSON or YAML (`config.json`, etc.) |
 | **How services are chosen** | Containers with `ai.logfox.castellan.autoupdate` or legacy Watchtower `enable=true` | Explicit `managedServices` list |
 | **Which tag is watched** | Parsed from each container’s **running** image (e.g. `:latest` → watches `latest`) | Tag you set in config (e.g. `staging`) |
-| **Rolling restarts** | One compose service per container | Group replicas: `composeServices: ["api-1", "api-2"]` |
+| **Rolling restarts** | Auto-groups containers sharing the same image ref | Auto-discovers compose services from running containers |
 | **HTTP health URLs** | Docker healthchecks only | `healthUrl` per service |
 | **Private registry creds** | Not available without config | `registries` block |
 | **Best for** | Watchtower opt-in migration | Production rollouts with safety features |
@@ -129,7 +129,6 @@ services:
     "registry": "ghcr.io",
     "repository": "myorg/api-service",
     "tag": "staging",
-    "composeServices": ["api-1", "api-2"],
     "healthUrl": "http://{{service}}:3000/health"
   }]
 }
@@ -219,7 +218,6 @@ Example config:
       "registry": "ghcr.io",
       "repository": "myorg/api-service",
       "tag": "staging",
-      "composeServices": ["api-1", "api-2"],
       "healthUrl": "http://{{service}}:3000/health",
       "healthIntervalMs": 5000,
       "healthRetries": 10
@@ -229,7 +227,6 @@ Example config:
       "registry": "docker.io",
       "repository": "myorg/worker",
       "tag": "staging",
-      "composeServices": ["worker"],
       "healthIntervalMs": 5000,
       "healthRetries": 10
     }
@@ -276,10 +273,10 @@ To deploy immediately after CI pushes, call **`forceCheck`** instead of waiting 
 
 ```yaml
 - run: |
-    curl -sf -X POST "$CASTELLAN_URL/v1" \
+    curl -sf -X POST "$CASTELLAN_URL/v1/forceCheck" \
       -H "Authorization: Bearer $CASTELLAN_AUTH_TOKEN" \
       -H "Content-Type: application/json" \
-      -d '{"method":"forceCheck"}'
+      -d '{}'
 ```
 
 Set `poll.enabled: false` if you only want CI-triggered deploys.
@@ -335,7 +332,6 @@ Need another registry? [Open a PR](https://github.com/logfoxai/castellan/pulls) 
       "registry": "<registry host>",
       "repository": "<repo name>",
       "tag": "<rolling tag>",
-      "composeServices": ["<compose service 1>", "<compose service 2>"],
       "healthUrl": "http://{{service}}:3000/health",
       "healthIntervalMs": 5000,
       "healthRetries": 10
@@ -386,10 +382,10 @@ Need another registry? [Open a PR](https://github.com/logfoxai/castellan/pulls) 
 | `registry` | Registry host (ECR, `ghcr.io`, `docker.io`, …) |
 | `repository` | Image name without tag |
 | `tag` | Registry tag to poll — see [Tags and versions](#tags-and-versions) |
-| `composeServices` | Compose service names to restart, in order, when the digest changes |
+| `composeServices` | *(optional)* Override compose service names to restart. When omitted, Castellan discovers running containers that use `registry/repository:tag` and restarts them one at a time. |
 
 - `healthUrl` may use `{{service}}` as a placeholder for the current compose service name.
-- When `composeServices` has more than one entry, Castellan restarts them one at a time, waiting for health before proceeding.
+- When multiple compose services share the same image ref, Castellan restarts them one at a time, waiting for health before proceeding.
 - `registries` maps registry hostnames to username/password for private Docker Hub, GHCR, or other HTTP v2 registries. ECR uses the AWS credential chain.
 
 Environment overrides: `CASTELLAN_CONFIG`, `CASTELLAN_STATE`, `CASTELLAN_COMPOSE_FILE`, `CASTELLAN_COMPOSE_ENV_FILE`, `CASTELLAN_AUTH_TOKEN`, `DOCKER_SOCKET`.
@@ -399,14 +395,14 @@ Environment overrides: `CASTELLAN_CONFIG`, `CASTELLAN_STATE`, `CASTELLAN_COMPOSE
 When `api.enabled` is `true` (the default), Castellan exposes an internal HTTP API on port `3003`:
 
 - `GET /v1/health` — liveness (no auth).
-- `POST /v1` — typed RPC (requires API auth when enabled):
-  - `status()` — service states and known-good digests.
-  - `forceCheck()` — check registries immediately.
-  - `pause()` / `resume()` — pause/resume polling.
-  - `rollback({ service })` — manually rollback a service.
-  - `history()` — recent events.
-  - `dockerContainers()`, `dockerImages()`, `dockerNetworks()`, `dockerVolumes()` — Docker inspection.
-  - `dockerLogs({ containerId, tail })`, `dockerStats({ containerId })`, `dockerInfo()`, `dockerEvents({ since })` — logs and stats.
+- `POST /v1/<method>` — typed RPC (requires API auth when enabled). Request body is the method input (use `{}` when there are no parameters):
+  - `status` — service states and known-good digests.
+  - `forceCheck` — check registries immediately.
+  - `pause` / `resume` — pause/resume polling.
+  - `rollback` — manually rollback a service (`{"service":"api"}`).
+  - `history` — recent events.
+  - `dockerContainers`, `dockerImages`, `dockerNetworks`, `dockerVolumes` — Docker inspection.
+  - `dockerLogs` (`{"containerId":"…","tail":100}`), `dockerStats` (`{"containerId":"…"}`), `dockerInfo`, `dockerEvents` (`{"since":300}`) — logs and stats.
 
 See [Access & API auth](#access--api-auth). For headless or API-only deployments, see [Operating modes](#operating-modes).
 
@@ -453,7 +449,7 @@ Castellan controls the Docker socket and can restart any container it manages. *
 | Layer | What it controls | How |
 |---|---|---|
 | **Network access** | Who can open the dashboard at all | VPN / Tailscale / internal DNS / not publishing port 3003 publicly |
-| **API secret** | Who can call `POST /v1` (including the dashboard’s background requests) | A single shared key — not per-user identity |
+| **API secret** | Who can call `POST /v1/*` (including the dashboard’s background requests) | A single shared key — not per-user identity |
 
 ### Dashboard (browser)
 
@@ -464,10 +460,10 @@ Castellan controls the Docker socket and can restart any container it manages. *
 ### curl, scripts, and future CLI
 
 ```bash
-curl -sS -X POST http://127.0.0.1:3003/v1 \
+curl -sS -X POST http://127.0.0.1:3003/v1/status \
   -H 'Content-Type: application/json' \
   -H 'Authorization: Bearer YOUR_API_SECRET' \
-  -d '{"method":"status"}'
+  -d '{}'
 ```
 
 ### Where the API secret comes from

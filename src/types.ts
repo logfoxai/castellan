@@ -3,7 +3,7 @@ export type ManagedService = {
     registry: string;
     repository: string;
     tag: string;
-    composeServices: string[];
+    composeServices?: string[];
     healthUrl?: string;
     healthIntervalMs: number;
     healthRetries: number;

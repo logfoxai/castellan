@@ -1,5 +1,5 @@
 import {test} from 'kizu';
-import {dispatch, isAuthorized, readCookie, SESSION_COOKIE} from './api.js';
+import {dispatchMethod, isAuthorized, readCookie, SESSION_COOKIE} from './api.js';
 import type {DockerClient} from './docker.js';
 import type {DeploymentEvent} from './types.js';
 import type {Roller, RollerStatus} from './roller.js';
@@ -90,30 +90,30 @@ function createMocks(): {roller: Roller; docker: DockerClient} {
 
 }
 
-test('dispatch status returns status', async (assert) => {
+test('dispatchMethod status returns status', async (assert) => {
 
     const {roller, docker} = createMocks();
-    const result = await dispatch({method: 'status'}, roller, docker);
+    const result = await dispatchMethod('status', {}, roller, docker);
 
     assert.equal(result, {paused: false, services: []});
 
 });
 
-test('dispatch pause toggles paused', async (assert) => {
+test('dispatchMethod pause toggles paused', async (assert) => {
 
     const {roller, docker} = createMocks();
 
-    await dispatch({method: 'pause'}, roller, docker);
-    const result = await dispatch({method: 'status'}, roller, docker);
+    await dispatchMethod('pause', {}, roller, docker);
+    const result = await dispatchMethod('status', {}, roller, docker);
 
     assert.equal(result, {paused: true, services: []});
 
 });
 
-test('dispatch dockerContainers returns empty list', async (assert) => {
+test('dispatchMethod dockerContainers returns empty list', async (assert) => {
 
     const {roller, docker} = createMocks();
-    const result = await dispatch({method: 'dockerContainers'}, roller, docker);
+    const result = await dispatchMethod('dockerContainers', {}, roller, docker);
 
     assert.equal(result, {containers: []});
 

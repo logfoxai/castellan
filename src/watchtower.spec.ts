@@ -8,6 +8,34 @@ import {
     WATCHTOWER_ENABLE_LABEL,
 } from './watchtower.js';
 
+function labeledRunningContainer(
+    id: string,
+    composeService: string,
+    image: string,
+): {
+    Id: string;
+    Names: string[];
+    Image: string;
+    Labels: Record<string, string>;
+    State: string;
+    Status: string;
+} {
+
+    return {
+        Id: id,
+        Names: [`/logfox_${composeService}_1`],
+        Image: image,
+        Labels: {
+            'com.docker.compose.service': composeService,
+            'com.docker.compose.project': 'logfox',
+            [CASTELLAN_AUTUPDATE_LABEL]: 'true',
+        },
+        State: 'running',
+        Status: 'Up',
+    };
+
+}
+
 test('parseImageRef handles ECR images', (assert) => {
 
     const parsed = parseImageRef('123456789.dkr.ecr.us-east-1.amazonaws.com/api-service:prime');
@@ -93,5 +121,24 @@ test('discoverConfig discovers containers with Castellan autoupdate label', asyn
     assert.equal(config.managedServices.length, 1);
     assert.equal(config.managedServices[0].name, 'api');
     assert.equal(config.managedServices[0].tag, 'staging');
+
+});
+
+test('discoverConfig coalesces labeled containers with the same image', async (assert) => {
+
+    const stagingImage = 'ghcr.io/myorg/api-service:staging';
+
+    const docker = {
+        listContainers: async () => [
+            labeledRunningContainer('1', 'api-1', stagingImage),
+            labeledRunningContainer('2', 'api-2', stagingImage),
+        ],
+    } as unknown as DockerClient;
+
+    const config = await discoverConfig(docker);
+
+    assert.equal(config.managedServices.length, 1);
+    assert.equal(config.managedServices[0].name, 'myorg/api-service');
+    assert.equal(config.managedServices[0].composeServices?.join(','), 'api-1,api-2');
 
 });
