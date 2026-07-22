@@ -24,21 +24,6 @@
   "homepage": "https://github.com/logfoxai/castellan",
   "license": "MIT",
   "author": "Marc H. Weiner <mhweiner234@gmail.com>",
-  "publishConfig": {
-    "access": "public"
-  },
-  "files": [
-    "dist",
-    "!dist/**/*.spec.*",
-    "assets",
-    "README.md",
-    "LICENSE"
-  ],
-  "main": "dist/index.js",
-  "types": "dist/index.d.ts",
-  "bin": {
-    "castellan": "dist/index.js"
-  },
   "workspaces": [
     "ui"
   ],

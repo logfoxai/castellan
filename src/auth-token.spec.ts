@@ -68,6 +68,8 @@ test('resolveAuthToken reads persisted token file', async (assert) => {
 
     try {
 
+        delete process.env[AUTH_TOKEN_ENV];
+
         await writeTokenFile(dir, 'persisted-token');
 
         const resolved = await resolveAuthToken(undefined, path.join(dir, 'state.json'));
