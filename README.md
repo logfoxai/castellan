@@ -9,12 +9,13 @@
   <p><strong>Lightweight deployment control &amp; monitoring for docker-compose</strong></p>
 
   <p>
-    <a href="https://github.com/logfoxai/castellan/actions/workflows/ci.yml"><img src="https://github.com/logfoxai/castellan/actions/workflows/ci.yml/badge.svg" alt="CI" /></a>
-    <a href="https://github.com/logfoxai/castellan/actions/workflows/release.yml"><img src="https://github.com/logfoxai/castellan/actions/workflows/release.yml/badge.svg" alt="Release" /></a>
-    <a href="https://www.npmjs.com/package/castellan"><img src="https://img.shields.io/npm/v/castellan.svg" alt="npm" /></a>
+    <a href="https://github.com/logfoxai/castellan/actions/workflows/release.yml"><img src="https://img.shields.io/github/actions/workflow/status/logfoxai/castellan/release.yml?branch=main&label=prod" alt="prod" /></a>
+    <a href="https://github.com/logfoxai/castellan/actions/workflows/release.yml"><img src="https://img.shields.io/github/actions/workflow/status/logfoxai/castellan/release.yml?branch=next&label=next" alt="next" /></a>
+    <img src="https://img.shields.io/badge/SemVer-2.0.0-blue" alt="SemVer" />
+    <img src="https://img.shields.io/badge/Conventional%20Commits-1.0.0-yellow.svg" alt="Conventional Commits" />
+    <a href="https://github.com/mhweiner/autorel"><img src="https://img.shields.io/badge/%F0%9F%9A%80%20AutoRel-2D4DDE" alt="AutoRel" /></a>
     <a href="https://opensource.org/licenses/MIT"><img src="https://img.shields.io/badge/License-MIT-blue.svg" alt="License: MIT" /></a>
     <img src="https://img.shields.io/badge/status-beta-orange.svg" alt="Beta" />
-    <a href="https://github.com/mhweiner/autorel"><img src="https://img.shields.io/badge/%F0%9F%9A%80%20AutoRel-2D4DDE" alt="AutoRel" /></a>
   </p>
 
   <p>
@@ -80,7 +81,7 @@ See [docs/comparisons.md](docs/comparisons.md) for detailed comparisons with Wat
 - **Supported registries** — Amazon ECR, Docker Hub, GHCR, and other OCI Distribution v2 hosts (see [Supported registries](#supported-registries)).
 - **API secret auth** — shared API key for scripts/CLI; dashboard auth is automatic (see [Access & API auth](#access--api-auth)).
 - **YAML and JSON config** — use whichever format you prefer.
-- **Lightweight sidecar** — TypeScript, MIT licensed, published to npm and GHCR; dashboard and API ship in the same container.
+- **Lightweight sidecar** — TypeScript, MIT licensed, published to [GHCR](https://github.com/logfoxai/castellan/pkgs/container/castellan); dashboard and API ship in the same container.
 
 # Supported registries
 
@@ -97,7 +98,9 @@ Need another registry? [Open a PR](https://github.com/logfoxai/castellan/pulls) 
 
 # Quick start
 
-Add Castellan as a sidecar in your `docker-compose.yml`:
+Castellan runs as a Docker sidecar — pull `ghcr.io/logfoxai/castellan:latest` (or a release tag from GitHub). There is no npm package; the container is the distribution.
+
+Add Castellan to your `docker-compose.yml`:
 
 ```yaml
 services:
@@ -480,7 +483,7 @@ Castellan is part of a family of MIT-licensed tools we ship and dogfood. Same vi
 | **[runtyp](https://github.com/logfoxai/runtyp)**             | Lightning-fast, zero-dependency runtime type validation for TypeScript and JavaScript.                                       |
 
 
-All published to npm, released with [AutoRel](https://github.com/mhweiner/autorel), and designed to be useful outside Logfox too.
+Most ship to npm; Castellan ships as a container image. All are released with [AutoRel](https://github.com/mhweiner/autorel).
 
 # License
 
