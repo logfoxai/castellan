@@ -10,7 +10,7 @@ export function Header(): JSX.Element {
                 <img src="/assets/castellan-logo-dark.png" alt="" aria-hidden="true" className="header-logo logo-dark" />
                 <div className="header-brand">
                     <h1>Castellan</h1>
-                    <p className="header-tagline">Drop-in Watchtower replacement for docker-compose</p>
+                    <p className="header-tagline">Deployment control &amp; monitoring for docker-compose</p>
                 </div>
                 <div className="header-controls">
                     <select
