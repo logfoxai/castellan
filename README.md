@@ -24,13 +24,13 @@
   </p>
 </div>
 
-> **Beta.** Castellan is built and dogfooded on [Logfox](https://logfox.ai) production hosts today. APIs and config may change before v1.0. Test in staging before trusting it elsewhere.
+> **Beta.** APIs and config may change before v1.0. Test in staging before trusting it in production.
 
 # What is Castellan?
 
 Castellan is a **lightweight, single-container sidecar** that sits beside your docker-compose stack. It:
 
-1. **Polls** a configured registry **tag** (e.g. `prime`, `latest`) and compares the **digest** behind it.
+1. **Polls** a configured registry **tag** (e.g. `staging`, `latest`, `v1.2.3`) and compares the **digest** behind it.
 2. **Deploys** when the digest changes — CI pushed a new build to the same tag — via `docker compose` rolling restarts.
 3. **Verifies** health with HTTP checks and Docker health status before continuing.
 4. **Rolls back** automatically if a new digest fails — reverting to the last known-good image.
@@ -196,33 +196,41 @@ Castellan does **not** watch arbitrary tags on running containers. Each managed 
 
 | Concept | Meaning |
 |---|---|
-| **`tag` in config** | The registry tag to watch — e.g. `prime`, `staging`, `latest`, `v1.2.3` |
+| **`tag` in config** | The registry tag to watch — e.g. `staging`, `production`, `latest`, `v1.2.3` |
 | **Digest** | The immutable `sha256:…` content hash of the image currently at that tag |
 | **Deploy trigger** | Registry tag points at a new digest (usually CI pushed a fresh build to the same tag) |
 
-The dashboard shows **`repository:tag`** prominently (e.g. `api-service:prime`). Expand **Image details** for the full registry path and digests.
+The dashboard shows **`repository:tag`** prominently (e.g. `api-service:staging`). Expand **Image details** for the full registry path and digests.
 
-### Logfox setup
+### CI and rolling tags
 
-On Logfox hosts, `infra/scripts/write-castellan-config.sh` generates Castellan config from `host-config.json`. Each service uses the **host environment name as the tag** — `prime`, `staging`, etc. — matching the ECR tags CI publishes:
+Many teams publish **environment tags** from CI — e.g. push `myorg/api-service:staging` on every merge to main. Castellan watches that tag and redeploys when the digest changes:
 
 ```json
 {
   "name": "api",
-  "registry": "123456789.dkr.ecr.us-east-2.amazonaws.com",
-  "repository": "api-service",
-  "tag": "prime",
+  "registry": "ghcr.io",
+  "repository": "myorg/api-service",
+  "tag": "staging",
   "composeServices": ["api-1", "api-2"]
 }
 ```
 
-When GitHub Actions pushes a new `api-service:prime` image, `deploy-compose-service` calls Castellan **`forceCheck`** over Tailscale. Castellan rolls `api-1` and `api-2` with health checks. If `forceCheck` fails, fallback polling (`castellan.poll` in host-config, default **30 minutes**) eventually picks up the new digest.
+To deploy immediately after CI pushes, call **`forceCheck`** on the RPC API instead of waiting for the next poll:
 
-Castellan does **not** manage itself — only api / ingest-worker / issue-worker appear in `managedServices`.
+```yaml
+- run: |
+    curl -sf -X POST "$CASTELLAN_URL/v1" \
+      -H "Authorization: Bearer $CASTELLAN_AUTH_TOKEN" \
+      -H "Content-Type: application/json" \
+      -d '{"method":"forceCheck"}'
+```
+
+Set `poll.enabled: false` if you only want CI-triggered deploys.
 
 ### Choosing tags
 
-- **Environment tags** (`prime`, `staging`) — Logfox default; one rolling tag per host/environment.
+- **Environment tags** (`staging`, `production`) — one rolling tag per environment; CI retags on each deploy.
 - **Version tags** (`v1.2.3`) — pin a host to a release; change the config tag to promote.
 - **`latest`** — fine for dev; avoid in production unless you accept surprise updates.
 
@@ -315,7 +323,7 @@ Each `managedServices` entry:
 
 | Field | Description |
 |---|---|
-| `name` | Short id for dashboard/API (e.g. `api`, `ingest-worker`) |
+| `name` | Short id for dashboard/API (e.g. `api`, `worker`) |
 | `registry` | Registry host (ECR, `ghcr.io`, `docker.io`, …) |
 | `repository` | Image name without tag (e.g. `api-service`) |
 | `tag` | Registry tag to poll — see [Tags and versions](#tags-and-versions) |
@@ -400,7 +408,7 @@ Instead, two layers work together:
 
 ### Dashboard (browser)
 
-1. You open Castellan over your private network (e.g. `http://castellan.int.logfox.ai:8443/` on VPN).
+1. You open Castellan over your private network (e.g. `http://castellan.internal.example:8443/` on VPN).
 2. Castellan serves the page and sets an **httpOnly session cookie** containing the API secret.
 3. The dashboard’s fetch calls send that cookie automatically.
 
@@ -428,7 +436,7 @@ Castellan picks a secret in this order:
 
 **Quick start / docker-compose:** mount a state volume (as in the example below). On first boot Castellan generates `auth-token` there — you only need that file if you want to call the API from curl or automation.
 
-**Production (Logfox):** inject a stable secret from AWS Secrets Manager via `host-config.json` → `write-castellan-config.sh` so every host shares a known token and nothing is auto-generated.
+**Production:** set a stable `api.authToken` in config (or inject via your secrets manager) so restarts do not rotate the key unexpectedly.
 
 ```json
 {
@@ -484,10 +492,7 @@ The primary gate is **network reachability**:
 
 1. **Do not publish port 3003** to your public NIC. Bind Castellan to `127.0.0.1:3003` inside the host.
 2. **Reverse-proxy through an internal edge** (Caddy, nginx, Traefik) that listens only on your VPN interface — e.g. Tailscale IP or `127.0.0.1`.
-3. **Use private DNS** so the dashboard is reachable only when connected to your VPN:
-  - Prod: `http://castellan.int.logfox.ai:8443/`
-  - Local: `http://castellan.local.logfox.test:8443/`
-  - Other envs: `http://castellan.<env>.logfox.ai:8443/`
+3. **Use private DNS** so the dashboard is reachable only when connected to your VPN — e.g. `http://castellan.internal.example:8443/` resolves to your compose host's Tailscale or private-network IP.
 
 Example Caddy internal edge (binds to Tailscale IP, not the public NIC):
 
@@ -496,13 +501,13 @@ Example Caddy internal edge (binds to Tailscale IP, not the public NIC):
     auto_https off
 }
 
-http://castellan.int.logfox.ai:8443 {
+http://castellan.internal.example:8443 {
     bind {$TAILSCALE_IP}
     reverse_proxy 127.0.0.1:3003
 }
 ```
 
-Split DNS (Tailscale, CoreDNS, etc.) resolves `*.int.logfox.ai` to your compose host's Tailscale IP. Without VPN membership, the hostname does not resolve and the port is not reachable.
+Split DNS (Tailscale, CoreDNS, etc.) resolves internal hostnames to your compose host. Without VPN membership, the hostname does not resolve and the port is not reachable.
 
 ## Other hardening
 
@@ -516,7 +521,7 @@ We build observability and deployment tools we actually want to use. If you like
 
 # More open-source tools from Logfox
 
-Castellan is part of a family of MIT-licensed tools we ship and dogfood. Same vibe: sharp CLIs, great TUIs, built for real ops work.
+Castellan is part of a family of MIT-licensed tools from [Logfox](https://logfox.ai). Same vibe: sharp CLIs, great TUIs, built for real ops work.
 
 
 | Tool                                                         | What it does                                                                                                                 |
