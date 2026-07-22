@@ -27,7 +27,8 @@ gh api "repos/${REPO}/rulesets" -X POST \
       "type": "required_status_checks",
       "parameters": {
         "strict_required_status_checks_policy": false,
-        "required_check": [
+        "do_not_enforce_on_create": true,
+        "required_status_checks": [
           {"context": "ci"}
         ]
       }
