@@ -18,7 +18,7 @@
   </p>
 
   <p>
-    Polls your registry, rolls out updates safely, verifies health, rolls back on failure — with a built-in dashboard.
+    Polls your registry, rolls out updates safely, verifies health, rolls back on failure — with an optional built-in dashboard, API, or fully headless operation.
   </p>
 
   <p>
@@ -36,9 +36,9 @@ Castellan is a **lightweight, single-container sidecar** that sits beside your d
 2. **Deploys** when the digest changes — CI pushed a new build to the same tag — via `docker compose` rolling restarts.
 3. **Verifies** health with HTTP checks and Docker health status before continuing.
 4. **Rolls back** automatically if a new digest fails — reverting to the last known-good image.
-5. **Observes** everything from a built-in dashboard: **tag/version at a glance**, history, container metrics, logs.
+5. **Observes** deployments from an optional built-in dashboard (status, history, container metrics, logs) — or run **headless** with polling and rollouts only.
 
-One image. No database. Config file in JSON/YAML. Dashboard included.
+One image. No database. Config file in JSON/YAML. Dashboard and API are optional — disable either or both via `api.enabled` / `api.dashboard`.
 
 See [Tags and versions](#tags-and-versions) for how image tags work — that is the core mental model.
 
@@ -46,7 +46,7 @@ See [Tags and versions](#tags-and-versions) for how image tags work — that is 
 
 - **Compose-native rollouts** — restarts grouped services one at a time via `docker compose pull/up`, not blind container recreation.
 - **Automatic rollback** — failed health checks trigger revert to the last known-good digest; bad digests are remembered.
-- **Built-in observability** — dashboard with service status, deployment history, container CPU/memory/disk, and logs.
+- **Built-in observability (optional)** — dashboard with service status, deployment history, container CPU/memory/disk, and logs; or run headless / API-only (see [Operating modes](#operating-modes)).
 - **Multi-registry support** — Amazon ECR, Docker Hub, GitHub Container Registry (GHCR), and any OCI Distribution v2 registry.
 - **Digest polling** — tunable intervals, jitter, and caching to stay within registry rate limits.
 - **Lightweight** — one sidecar container, file-based state, no PostgreSQL or multi-service stack.
@@ -66,6 +66,8 @@ See [docs/comparisons.md](docs/comparisons.md) for detailed comparisons with Wat
 
 ## Observability hub
 
+Optional — requires `api.enabled: true` and `api.dashboard: true` (see [Operating modes](#operating-modes)).
+
 - **Self-hosted React dashboard** — live status, controls, and Docker inspection in one dark, fast UI.
 - **Service status cards** — watched tag and `repository:tag` at a glance; full digests in expandable details.
 - **Container metrics table** — every container with live CPU, memory (usage + %), disk (writable layer size), state, and one-click log viewing.
@@ -75,12 +77,37 @@ See [docs/comparisons.md](docs/comparisons.md) for detailed comparisons with Wat
 
 ## Integration & compatibility
 
-- **Internal HTTP API** — typed RPC for dashboard, CLI, or automation.
+- **Flexible operating modes** — full stack (dashboard + API), API-only (`api.dashboard: false`), or fully headless (`api.enabled: false`); see [Operating modes](#operating-modes).
+- **Internal HTTP API** — typed RPC for dashboard, CLI, or automation (when `api.enabled` is `true`).
 - **Watchtower compatibility mode** — optional label-based discovery for migration; config file recommended for full features.
 - **Supported registries** — Amazon ECR, Docker Hub, GHCR, and other OCI Distribution v2 hosts (see [Supported registries](#supported-registries)).
 - **API secret auth** — shared API key for scripts/CLI; dashboard auth is automatic (see [Access & API auth](#access--api-auth)).
 - **YAML and JSON config** — use whichever format you prefer.
-- **Lightweight sidecar** — TypeScript, MIT licensed, published to [Docker Hub](https://hub.docker.com/r/logfoxai/castellan); dashboard and API ship in the same container.
+- **Lightweight sidecar** — TypeScript, MIT licensed, published to [Docker Hub](https://hub.docker.com/r/logfoxai/castellan); dashboard and API ship in the same image but can be turned off independently.
+
+# Operating modes
+
+Castellan always runs registry polling and compose rollouts. HTTP is optional — turn off the **dashboard**, the **API**, or **both**:
+
+| Mode | Config | HTTP | Use when |
+|---|---|---|---|
+| **Full** (default) | `api.enabled: true`, `api.dashboard: true` | Dashboard at `/` + RPC on `/v1` | Day-to-day ops with browser UI and automation |
+| **API-only** | `api.enabled: true`, `api.dashboard: false` | RPC on `/v1` only | Scripts, curl, or future CLI — no browser UI |
+| **Headless** | `api.enabled: false` | None | Compliance / zero HTTP surface; polling and rollouts only |
+
+`api.dashboard` is ignored when `api.enabled` is `false`. In headless mode no port is bound, no auth token is generated, and state is still persisted to disk.
+
+Examples:
+
+```json
+{ "api": { "enabled": false } }
+```
+
+```json
+{ "api": { "enabled": true, "dashboard": false, "authToken": "your-secret" } }
+```
+
+See [Headless & API-only setup](#headless--api-only-setup) for details.
 
 # Supported registries
 
@@ -159,9 +186,9 @@ Create `castellan-config.json` (or `castellan-config.yaml`):
 
 Public images on Docker Hub and GHCR do not need the `registries` block. Use it for private repositories or when your registry requires authenticated token exchange.
 
-Mount a **state volume** (as above). On first start, if you omit `api.authToken`, Castellan writes a random API secret to `./castellan-state/auth-token` — use that for curl/scripts; the dashboard still needs no login.
+Mount a **state volume** (as above). On first start, if you omit `api.authToken`, Castellan writes a random API secret to `./castellan-state/auth-token` — use that for curl/scripts; the dashboard still needs no login. (Skipped in **headless** mode when `api.enabled` is `false`.)
 
-Open the dashboard at `http://castellan:3003/` (or map a port to your host).
+Open the dashboard at `http://castellan:3003/` (or map a port to your host). To run without the UI or without any HTTP listener, see [Operating modes](#operating-modes).
 
 # Tags and versions
 
@@ -271,7 +298,7 @@ For grouped services (e.g. multiple API replicas that need zero-downtime rolling
 
 | Key | Default | Description |
 |---|---|---|
-| `enabled` | `true` | When `false`, Castellan runs **headless** — polling and rollouts only, no HTTP server, no auth token generated. |
+| `enabled` | `true` | When `false`, Castellan runs **headless** — polling and rollouts only, no HTTP server, no auth token generated. See [Operating modes](#operating-modes). |
 | `dashboard` | `true` | When `false`, the RPC API on `/v1` still runs but the web UI at `/` is not served. Ignored when `enabled` is `false`. |
 | `port` | `3003` | HTTP listen port when `enabled` is `true`. |
 | `authToken` | *(auto)* | Optional API secret — see [Access & API auth](#access--api-auth). |
@@ -317,11 +344,13 @@ When `api.enabled` is `true` (the default), Castellan exposes an internal HTTP A
 
 See [Access & API auth](#access--api-auth) for how authentication works.
 
-Set `api.enabled: false` for a **headless** deployment with zero HTTP surface (useful for compliance audits). Set `api.dashboard: false` to keep the RPC API for scripts while disabling the browser UI.
+For **headless** (`api.enabled: false`) or **API-only** (`api.dashboard: false`) deployments, see [Operating modes](#operating-modes).
 
 # Dashboard
 
-When `api.dashboard` is `true` (the default), the dashboard is built into the image and served at `/`. It gives you:
+Optional — served at `/` when `api.enabled` and `api.dashboard` are both `true` (the default). When disabled, use the RPC API, Docker logs, or the on-disk state file instead.
+
+When enabled, it gives you:
 
 - Live service status with watched **tag** and `repository:tag`; digests in expandable details.
 - **Check now** and **Pause/Resume polling** controls.
@@ -339,6 +368,8 @@ When `api.dashboard` is `true` (the default), the dashboard is built into the im
 4. It waits for Docker and/or HTTP health checks to pass.
 5. If health checks fail, it rolls back to the last known-good digest and marks the failing digest as bad.
 6. State is persisted atomically to a JSON file so restarts are safe.
+
+HTTP (dashboard and/or API) is optional — set `api.enabled: false` for headless operation or `api.dashboard: false` for API-only. See [Operating modes](#operating-modes).
 
 # Roadmap
 
@@ -419,9 +450,11 @@ Rotate the secret by updating config (or the `auth-token` file) and restarting C
 
 If you need per-user identity, put Clerk (or similar) in front of Castellan at your reverse proxy. Castellan itself stays a single shared-secret ops tool.
 
-### Headless mode (auditing / compliance)
+### Headless & API-only setup
 
-For environments that must not expose any HTTP listener:
+Castellan supports three operating modes — see [Operating modes](#operating-modes) for the full table.
+
+**Headless** — no HTTP at all (`api.enabled: false`):
 
 ```json
 {
@@ -433,7 +466,7 @@ For environments that must not expose any HTTP listener:
 
 Castellan continues polling registries and performing rollouts. No port is bound, no dashboard, no RPC, and no `auth-token` file is created. Check deployment state via Docker logs and the persisted state file on disk.
 
-To keep automation (`curl` / future CLI) but drop the browser UI:
+**API-only** — automation without the browser UI (`api.dashboard: false`):
 
 ```json
 {
@@ -444,6 +477,8 @@ To keep automation (`curl` / future CLI) but drop the browser UI:
   }
 }
 ```
+
+The RPC API on `/v1` stays available for curl, scripts, and a future CLI; the React dashboard at `/` is not served.
 
 ## Keep it internal (recommended)
 
