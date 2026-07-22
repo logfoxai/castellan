@@ -14,6 +14,9 @@
   --radius: 14px;
   --radius-sm: 9px;
   --shadow: 0 1px 2px rgba(0, 0, 0, 0.3), 0 12px 32px -18px rgba(0, 0, 0, 0.7);
+  --font-ui: 'Outfit', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  --font-display: 'Syne', 'Outfit', sans-serif;
+  --font-mono: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
 }
 
 @media (prefers-color-scheme: light) {
@@ -72,7 +75,7 @@ html[data-theme="light"] {
 
 body {
   margin: 0;
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+  font-family: var(--font-ui);
   background: var(--bg);
   color: var(--text);
   line-height: 1.55;
@@ -110,21 +113,33 @@ body {
   align-items: center;
   justify-content: space-between;
   gap: 16px;
-  padding: 12px 28px;
+  padding: 10px 28px;
+  min-height: 52px;
 }
 
 .header-lockup {
-  display: flex;
+  display: inline-flex;
   align-items: center;
-  gap: 12px;
+  gap: 8px;
   min-width: 0;
 }
 
+.header-mark {
+  position: relative;
+  flex: 0 0 28px;
+  width: 28px;
+  height: 28px;
+  transform: translateY(-0.5px);
+}
+
 .header-logo {
-  width: 32px;
-  height: 32px;
-  flex-shrink: 0;
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  display: block;
   object-fit: contain;
+  object-position: center 46%;
 }
 
 .header-logo.logo-dark {
@@ -139,10 +154,11 @@ html[data-theme="dark"] .header-logo.logo-dark {
   display: block;
 }
 
-.header h1 {
+.header-wordmark {
   margin: 0;
-  font-size: 1.05rem;
-  font-weight: 650;
+  font-family: var(--font-display);
+  font-size: 1.125rem;
+  font-weight: 700;
   letter-spacing: -0.02em;
   line-height: 1;
   white-space: nowrap;
@@ -358,7 +374,7 @@ button:hover {
 }
 
 .status-image-ref {
-  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-family: var(--font-mono);
   font-size: 0.92rem;
   font-weight: 600;
   color: var(--text);
@@ -385,7 +401,7 @@ button:hover {
 }
 
 .status-meta code {
-  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-family: var(--font-mono);
   color: var(--text);
   font-size: 0.74rem;
   overflow-wrap: anywhere;
@@ -435,7 +451,7 @@ button:hover {
 }
 
 .status-details code {
-  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-family: var(--font-mono);
   color: var(--text);
   font-size: 0.72rem;
   overflow-wrap: anywhere;
@@ -666,7 +682,7 @@ html[data-theme="light"] .usage-ring-memory .usage-ring-fill {
   font-size: 0.78rem;
   color: var(--muted);
   white-space: pre-wrap;
-  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-family: var(--font-mono);
   line-height: 1.65;
 }
 
@@ -802,8 +818,18 @@ html[data-theme="light"] .usage-ring-memory .usage-ring-fill {
 }
 
 @media (max-width: 480px) {
-  .header h1 {
+  .header-wordmark {
     font-size: 1rem;
+  }
+
+  .header-mark {
+    flex-basis: 24px;
+    width: 24px;
+    height: 24px;
+  }
+
+  .header-lockup {
+    gap: 7px;
   }
 
   .theme-select {
