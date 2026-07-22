@@ -60,7 +60,7 @@ const containers = [
     {id: 'b2c3d4e5f6a7', name: 'api_api-2_1', displayName: 'api-2', image: 'api-service:latest', state: 'running', status: 'Up 2 hours', disk: '17 MB'},
     {id: 'c3d4e5f6a7b8', name: 'api_ingest-worker_1', displayName: 'ingest-worker', image: 'ingest-worker:latest', state: 'running', status: 'Up 2 hours', disk: '9 MB'},
     {id: 'd4e5f6a7b8c9', name: 'api_issue-worker_1', displayName: 'issue-worker', image: 'issue-worker:latest', state: 'running', status: 'Up 5 minutes', disk: '11 MB'},
-    {id: 'e5f6a7b8c9d0', name: 'api_castellan_1', displayName: 'castellan', image: 'ghcr.io/logfoxai/castellan:latest', state: 'running', status: 'Up 2 hours', disk: '6 MB'},
+    {id: 'e5f6a7b8c9d0', name: 'api_castellan_1', displayName: 'castellan', image: 'logfoxai/castellan:latest', state: 'running', status: 'Up 2 hours', disk: '6 MB'},
 ];
 
 const stats = [
