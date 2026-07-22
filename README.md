@@ -1,36 +1,30 @@
-<p align="center">
-  <table>
-    <tr>
-      <td valign="middle" style="padding-right: 16px;">
-        <picture>
-          <source media="(prefers-color-scheme: dark)" srcset="assets/castellan-logo-dark.png" />
-          <img src="assets/castellan-logo-light.png" alt="" width="80" />
-        </picture>
-      </td>
-      <td valign="middle" align="left">
-        <h1 style="margin: 0; line-height: 1.1;">Castellan</h1>
-        <strong>Deployment control &amp; monitoring for docker-compose.</strong>
-      </td>
-    </tr>
-  </table>
-</p>
+<div align="center">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="assets/castellan-logo-dark.png" />
+    <img src="assets/castellan-logo-light.png" alt="" width="96" />
+  </picture>
 
-<p align="center">
-  <a href="https://github.com/logfoxai/castellan/actions/workflows/ci.yml"><img src="https://github.com/logfoxai/castellan/actions/workflows/ci.yml/badge.svg" alt="CI" /></a>
-  <a href="https://github.com/logfoxai/castellan/actions/workflows/release.yml"><img src="https://github.com/logfoxai/castellan/actions/workflows/release.yml/badge.svg" alt="Release" /></a>
-  <a href="https://www.npmjs.com/package/castellan"><img src="https://img.shields.io/npm/v/castellan.svg" alt="npm" /></a>
-  <a href="https://opensource.org/licenses/MIT"><img src="https://img.shields.io/badge/License-MIT-blue.svg" alt="License: MIT" /></a>
-  <img src="https://img.shields.io/badge/status-beta-orange.svg" alt="Beta" />
-  <a href="https://github.com/mhweiner/autorel"><img src="https://img.shields.io/badge/%F0%9F%9A%80%20AutoRel-2D4DDE" alt="AutoRel" /></a>
-</p>
+  <h1>Castellan</h1>
 
-<p align="center">
-  Polls your registry, rolls out updates safely, verifies health, rolls back on failure — with a built-in dashboard.
-</p>
+  <p><strong>Deployment control &amp; monitoring for docker-compose</strong></p>
 
-<p align="center">
-  <img src="assets/screenshot.png" alt="Castellan dashboard" width="100%" />
-</p>
+  <p>
+    <a href="https://github.com/logfoxai/castellan/actions/workflows/ci.yml"><img src="https://github.com/logfoxai/castellan/actions/workflows/ci.yml/badge.svg" alt="CI" /></a>
+    <a href="https://github.com/logfoxai/castellan/actions/workflows/release.yml"><img src="https://github.com/logfoxai/castellan/actions/workflows/release.yml/badge.svg" alt="Release" /></a>
+    <a href="https://www.npmjs.com/package/castellan"><img src="https://img.shields.io/npm/v/castellan.svg" alt="npm" /></a>
+    <a href="https://opensource.org/licenses/MIT"><img src="https://img.shields.io/badge/License-MIT-blue.svg" alt="License: MIT" /></a>
+    <img src="https://img.shields.io/badge/status-beta-orange.svg" alt="Beta" />
+    <a href="https://github.com/mhweiner/autorel"><img src="https://img.shields.io/badge/%F0%9F%9A%80%20AutoRel-2D4DDE" alt="AutoRel" /></a>
+  </p>
+
+  <p>
+    Polls your registry, rolls out updates safely, verifies health, rolls back on failure — with a built-in dashboard.
+  </p>
+
+  <p>
+    <img src="assets/screenshot.png" alt="Castellan dashboard" width="100%" />
+  </p>
+</div>
 
 > **Beta.** Castellan is actively developed and dogfooded by [Logfox](https://logfox.ai), but it has not seen wide production use outside our own stacks yet. Test in staging before trusting it with critical workloads. APIs and config may change before v1.0.
 
@@ -38,7 +32,7 @@
 
 Castellan is a **single-container sidecar** that sits beside your docker-compose stack. It:
 
-1. **Polls** your container registry (ECR-first) for new image digests on a tunable schedule.
+1. **Polls** your container registry for new image digests on a tunable schedule.
 2. **Deploys** updates via `docker compose` — rolling through grouped services (`api-1`, then `api-2`) so one replica stays up.
 3. **Verifies** health with HTTP checks and Docker health status before continuing.
 4. **Rolls back** automatically if a new digest fails — reverting to the last known-good image like an ECS circuit breaker.
@@ -72,7 +66,8 @@ Castellan is **not a clone of Watchtower**. It is a **safety-first deployment co
 - **Compose-native rollouts** — restarts grouped services one at a time via `docker compose pull/up`, not blind container recreation.
 - **Automatic rollback** — failed health checks trigger revert to the last known-good digest; bad digests are remembered.
 - **Built-in observability** — dashboard with service status, deployment history, container CPU/memory/disk, and logs.
-- **ECR-first** — digest polling with tunable intervals, jitter, and rate-limit protection.
+- **Multi-registry support** — Amazon ECR, Docker Hub, GitHub Container Registry (GHCR), and any OCI Distribution v2 registry.
+- **Digest polling** — tunable intervals, jitter, and caching to stay within registry rate limits.
 - **Small footprint** — one TypeScript sidecar, MIT licensed, no PostgreSQL or multi-service stack.
 - **Watchtower label compat** — optional; reads `com.centurylinklabs.watchtower.enable=true` for drop-in migration.
 
@@ -108,7 +103,7 @@ Castellan targets a different sweet spot:
 | **License** | MIT | BSL 1.1 |
 | **Deploy** | 1 sidecar | Agent; dashboard needs controller + Postgres + UI |
 | **Update model** | Compose rolling (`api-1` → `api-2`) | Per-container blue-green |
-| **Best for** | Single compose host, ECR, safety-first rollouts | Multi-host fleet, rich policies, notifications |
+| **Best for** | Single compose host, safety-first rollouts | Multi-host fleet, rich policies, notifications |
 | **Maturity** | Beta (early) | Beta (more features, 462+ tests) |
 
 We built Castellan because we wanted a **small, MIT-licensed, compose-native controller** we fully own — not a multi-service platform. If you need fleet management and don't mind BSL + Postgres, WatchWarden may be the better fit.
@@ -124,7 +119,7 @@ We built Castellan because we wanted a **small, MIT-licensed, compose-native con
 | Container metrics & logs | ❌ | ✅ |
 | HTTP API | ❌ | ✅ |
 | Digest-based change detection | ❌ | ✅ |
-| ECR rate-limit protection | ❌ | ✅ |
+| Registry polling with jitter & cache | ❌ | ✅ |
 | Mobile-responsive dashboard | ❌ | ✅ |
 
 
@@ -132,7 +127,7 @@ We built Castellan because we wanted a **small, MIT-licensed, compose-native con
 
 ## Deployment safety
 
-- **Registry polling** with tunable intervals, jitter, and ECR rate-limit protection.
+- **Registry polling** with tunable intervals, jitter, and caching.
 - **Digest-based change detection** — only restarts when the image digest actually changes, eliminating false pulls.
 - **Zero-downtime rolling restarts** for grouped compose services (`api-1`, `api-2`, etc.).
 - **Automatic rollback** on health-check failure with a persisted known-good digest and a bad-digest list.
@@ -151,10 +146,23 @@ We built Castellan because we wanted a **small, MIT-licensed, compose-native con
 
 - **Internal HTTP API** — typed RPC for dashboard, CLI, or automation.
 - **Watchtower compatibility mode** — optional label-based discovery for migration; config file recommended for full features.
-- **Registry-agnostic** — ECR first, with Docker Hub and GHCR support ready.
+- **Supported registries** — Amazon ECR, Docker Hub, GHCR, and other OCI Distribution v2 hosts (see [Supported registries](#supported-registries)).
 - **Bearer token auth** — secure the API in shared environments.
 - **YAML and JSON config** — use whichever format you prefer.
 - **Small, fast sidecar** — TypeScript, MIT licensed, published to npm and GHCR.
+
+# Supported registries
+
+Castellan polls image digests from these registries today:
+
+| Registry | Config `registry` value | Authentication |
+|---|---|---|
+| **Amazon ECR** | `{account}.dkr.ecr.{region}.amazonaws.com` | AWS credential chain (IAM role, env vars) |
+| **Docker Hub** | `docker.io` | Public images work without credentials; add `registries` for private repos |
+| **GitHub Container Registry** | `ghcr.io` | Public images work without credentials; PAT in `registries` for private repos |
+| **Other OCI Distribution v2** | any host | Standard Bearer token flow; optional `registries` credentials |
+
+Need another registry? [Open a PR](https://github.com/logfoxai/castellan/pulls) — most v2-compatible hosts work via the HTTP backend; dedicated backends are welcome for edge cases.
 
 # Quick start
 
@@ -170,7 +178,7 @@ services:
       - ./castellan-config.json:/app/config.json:ro
       - ./castellan-state:/app/state
     environment:
-      - AWS_REGION=us-east-2
+      - AWS_REGION=us-east-2  # only needed for ECR-hosted images
     networks:
       - backend
 
@@ -184,21 +192,38 @@ Create `castellan-config.json` (or `castellan-config.yaml`):
   "managedServices": [
     {
       "name": "api",
-      "registry": "123456789.dkr.ecr.us-east-2.amazonaws.com",
-      "repository": "api-service",
+      "registry": "ghcr.io",
+      "repository": "myorg/api-service",
       "tag": "latest",
       "composeServices": ["api-1", "api-2"],
       "healthUrl": "http://{{service}}:3000/health",
       "healthIntervalMs": 5000,
       "healthRetries": 10
+    },
+    {
+      "name": "worker",
+      "registry": "docker.io",
+      "repository": "myorg/worker",
+      "tag": "latest",
+      "composeServices": ["worker"],
+      "healthIntervalMs": 5000,
+      "healthRetries": 10
     }
   ],
+  "registries": {
+    "ghcr.io": {
+      "username": "my-github-username",
+      "password": "ghp_your_token"
+    }
+  },
   "poll": {
     "intervalMs": 60000,
     "jitterMs": 5000
   }
 }
 ```
+
+Public images on Docker Hub and GHCR do not need the `registries` block. Use it for private repositories or when your registry requires authenticated token exchange.
 
 Open the dashboard at `http://castellan:3003/` (or map a port to your host).
 
@@ -263,12 +288,23 @@ For grouped services (e.g. multiple API replicas that need zero-downtime rolling
   "api": {
     "port": 3003,
     "authToken": "optional-bearer-token"
+  },
+  "registries": {
+    "ghcr.io": {
+      "username": "my-github-username",
+      "password": "ghp_your_token"
+    },
+    "docker.io": {
+      "username": "my-dockerhub-username",
+      "password": "dckr_pat_..."
+    }
   }
 }
 ```
 
 - `healthUrl` may use `{{service}}` as a placeholder for the current compose service name.
 - `composeServices` is a list; when more than one is present, Castellan restarts them one at a time, waiting for health before proceeding.
+- `registries` is optional. Map registry hostnames to username/password credentials for private Docker Hub, GHCR, or other HTTP v2 registries. ECR uses the AWS credential chain instead.
 - YAML configs are supported — just use `config.yaml` or `config.yml` instead of `config.json`.
 
 # API

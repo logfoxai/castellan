@@ -46,7 +46,7 @@ async function main(): Promise<void> {
 
     const docker = new DockerClient(process.env.DOCKER_SOCKET ?? DEFAULT_SOCKET_PATH);
     const config = await loadConfigOrDiscover(docker, process.env.CASTELLAN_CONFIG);
-    const registry = new CachingRegistry(createRegistry(), config.poll.intervalMs);
+    const registry = new CachingRegistry(createRegistry(config.registries), config.poll.intervalMs);
     const statePath = process.env.CASTELLAN_STATE ?? DEFAULT_STATE_PATH;
     const state = new StateManager(statePath);
 

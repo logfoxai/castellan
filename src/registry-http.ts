@@ -1,6 +1,6 @@
 import {isManifestList, resolveManifestList} from './manifest.js';
 import type {Registry} from './registry.js';
-import type {RegistryImage, RegistryManifest} from './types.js';
+import type {RegistryCredentials, RegistryImage, RegistryManifest} from './types.js';
 
 const ACCEPT_HEADER = [
     'application/vnd.docker.distribution.manifest.v2+json',
@@ -11,11 +11,17 @@ const ACCEPT_HEADER = [
 
 export class HttpRegistry implements Registry {
 
+    constructor(
+        private readonly credentials: Record<string, RegistryCredentials> = {},
+        private readonly fetchImpl: typeof fetch = fetch,
+    ) {}
+
     async getManifest(image: RegistryImage): Promise<RegistryManifest> {
 
         const url = buildManifestUrl(image);
+        const auth = resolveCredentials(image.registry, this.credentials);
 
-        return fetchManifest(url, ACCEPT_HEADER);
+        return fetchManifest(url, ACCEPT_HEADER, auth, this.fetchImpl);
 
 }
 
@@ -57,10 +63,34 @@ function normalizeRepository(registry: string, repository: string): string {
 
 }
 
-async function fetchManifest(url: string, accept: string): Promise<RegistryManifest> {
+function resolveCredentials(
+    registry: string,
+    credentials: Record<string, RegistryCredentials>,
+): RegistryCredentials | undefined {
 
-    const response = await fetchWithTimeout(url, {headers: {Accept: accept}});
-    const tokenManifest = await tryTokenAuth(url, accept, response);
+    const normalized = normalizeRegistryHost(registry);
+
+    return credentials[registry]
+        ?? credentials[normalized]
+        ?? (normalized === 'registry-1.docker.io' ? credentials['docker.io'] : undefined);
+
+}
+
+function basicAuthHeader(credentials: RegistryCredentials): string {
+
+    return `Basic ${Buffer.from(`${credentials.username}:${credentials.password}`).toString('base64')}`;
+
+}
+
+async function fetchManifest(
+    url: string,
+    accept: string,
+    credentials: RegistryCredentials | undefined,
+    fetchImpl: typeof fetch,
+): Promise<RegistryManifest> {
+
+    const response = await fetchWithTimeout(url, {headers: {Accept: accept}}, fetchImpl);
+    const tokenManifest = await tryTokenAuth(url, accept, response, credentials, fetchImpl);
 
     if (tokenManifest) {
 
@@ -82,6 +112,8 @@ async function tryTokenAuth(
     url: string,
     accept: string,
     response: Response,
+    credentials: RegistryCredentials | undefined,
+    fetchImpl: typeof fetch,
 ): Promise<RegistryManifest | null> {
 
     if (response.status !== 401) {
@@ -90,7 +122,7 @@ async function tryTokenAuth(
 
 }
 
-    const token = await fetchToken(response.headers.get('www-authenticate'));
+    const token = await fetchToken(response.headers.get('www-authenticate'), credentials, fetchImpl);
 
     if (!token) {
 
@@ -103,7 +135,7 @@ async function tryTokenAuth(
             Accept: accept,
             Authorization: `Bearer ${token}`,
         },
-    });
+    }, fetchImpl);
 
     if (!retry.ok) {
 
@@ -147,7 +179,11 @@ async function readManifestResponse(response: Response): Promise<RegistryManifes
 
 }
 
-async function fetchToken(wwwAuthenticate: string | null): Promise<string | null> {
+async function fetchToken(
+    wwwAuthenticate: string | null,
+    credentials: RegistryCredentials | undefined,
+    fetchImpl: typeof fetch,
+): Promise<string | null> {
 
     if (!wwwAuthenticate || !wwwAuthenticate.toLowerCase().startsWith('bearer ')) {
 
@@ -171,7 +207,15 @@ async function fetchToken(wwwAuthenticate: string | null): Promise<string | null
 
 }
 
-    const response = await fetchWithTimeout(url);
+    const headers: Record<string, string> = {};
+
+    if (credentials) {
+
+        headers.Authorization = basicAuthHeader(credentials);
+
+}
+
+    const response = await fetchWithTimeout(url, {headers}, fetchImpl);
 
     if (!response.ok) {
 
@@ -208,14 +252,18 @@ function parseWWWAuthenticate(header: string): Record<string, string> {
 
 const FETCH_TIMEOUT_MS = 30_000;
 
-async function fetchWithTimeout(url: string, init: RequestInit = {}): Promise<Response> {
+async function fetchWithTimeout(
+    url: string,
+    init: RequestInit = {},
+    fetchImpl: typeof fetch = fetch,
+): Promise<Response> {
 
     const controller = new AbortController();
     const id = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS);
 
     try {
 
-        return await fetch(url, {...init, signal: controller.signal});
+        return await fetchImpl(url, {...init, signal: controller.signal});
 
 } finally {
 
