@@ -6,16 +6,17 @@ export function Header(): JSX.Element {
     return (
         <header className="header">
             <div className="container header-content">
-                <img src="/assets/castellan-logo-light.png" alt="Castellan" className="header-logo logo-light" />
-                <img src="/assets/castellan-logo-dark.png" alt="" aria-hidden="true" className="header-logo logo-dark" />
-                <div className="header-brand">
+                <div className="header-lockup">
+                    <img src="/assets/castellan-logo-light.png" alt="" className="header-logo logo-light" />
+                    <img src="/assets/castellan-logo-dark.png" alt="" aria-hidden="true" className="header-logo logo-dark" />
                     <h1>Castellan</h1>
-                    <p className="header-tagline">Deployment control &amp; monitoring for docker-compose</p>
                 </div>
                 <div className="header-controls">
                     <select
                         className="theme-select"
                         value={theme}
+                        aria-label="Color theme"
+                        title="Color theme"
                         onChange={(event) => setTheme(event.target.value as 'light' | 'dark' | 'system')}
                     >
                         <option value="system">System</option>
