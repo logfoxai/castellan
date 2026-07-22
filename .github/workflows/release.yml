@@ -60,6 +60,12 @@ jobs:
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
+      - name: Make GHCR package public
+        run: |
+          gh api --method PATCH \
+            "/orgs/${{ github.repository_owner }}/packages/container/castellan" \
+            -f visibility=public
+
       - run: npx autorel@^2
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
