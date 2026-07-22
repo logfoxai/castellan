@@ -497,6 +497,11 @@ button:hover {
   text-align: left;
 }
 
+.docker-head > span.num {
+  justify-self: end;
+  text-align: right;
+}
+
 .docker-row {
   padding: 7px 12px;
   margin: 0 -12px;
