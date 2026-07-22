@@ -9,8 +9,12 @@ export function StatusPanel(): JSX.Element {
 
     return (
         <section className="panel status-panel">
-            <h2>Service Status</h2>
-            <p className="empty">{data?.paused ? 'Polling paused' : 'Polling active'}</p>
+            <div className="panel-head">
+                <h2>Service Status</h2>
+                <span className={`poll-state${data?.paused ? ' paused' : ''}`}>
+                    {data?.paused ? 'Polling paused' : 'Polling active'}
+                </span>
+            </div>
             <div className="status-grid">
                 {(data?.services ?? []).map((service) => (
                     <div key={service.name} className={`status-card status-${service.state}`}>

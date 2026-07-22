@@ -13,22 +13,15 @@
   <a href="https://github.com/mhweiner/autorel"><img src="https://img.shields.io/badge/%F0%9F%9A%80%20AutoRel-2D4DDE" alt="AutoRel" /></a>
 </p>
 
-<h3 align="center">The drop-in Watchtower replacement — with rollback, zero-downtime, and a dashboard.</h3>
+<h3 align="center">The drop-in replacement for deprecated Watchtower.</h3>
 
 <p align="center">
-  <strong>Keep your existing <code>com.centurylinklabs.watchtower.enable=true</code> labels. Swap the sidecar. Done.</strong><br />
-  Castellan polls your registry, rolls your services safely, verifies health, and rolls back if anything breaks — plus a built-in Docker observability dashboard you can check from your phone.
+  Registry-aware deployments for docker-compose — with zero-downtime rollouts, automatic rollback, and a built-in observability dashboard.
 </p>
 
 <p align="center">
-  <img src="assets/screenshot.png" alt="Castellan dashboard in dark mode" width="100%" />
+  <img src="assets/screenshot.png" alt="Castellan dashboard" width="100%" />
 </p>
-
-<p align="center">
-  <img src="assets/screenshot-mobile.png" alt="Castellan dashboard on a phone" width="360px" />
-</p>
-
-<p align="center"><em>Works on your desktop, tablet, and phone. Check deployments from anywhere.</em></p>
 
 ## Why Castellan?
 
@@ -153,7 +146,11 @@ Open the dashboard at `http://castellan:3003/` (or map a port to your host).
 
 ## Migrating from Watchtower
 
-If you already use Watchtower labels, just add Castellan and remove Watchtower. No config file needed:
+**Keep your existing `com.centurylinklabs.watchtower.enable=true` labels. Swap the sidecar. Done.**
+
+[Watchtower](https://github.com/containrrr/watchtower) was archived in December 2025. Castellan reads the same labels, so migration is a one-line change: replace the Watchtower container with Castellan. No relabeling, no config rewrite.
+
+Remove your Watchtower service and add Castellan. No config file is needed for basic label-based updates:
 
 ```yaml
 services:
@@ -172,7 +169,9 @@ services:
       - com.centurylinklabs.watchtower.enable=true
 ```
 
-For grouped services (e.g. multiple API replicas), add a config file to enable rolling restarts.
+Castellan discovers every container carrying the Watchtower label and manages it immediately — same behavior you already rely on, plus health verification and rollback.
+
+For grouped services (e.g. multiple API replicas that need zero-downtime rolling restarts), add a config file — see [Configuration reference](#configuration-reference).
 
 ## Configuration reference
 
@@ -273,13 +272,73 @@ Have an idea? Open an issue or discussion.
 
 ## Security
 
-- Run the API behind your internal network or reverse proxy.
-- Set `api.authToken` to require a Bearer token.
+Castellan controls the Docker socket and can restart any container it manages. **Treat it as highly privileged infrastructure** — never expose it on the public internet.
+
+### Keep it internal (recommended)
+
+The safest deployment is **VPN-only access** with no public DNS or port mapping:
+
+1. **Do not publish port 3003** to your public NIC. Bind Castellan to `127.0.0.1:3003` inside the host.
+2. **Reverse-proxy through an internal edge** (Caddy, nginx, Traefik) that listens only on your VPN interface — e.g. Tailscale IP or `127.0.0.1`.
+3. **Use private DNS** so the dashboard is reachable only when connected to your VPN:
+   - Prod: `http://castellan.int.logfox.ai:8443/`
+   - Local: `http://castellan.local.logfox.test:8443/`
+   - Other envs: `http://castellan.<env>.logfox.ai:8443/`
+
+Example Caddy internal edge (binds to Tailscale IP, not the public NIC):
+
+```caddyfile
+{
+    auto_https off
+}
+
+http://castellan.int.logfox.ai:8443 {
+    bind {$TAILSCALE_IP}
+    reverse_proxy 127.0.0.1:3003
+}
+```
+
+Split DNS (Tailscale, CoreDNS, etc.) resolves `*.int.logfox.ai` to your compose host's Tailscale IP. Without VPN membership, the hostname does not resolve and the port is not reachable.
+
+### Require a Bearer token (defense in depth)
+
+Even on a private network, set `api.authToken` so every API and dashboard request requires authentication:
+
+```json
+{
+  "api": {
+    "port": 3003,
+    "authToken": "generate-a-long-random-secret"
+  }
+}
+```
+
+Clients send `Authorization: Bearer <token>`. The dashboard has a token input field that persists to `localStorage`.
+
+In production, store the token in a secrets manager and inject it at deploy time (Logfox uses AWS Secrets Manager via `host-config.json`).
+
+### Other hardening
+
 - Mount the Docker socket read-only if your runtime supports it; Castellan only needs the API surface it uses.
+- Run Castellan on an isolated Docker network; do not expose it alongside public-facing services without the internal edge pattern above.
+- Rotate `authToken` if it is ever leaked — Castellan reads config at startup.
 
 ## Built by the team behind [Logfox](https://logfox.ai)
 
 We build observability and deployment tools we actually want to use. If you like Castellan, star the repo and tell your friends.
+
+## More open-source tools from Logfox
+
+Castellan is part of a family of MIT-licensed tools we ship and dogfood. Same vibe: sharp CLIs, great TUIs, built for real ops work.
+
+| Tool | What it does |
+|------|--------------|
+| [**open-prs**](https://github.com/logfoxai/open-prs) | Live TUI + CLI dashboard for every open PR in a GitHub org — CI status, deploy tracking, clickable links. |
+| [**ecswatch**](https://github.com/logfoxai/ecswatch) | ECS service watcher with CI streaming, interactive TUI, and one-shot `inspect` snapshots. Optional LLM root-cause analysis. |
+| [**composewatch**](https://github.com/logfoxai/composewatch) | Sibling of ecswatch for Docker Compose stacks over Tailscale SSH — watch Watchtower/Castellan rollouts, health, and digests. |
+| [**runtyp**](https://github.com/logfoxai/runtyp) | Lightning-fast, zero-dependency runtime type validation for TypeScript and JavaScript. |
+
+All published to npm, released with [AutoRel](https://github.com/mhweiner/autorel), and designed to be useful outside Logfox too.
 
 ## License
 
