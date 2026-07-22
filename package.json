@@ -37,6 +37,7 @@
     "lint": "eslint . --fix",
     "lint:check": "eslint .",
     "screenshots": "npm run build:ui && node scripts/capture-screenshots.mjs",
+    "readme-lockup": "npm run build:ui && node scripts/capture-readme-lockup.mjs",
     "validate": "npm run build && npm run lint && npm test"
   },
   "dependencies": {
