@@ -3,7 +3,7 @@ import {existsSync} from 'fs';
 import path from 'path';
 import yaml from 'js-yaml';
 import type {DockerClient} from './docker.js';
-import type {Config, ManagedService, RegistryCredentials} from './types.js';
+import type {Config, ManagedService, RegistryCredentials, ApiConfig} from './types.js';
 import {discoverConfig} from './watchtower.js';
 
 const DEFAULT_CONFIG_PATHS = ['/app/config.json', '/app/config.yaml', '/app/config.yml'];
@@ -278,17 +278,19 @@ function normalizeRegistries(input: unknown): Record<string, RegistryCredentials
 
 }
 
-function normalizeApi(input: unknown): {port: number; authToken?: string} {
+function normalizeApi(input: unknown): ApiConfig {
 
     if (typeof input !== 'object' || input === null) {
 
-        return {port: 3003};
+        return {enabled: true, dashboard: true, port: 3003};
 
 }
 
     const a = input as Record<string, unknown>;
 
     return {
+        enabled: getBoolean(a, 'enabled', true),
+        dashboard: getBoolean(a, 'dashboard', true),
         port: getNumber(a, 'port', 3003),
         authToken: getOptionalString(a, 'authToken'),
     };
@@ -320,6 +322,26 @@ function getOptionalString(obj: Record<string, unknown>, key: string): string | 
     const value = obj[key];
 
     return value === undefined ? undefined : getString(obj, key);
+
+}
+
+function getBoolean(obj: Record<string, unknown>, key: string, defaultValue: boolean): boolean {
+
+    const value = obj[key];
+
+    if (value === undefined) {
+
+        return defaultValue;
+
+}
+
+    if (typeof value !== 'boolean') {
+
+        throw new Error(`Expected ${key} to be a boolean`);
+
+}
+
+    return value;
 
 }
 

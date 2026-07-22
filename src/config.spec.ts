@@ -257,8 +257,30 @@ test('normalizeConfig applies partial api defaults', async (assert) => {
         api: {authToken: 'secret'},
     });
 
+    assert.equal(config.api.enabled, true);
+    assert.equal(config.api.dashboard, true);
     assert.equal(config.api.port, 3003);
     assert.equal(config.api.authToken, 'secret');
+
+});
+
+test('normalizeConfig disables api and dashboard when configured', async (assert) => {
+
+    const headless = normalizeConfig({
+        managedServices: [],
+        api: {enabled: false},
+    });
+
+    assert.equal(headless.api.enabled, false);
+    assert.equal(headless.api.dashboard, true);
+
+    const apiOnly = normalizeConfig({
+        managedServices: [],
+        api: {enabled: true, dashboard: false},
+    });
+
+    assert.equal(apiOnly.api.enabled, true);
+    assert.equal(apiOnly.api.dashboard, false);
 
 });
 

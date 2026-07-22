@@ -6,7 +6,7 @@
 
   <h1>Castellan</h1>
 
-  <p><strong>Deployment control &amp; monitoring for docker-compose</strong></p>
+  <p><strong>Lightweight deployment control &amp; monitoring for docker-compose</strong></p>
 
   <p>
     <a href="https://github.com/logfoxai/castellan/actions/workflows/ci.yml"><img src="https://github.com/logfoxai/castellan/actions/workflows/ci.yml/badge.svg" alt="CI" /></a>
@@ -30,7 +30,7 @@
 
 # What is Castellan?
 
-Castellan is a **single-container sidecar** that sits beside your docker-compose stack. It:
+Castellan is a **lightweight, single-container sidecar** that sits beside your docker-compose stack. It:
 
 1. **Polls** your container registry for new image digests on a tunable schedule.
 2. **Deploys** updates via `docker compose` — rolling through grouped services (`api-1`, then `api-2`) so one replica stays up.
@@ -38,7 +38,7 @@ Castellan is a **single-container sidecar** that sits beside your docker-compose
 4. **Rolls back** automatically if a new digest fails — reverting to the last known-good image like an ECS circuit breaker.
 5. **Observes** everything from a self-hosted dashboard: digests, history, container metrics, logs.
 
-One image. No database. No separate controller. Dashboard included.
+One image. No database. No separate controller. Dashboard included — same sidecar footprint as Watchtower, with safety and observability built in.
 
 # Castellan vs Watchtower
 
@@ -55,7 +55,7 @@ Castellan is **not a clone of Watchtower**. It is a **safety-first deployment co
 | **Change detection** | Tag comparison | Digest comparison (no false pulls) |
 | **Dashboard** | None | Built-in, responsive, always included |
 | **Config** | Env vars + labels | JSON/YAML config + optional Watchtower labels |
-| **Footprint** | One container | One container |
+| **Footprint** | One container | One lightweight container (no DB, no extra services) |
 
 **Migrating from Watchtower?** Castellan can discover containers via the same `com.centurylinklabs.watchtower.enable=true` labels — swap the sidecar, keep your labels. For rolling restarts and rollback you will want a config file; see [Migrating from Watchtower](#migrating-from-watchtower).
 
@@ -68,60 +68,10 @@ Castellan is **not a clone of Watchtower**. It is a **safety-first deployment co
 - **Built-in observability** — dashboard with service status, deployment history, container CPU/memory/disk, and logs.
 - **Multi-registry support** — Amazon ECR, Docker Hub, GitHub Container Registry (GHCR), and any OCI Distribution v2 registry.
 - **Digest polling** — tunable intervals, jitter, and caching to stay within registry rate limits.
-- **Small footprint** — one TypeScript sidecar, MIT licensed, no PostgreSQL or multi-service stack.
+- **Lightweight** — one sidecar container, file-based state, no PostgreSQL or multi-service stack.
 - **Watchtower label compat** — optional; reads `com.centurylinklabs.watchtower.enable=true` for drop-in migration.
 
-## How alternatives compare
-
-Most tools marketed as "Watchtower replacements" solve a different problem or require a heavier stack. This table is honest about trade-offs — not every checkmark means "better for everyone."
-
-| Tool | Migration | Auto-update | Rollback | Zero-downtime | Dashboard | Notes |
-|---|---|---|---|---|---|---|
-| **Castellan** | Labels or config | ✅ | ✅ known-good | ✅ compose rolling | ✅ built-in | Single sidecar, MIT, compose-first |
-| [Watchtower](https://github.com/containrrr/watchtower) (archived) | — | ✅ | ❌ | ❌ | ❌ | Simple restarter; no safety net |
-| [nickfedor/watchtower](https://github.com/nicholas-fedor/watchtower) | ✅ swap image | ✅ | ❌ | ❌ | ❌ | Community fork of archived Watchtower |
-| [Lighthouse](https://github.com/grioghar/lighthouse) | ✅ `WATCHTOWER_*` + labels | ✅ | ❌ | ❌ | ❌ | Lightweight Watchtower fork |
-| [WatchWarden](https://github.com/watchwarden-labs/watchwarden) | ✅ `WATCHTOWER_*` env vars | ✅ | ✅ any version | ⚠️ per-container blue-green | ✅ managed mode | Feature-rich; BSL license; dashboard needs controller + Postgres |
-| [DockWarden](https://github.com/emon5122/dockwarden) | ⚠️ env remap | ✅ | ❌ | ❌ | optional | Watchtower-like with optional UI |
-| [WUD](https://github.com/getwud/wud) | ❌ `wud.*` labels | optional | ❌ | ❌ | ✅ | Monitor-first; auto-update optional |
-| [Diun](https://github.com/crazy-max/diun) | ❌ notify-only | ❌ | ❌ | ❌ | ❌ | Notifications only, no updates |
-| [freshdock](https://github.com/Turbootzz/freshdock) | ❌ `freshdock.*` labels | ✅ | ✅ | ❌ | ❌ | Per-container updates |
-
-**Reading the table:**
-- **Migration** — what you can keep from Watchtower. Castellan supports centurylinklabs labels; WatchWarden supports `WATCHTOWER_*` env vars in solo mode.
-- **Zero-downtime** varies: Castellan does compose-service rolling; WatchWarden does per-container blue-green (falls back to stop-first when ports conflict).
-- **Dashboard** — Castellan's ships in the same container. WatchWarden's dashboard requires the managed stack (controller + PostgreSQL + UI); solo agent mode has no UI.
-
-## Castellan vs WatchWarden (the serious alternative)
-
-[WatchWarden](https://github.com/watchwarden-labs/watchwarden) is the most feature-complete Watchtower successor — multi-host management, Trivy scanning, cosign verification, notifications, update groups, and a rich WebSocket dashboard. Worth evaluating if you need a fleet controller.
-
-Castellan targets a different sweet spot:
-
-| | Castellan | WatchWarden |
-|---|---|---|
-| **License** | MIT | BSL 1.1 |
-| **Deploy** | 1 sidecar | Agent; dashboard needs controller + Postgres + UI |
-| **Update model** | Compose rolling (`api-1` → `api-2`) | Per-container blue-green |
-| **Best for** | Single compose host, safety-first rollouts | Multi-host fleet, rich policies, notifications |
-| **Maturity** | Beta (early) | Beta (more features, 462+ tests) |
-
-We built Castellan because we wanted a **small, MIT-licensed, compose-native controller** we fully own — not a multi-service platform. If you need fleet management and don't mind BSL + Postgres, WatchWarden may be the better fit.
-
-## What you get beyond Watchtower
-
-| | Watchtower | Castellan |
-|---|---|---|
-| Compose rolling restarts | ❌ | ✅ |
-| Automatic rollback on failure | ❌ | ✅ |
-| Health-check verification | ❌ | ✅ |
-| Self-hosted dashboard | ❌ | ✅ |
-| Container metrics & logs | ❌ | ✅ |
-| HTTP API | ❌ | ✅ |
-| Digest-based change detection | ❌ | ✅ |
-| Registry polling with jitter & cache | ❌ | ✅ |
-| Mobile-responsive dashboard | ❌ | ✅ |
-
+See [docs/comparisons.md](docs/comparisons.md) for detailed comparisons with WatchWarden and other alternatives.
 
 # Features
 
@@ -147,9 +97,9 @@ We built Castellan because we wanted a **small, MIT-licensed, compose-native con
 - **Internal HTTP API** — typed RPC for dashboard, CLI, or automation.
 - **Watchtower compatibility mode** — optional label-based discovery for migration; config file recommended for full features.
 - **Supported registries** — Amazon ECR, Docker Hub, GHCR, and other OCI Distribution v2 hosts (see [Supported registries](#supported-registries)).
-- **Bearer token auth** — secure the API in shared environments.
+- **API secret auth** — shared API key for scripts/CLI; dashboard auth is automatic (see [Access & API auth](#access--api-auth)).
 - **YAML and JSON config** — use whichever format you prefer.
-- **Small, fast sidecar** — TypeScript, MIT licensed, published to npm and GHCR.
+- **Lightweight sidecar** — TypeScript, MIT licensed, published to npm and GHCR; dashboard and API ship in the same container.
 
 # Supported registries
 
@@ -225,6 +175,8 @@ Create `castellan-config.json` (or `castellan-config.yaml`):
 
 Public images on Docker Hub and GHCR do not need the `registries` block. Use it for private repositories or when your registry requires authenticated token exchange.
 
+Mount a **state volume** (as above). On first start, if you omit `api.authToken`, Castellan writes a random API secret to `./castellan-state/auth-token` — use that for curl/scripts; the dashboard still needs no login.
+
 Open the dashboard at `http://castellan:3003/` (or map a port to your host).
 
 # Migrating from Watchtower
@@ -286,21 +238,20 @@ For grouped services (e.g. multiple API replicas that need zero-downtime rolling
     "maxAttempts": 1
   },
   "api": {
-    "port": 3003,
-    "authToken": "optional-bearer-token"
-  },
-  "registries": {
-    "ghcr.io": {
-      "username": "my-github-username",
-      "password": "ghp_your_token"
-    },
-    "docker.io": {
-      "username": "my-dockerhub-username",
-      "password": "dckr_pat_..."
-    }
+    "port": 3003
   }
-}
 ```
+
+`api` options:
+
+| Key | Default | Description |
+|---|---|---|
+| `enabled` | `true` | When `false`, Castellan runs **headless** — polling and rollouts only, no HTTP server, no auth token generated. |
+| `dashboard` | `true` | When `false`, the RPC API on `/v1` still runs but the web UI at `/` is not served. Ignored when `enabled` is `false`. |
+| `port` | `3003` | HTTP listen port when `enabled` is `true`. |
+| `authToken` | *(auto)* | Optional API secret — see [Access & API auth](#access--api-auth). |
+
+`api.authToken` is optional — see [Access & API auth](#access--api-auth). If omitted, Castellan generates a secret on first start and saves it under your state directory (`auth-token`). Not used when `api.enabled` is `false`.
 
 - `healthUrl` may use `{{service}}` as a placeholder for the current compose service name.
 - `composeServices` is a list; when more than one is present, Castellan restarts them one at a time, waiting for health before proceeding.
@@ -309,10 +260,10 @@ For grouped services (e.g. multiple API replicas that need zero-downtime rolling
 
 # API
 
-Castellan exposes an internal HTTP API on port `3003`:
+When `api.enabled` is `true` (the default), Castellan exposes an internal HTTP API on port `3003`:
 
-- `GET /v1/health` — liveness.
-- `POST /v1` — typed RPC:
+- `GET /v1/health` — liveness (no auth).
+- `POST /v1` — typed RPC (requires API auth when enabled):
   - `status()` — service states and known-good digests.
   - `forceCheck()` — check registries immediately.
   - `pause()` / `resume()` — pause/resume polling.
@@ -321,17 +272,19 @@ Castellan exposes an internal HTTP API on port `3003`:
   - `dockerContainers()`, `dockerImages()`, `dockerNetworks()`, `dockerVolumes()` — Docker inspection.
   - `dockerLogs({ containerId, tail })`, `dockerStats({ containerId })`, `dockerInfo()`, `dockerEvents({ since })` — logs and stats.
 
-Set `api.authToken` in your config to require authentication. External clients (CLI, automation) send `Authorization: Bearer <token>`. The built-in dashboard authenticates automatically via a same-site session cookie the server sets when it serves the page — no token is ever entered in the browser.
+See [Access & API auth](#access--api-auth) for how authentication works.
+
+Set `api.enabled: false` for a **headless** deployment with zero HTTP surface (useful for compliance audits). Set `api.dashboard: false` to keep the RPC API for scripts while disabling the browser UI.
 
 # Dashboard
 
-The dashboard is built into the image and served at `/`. It gives you:
+When `api.dashboard` is `true` (the default), the dashboard is built into the image and served at `/`. It gives you:
 
 - Live service status with current vs desired image digests.
 - **Check now** and **Pause/Resume polling** controls.
 - Docker container table with live CPU, memory, disk usage, state, and one-click log viewing.
 - Deployment / rollback / failure history timeline.
-- Zero-config auth — authenticates via a same-site session cookie, no token to paste.
+- **No login screen** — open the URL and it works (see [Access & API auth](#access--api-auth)).
 - Fully responsive — works on phones, tablets, and desktops.
 - Light and dark mode with system preference detection.
 
@@ -362,9 +315,96 @@ Have an idea? Open an issue or discussion.
 
 Castellan controls the Docker socket and can restart any container it manages. **Treat it as highly privileged infrastructure** — never expose it on the public internet.
 
+## Access & API auth
+
+**Castellan is not user login.** There is no Clerk, no passwords, and no per-user accounts. You do not type a secret into the dashboard.
+
+Instead, two layers work together:
+
+| Layer | What it controls | How |
+|---|---|---|
+| **Network access** | Who can open the dashboard at all | VPN / Tailscale / internal DNS / not publishing port 3003 publicly |
+| **API secret** | Who can call `POST /v1` (including the dashboard’s background requests) | A single shared key — not per-user identity |
+
+### Dashboard (browser)
+
+1. You open Castellan over your private network (e.g. `http://castellan.int.logfox.ai:8443/` on VPN).
+2. Castellan serves the page and sets an **httpOnly session cookie** containing the API secret.
+3. The dashboard’s fetch calls send that cookie automatically.
+
+No login form. No token pasted in the UI. If someone cannot reach the URL on your network, they never see the dashboard.
+
+### curl, scripts, and future CLI
+
+These clients do not get the cookie. Send the shared secret as a header:
+
+```bash
+curl -sS -X POST http://127.0.0.1:3003/v1 \
+  -H 'Content-Type: application/json' \
+  -H 'Authorization: Bearer YOUR_API_SECRET' \
+  -d '{"method":"status"}'
+```
+
+### Where the API secret comes from
+
+Castellan picks a secret in this order:
+
+1. **`api.authToken` in config** — you set it explicitly (recommended for production).
+2. **`CASTELLAN_AUTH_TOKEN` env var** — override without editing config.
+3. **`auth-token` file in the state directory** — persisted from a previous run.
+4. **Auto-generated on first start** — if none of the above exist, Castellan creates a random secret, writes it to `<state-dir>/auth-token`, and logs the file path once.
+
+**Quick start / docker-compose:** mount a state volume (as in the example below). On first boot Castellan generates `auth-token` there — you only need that file if you want to call the API from curl or automation.
+
+**Production (Logfox):** inject a stable secret from AWS Secrets Manager via `host-config.json` → `write-castellan-config.sh` so every host shares a known token and nothing is auto-generated.
+
+```json
+{
+  "api": {
+    "port": 3003,
+    "authToken": "long-random-secret-from-secrets-manager"
+  }
+}
+```
+
+Rotate the secret by updating config (or the `auth-token` file) and restarting Castellan.
+
+### What this is not
+
+- **Not Clerk / Auth0 / OAuth** — no sign-in, no SSO, no audit trail per human user.
+- **Not a substitute for network security** — the API secret is defense in depth on top of VPN-only access, not a public login wall.
+
+If you need per-user identity, put Clerk (or similar) in front of Castellan at your reverse proxy. Castellan itself stays a single shared-secret ops tool.
+
+### Headless mode (auditing / compliance)
+
+For environments that must not expose any HTTP listener:
+
+```json
+{
+  "api": {
+    "enabled": false
+  }
+}
+```
+
+Castellan continues polling registries and performing rollouts. No port is bound, no dashboard, no RPC, and no `auth-token` file is created. Check deployment state via Docker logs and the persisted state file on disk.
+
+To keep automation (`curl` / future CLI) but drop the browser UI:
+
+```json
+{
+  "api": {
+    "enabled": true,
+    "dashboard": false,
+    "authToken": "your-secret"
+  }
+}
+```
+
 ## Keep it internal (recommended)
 
-The safest deployment is **VPN-only access** with no public DNS or port mapping:
+The primary gate is **network reachability**:
 
 1. **Do not publish port 3003** to your public NIC. Bind Castellan to `127.0.0.1:3003` inside the host.
 2. **Reverse-proxy through an internal edge** (Caddy, nginx, Traefik) that listens only on your VPN interface — e.g. Tailscale IP or `127.0.0.1`.
@@ -388,30 +428,11 @@ http://castellan.int.logfox.ai:8443 {
 
 Split DNS (Tailscale, CoreDNS, etc.) resolves `*.int.logfox.ai` to your compose host's Tailscale IP. Without VPN membership, the hostname does not resolve and the port is not reachable.
 
-## Require a Bearer token (defense in depth)
-
-Even on a private network, set `api.authToken` so every API request requires authentication:
-
-```json
-{
-  "api": {
-    "port": 3003,
-    "authToken": "generate-a-long-random-secret"
-  }
-}
-```
-
-**External clients** (CLI, curl, automation) send `Authorization: Bearer <token>`.
-
-**The dashboard authenticates itself.** When Castellan serves the dashboard, it sets an `httpOnly`, `SameSite=Strict` session cookie so the browser's API calls are authorized automatically — the token stays purely a server-side config value and is never entered or stored in the browser. The cookie is not readable by JavaScript, and because it is same-site it cannot be used in cross-site requests. Access to the dashboard is therefore gated by network reachability (keep it VPN-only, per above).
-
-In production, store the token in a secrets manager and inject it at deploy time (Logfox uses AWS Secrets Manager via `host-config.json`).
-
 ## Other hardening
 
 - Mount the Docker socket read-only if your runtime supports it; Castellan only needs the API surface it uses.
 - Run Castellan on an isolated Docker network; do not expose it alongside public-facing services without the internal edge pattern above.
-- Rotate `authToken` if it is ever leaked — Castellan reads config at startup.
+- Rotate the API secret if it is ever leaked — update config or delete `<state-dir>/auth-token` and restart (a new one will be generated unless config provides a replacement).
 
 # Built by the team behind [Logfox](https://logfox.ai)
 

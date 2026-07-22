@@ -1,7 +1,7 @@
 {
   "name": "castellan",
   "version": "0.0.0",
-  "description": "Beta. Deployment control and monitoring for docker-compose. Polls registries, rolling restarts with health verification, automatic rollback, and a built-in dashboard.",
+  "description": "Beta. Lightweight deployment control and monitoring for docker-compose. One sidecar — polls registries, rolling restarts with health verification, automatic rollback, and a built-in dashboard.",
   "keywords": [
     "docker",
     "docker-compose",
@@ -12,6 +12,7 @@
     "docker-hub",
     "rollback",
     "sidecar",
+    "lightweight",
     "containers",
     "devops",
     "typescript"

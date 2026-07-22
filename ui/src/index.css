@@ -108,14 +108,15 @@ body {
 .header-content {
   display: flex;
   align-items: center;
-  gap: 14px;
-  padding: 18px 28px;
+  gap: 16px;
+  padding: 20px 28px;
 }
 
 .header-logo {
-  width: 34px;
-  height: 34px;
+  width: 48px;
+  height: 48px;
   flex-shrink: 0;
+  object-fit: contain;
 }
 
 .header-logo.logo-dark {
