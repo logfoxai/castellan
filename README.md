@@ -1,64 +1,125 @@
 # Castellan
 
+<p align="center">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="assets/castellan-logo-dark.png" />
+    <img src="assets/castellan-logo-light.png" alt="Castellan logo" width="120" />
+  </picture>
+</p>
 
+<p align="center">
+  <a href="https://github.com/logfoxai/castellan/actions/workflows/ci.yml"><img src="https://github.com/logfoxai/castellan/actions/workflows/ci.yml/badge.svg" alt="CI" /></a>
+  <a href="https://github.com/logfoxai/castellan/actions/workflows/release.yml"><img src="https://github.com/logfoxai/castellan/actions/workflows/release.yml/badge.svg" alt="Release" /></a>
+  <a href="https://www.npmjs.com/package/castellan"><img src="https://img.shields.io/npm/v/castellan.svg" alt="npm" /></a>
+  <a href="https://opensource.org/licenses/MIT"><img src="https://img.shields.io/badge/License-MIT-blue.svg" alt="License: MIT" /></a>
+  <img src="https://img.shields.io/badge/status-beta-orange.svg" alt="Beta" />
+  <a href="https://github.com/mhweiner/autorel"><img src="https://img.shields.io/badge/%F0%9F%9A%80%20AutoRel-2D4DDE" alt="AutoRel" /></a>
+</p>
 
+<h3 align="center">Deployment control &amp; monitoring for docker-compose.</h3>
 
+<p align="center">
+  Polls your registry, rolls out updates safely, verifies health, rolls back on failure — with a built-in dashboard.
+</p>
 
-### The drop-in replacement for deprecated Watchtower.
+<p align="center">
+  <img src="assets/screenshot.png" alt="Castellan dashboard" width="100%" />
+</p>
 
-Registry-aware deployments for docker-compose — with zero-downtime rollouts, automatic rollback, and a built-in observability dashboard.
+> **Beta.** Castellan is actively developed and dogfooded by [Logfox](https://logfox.ai), but it has not seen wide production use outside our own stacks yet. Test in staging before trusting it with critical workloads. APIs and config may change before v1.0.
 
+## What is Castellan?
 
+Castellan is a **single-container sidecar** that sits beside your docker-compose stack. It:
+
+1. **Polls** your container registry (ECR-first) for new image digests on a tunable schedule.
+2. **Deploys** updates via `docker compose` — rolling through grouped services (`api-1`, then `api-2`) so one replica stays up.
+3. **Verifies** health with HTTP checks and Docker health status before continuing.
+4. **Rolls back** automatically if a new digest fails — reverting to the last known-good image like an ECS circuit breaker.
+5. **Observes** everything from a self-hosted dashboard: digests, history, container metrics, logs.
+
+One image. No database. No separate controller. Dashboard included.
+
+## Castellan vs Watchtower
+
+[Watchtower](https://containrrr.dev/watchtower/) was archived in December 2025. It was a **simple auto-updater**: poll the registry, pull new images, restart containers. That worked, but it had no health verification, no rollback, no zero-downtime strategy, and no UI.
+
+Castellan is **not a clone of Watchtower**. It is a **safety-first deployment controller** for docker-compose:
+
+| | Watchtower | Castellan |
+|---|---|---|
+| **Job** | Restart containers when a tag moves | Deploy new digests safely across compose services |
+| **Update strategy** | Stop and recreate (downtime) | Rolling restart across grouped compose services |
+| **Health checks** | None before/after update | HTTP + Docker health verification |
+| **Rollback** | None | Automatic revert to last known-good digest |
+| **Change detection** | Tag comparison | Digest comparison (no false pulls) |
+| **Dashboard** | None | Built-in, responsive, always included |
+| **Config** | Env vars + labels | JSON/YAML config + optional Watchtower labels |
+| **Footprint** | One container | One container |
+
+**Migrating from Watchtower?** Castellan can discover containers via the same `com.centurylinklabs.watchtower.enable=true` labels — swap the sidecar, keep your labels. For rolling restarts and rollback you will want a config file; see [Migrating from Watchtower](#migrating-from-watchtower).
+
+**Starting fresh?** Skip the Watchtower labels entirely and use JSON/YAML config — that is the recommended path for new deployments.
 
 ## Why Castellan?
 
-[Watchtower](https://containrrr.dev/watchtower/) was archived in December 2025. Most tools marketed as "alternatives" aren't drop-in replacements — they want new labels, new config, or a completely different workflow (notify-only, manual updates, GitOps PRs). Castellan is different:
+- **Compose-native rollouts** — restarts grouped services one at a time via `docker compose pull/up`, not blind container recreation.
+- **Automatic rollback** — failed health checks trigger revert to the last known-good digest; bad digests are remembered.
+- **Built-in observability** — dashboard with service status, deployment history, container CPU/memory/disk, and logs.
+- **ECR-first** — digest polling with tunable intervals, jitter, and rate-limit protection.
+- **Small footprint** — one TypeScript sidecar, MIT licensed, no PostgreSQL or multi-service stack.
+- **Watchtower label compat** — optional; reads `com.centurylinklabs.watchtower.enable=true` for drop-in migration.
 
-- **True drop-in** — uses the same `com.centurylinklabs.watchtower.enable=true` labels. Remove Watchtower, add Castellan, keep everything else.
-- **Safer updates** — rolling restarts and health verification, not blind restarts.
-- **Automatic rollback** — if a new image fails health checks, Castellan reverts to the last known-good digest like an ECS circuit breaker.
-- **Built-in observability** — live dashboard, deployment history, container logs, and health status in one place.
-- **Works on your phone** — the dashboard is fully responsive, so you can check deployments from anywhere without pinching or zooming.
-- **Extensible** — HTTP API, Bearer auth, YAML/JSON config, and ECR-first registry support.
+### How alternatives compare
 
-### Drop-in compatibility: Castellan vs the field
+Most tools marketed as "Watchtower replacements" solve a different problem or require a heavier stack. This table is honest about trade-offs — not every checkmark means "better for everyone."
 
-Most Watchtower "successors" require migration work. Here's how they actually compare:
+| Tool | Migration | Auto-update | Rollback | Zero-downtime | Dashboard | Notes |
+|---|---|---|---|---|---|---|
+| **Castellan** | Labels or config | ✅ | ✅ known-good | ✅ compose rolling | ✅ built-in | Single sidecar, MIT, compose-first |
+| [Watchtower](https://github.com/containrrr/watchtower) (archived) | — | ✅ | ❌ | ❌ | ❌ | Simple restarter; no safety net |
+| [nickfedor/watchtower](https://github.com/nicholas-fedor/watchtower) | ✅ swap image | ✅ | ❌ | ❌ | ❌ | Community fork of archived Watchtower |
+| [Lighthouse](https://github.com/grioghar/lighthouse) | ✅ `WATCHTOWER_*` + labels | ✅ | ❌ | ❌ | ❌ | Lightweight Watchtower fork |
+| [WatchWarden](https://github.com/watchwarden-labs/watchwarden) | ✅ `WATCHTOWER_*` env vars | ✅ | ✅ any version | ⚠️ per-container blue-green | ✅ managed mode | Feature-rich; BSL license; dashboard needs controller + Postgres |
+| [DockWarden](https://github.com/emon5122/dockwarden) | ⚠️ env remap | ✅ | ❌ | ❌ | optional | Watchtower-like with optional UI |
+| [WUD](https://github.com/getwud/wud) | ❌ `wud.*` labels | optional | ❌ | ❌ | ✅ | Monitor-first; auto-update optional |
+| [Diun](https://github.com/crazy-max/diun) | ❌ notify-only | ❌ | ❌ | ❌ | ❌ | Notifications only, no updates |
+| [freshdock](https://github.com/Turbootzz/freshdock) | ❌ `freshdock.*` labels | ✅ | ✅ | ❌ | ❌ | Per-container updates |
 
+**Reading the table:**
+- **Migration** — what you can keep from Watchtower. Castellan supports centurylinklabs labels; WatchWarden supports `WATCHTOWER_*` env vars in solo mode.
+- **Zero-downtime** varies: Castellan does compose-service rolling; WatchWarden does per-container blue-green (falls back to stop-first when ports conflict).
+- **Dashboard** — Castellan's ships in the same container. WatchWarden's dashboard requires the managed stack (controller + PostgreSQL + UI); solo agent mode has no UI.
 
-| Tool                                                                 | Drop-in?                  | Auto-update | Rollback | Zero-downtime | Dashboard |
-| -------------------------------------------------------------------- | ------------------------- | ----------- | -------- | ------------- | --------- |
-| **Castellan**                                                        | ✅ same labels             | ✅           | ✅        | ✅             | ✅         |
-| [Watchtower](https://github.com/containrrr/watchtower) (archived)    | —                         | ✅           | ❌        | ❌             | ❌         |
-| [nickfedor/watchtower](https://github.com/nicholas-fedor/watchtower) | ✅ swap image              | ✅           | ❌        | ❌             | ❌         |
-| [openserbia/watchtower](https://github.com/openserbia/watchtower)    | ✅ swap image              | ✅           | ❌        | ❌             | ❌         |
-| [Lighthouse](https://github.com/grioghar/lighthouse)                 | ✅ `WATCHTOWER_*` + labels | ✅           | ❌        | ❌             | ❌         |
-| [DockWarden](https://github.com/emon5122/dockwarden)                 | ⚠️ env var remap          | ✅           | ❌        | ❌             | optional  |
-| [WatchWarden](https://github.com/watchwarden-labs/watchwarden)       | ⚠️ env var remap          | ✅           | ✅        | partial       | ✅         |
-| [WUD](https://github.com/getwud/wud)                                 | ❌ new `wud.*` labels      | optional    | ❌        | ❌             | ✅         |
-| [Diun](https://github.com/crazy-max/diun)                            | ❌ notify-only             | ❌           | ❌        | ❌             | ❌         |
-| [freshdock](https://github.com/Turbootzz/freshdock)                  | ❌ `freshdock.*` labels    | ✅           | ✅        | ❌             | ❌         |
+### Castellan vs WatchWarden (the serious alternative)
 
+[WatchWarden](https://github.com/watchwarden-labs/watchwarden) is the most feature-complete Watchtower successor — multi-host management, Trivy scanning, cosign verification, notifications, update groups, and a rich WebSocket dashboard. Worth evaluating if you need a fleet controller.
 
-**Drop-in** means you can swap the container image and keep your existing Watchtower labels or environment variables with no config rewrite. Tools marked ⚠️ require remapping env vars. Tools marked ❌ need new labels, a new config model, or don't auto-update at all.
+Castellan targets a different sweet spot:
 
-Castellan is the only option that is label-compatible **and** adds rollback, zero-downtime rolling restarts, and a mobile-friendly observability dashboard.
+| | Castellan | WatchWarden |
+|---|---|---|
+| **License** | MIT | BSL 1.1 |
+| **Deploy** | 1 sidecar | Agent; dashboard needs controller + Postgres + UI |
+| **Update model** | Compose rolling (`api-1` → `api-2`) | Per-container blue-green |
+| **Best for** | Single compose host, ECR, safety-first rollouts | Multi-host fleet, rich policies, notifications |
+| **Maturity** | Beta (early) | Beta (more features, 462+ tests) |
+
+We built Castellan because we wanted a **small, MIT-licensed, compose-native controller** we fully own — not a multi-service platform. If you need fleet management and don't mind BSL + Postgres, WatchWarden may be the better fit.
 
 ### What you get beyond Watchtower
 
-
-|                               | Watchtower | Castellan |
-| ----------------------------- | ---------- | --------- |
-| Drop-in label compatibility   | ✅          | ✅         |
-| Zero-downtime rolling restart | ❌          | ✅         |
-| Automatic rollback on failure | ❌          | ✅         |
-| Health-check verification     | ❌          | ✅         |
-| Self-hosted dashboard         | ❌          | ✅         |
-| Container logs & inspection   | ❌          | ✅         |
-| HTTP API + CLI integration    | ❌          | ✅         |
-| Digest-based change detection | ❌          | ✅         |
-| ECR rate-limit protection     | ❌          | ✅         |
-| Mobile-responsive dashboard   | ❌          | ✅         |
+| | Watchtower | Castellan |
+|---|---|---|
+| Compose rolling restarts | ❌ | ✅ |
+| Automatic rollback on failure | ❌ | ✅ |
+| Health-check verification | ❌ | ✅ |
+| Self-hosted dashboard | ❌ | ✅ |
+| Container metrics & logs | ❌ | ✅ |
+| HTTP API | ❌ | ✅ |
+| Digest-based change detection | ❌ | ✅ |
+| ECR rate-limit protection | ❌ | ✅ |
+| Mobile-responsive dashboard | ❌ | ✅ |
 
 
 ## Features
@@ -69,7 +130,7 @@ Castellan is the only option that is label-compatible **and** adds rollback, zer
 - **Digest-based change detection** — only restarts when the image digest actually changes, eliminating false pulls.
 - **Zero-downtime rolling restarts** for grouped compose services (`api-1`, `api-2`, etc.).
 - **Automatic rollback** on health-check failure with a persisted known-good digest and a bad-digest list.
-- **Manual controls** — force a check, pause/resume polling, or trigger a rollback from the UI or API.
+- **Manual controls** — check now, pause/resume polling, or trigger a rollback from the UI or API.
 
 ### Observability hub
 
@@ -83,7 +144,7 @@ Castellan is the only option that is label-compatible **and** adds rollback, zer
 ### Integration & compatibility
 
 - **Internal HTTP API** — typed RPC for dashboard, CLI, or automation.
-- **Watchtower compatibility mode** — works with existing Watchtower labels, no config required.
+- **Watchtower compatibility mode** — optional label-based discovery for migration; config file recommended for full features.
 - **Registry-agnostic** — ECR first, with Docker Hub and GHCR support ready.
 - **Bearer token auth** — secure the API in shared environments.
 - **YAML and JSON config** — use whichever format you prefer.
@@ -137,11 +198,11 @@ Open the dashboard at `http://castellan:3003/` (or map a port to your host).
 
 ## Migrating from Watchtower
 
-**Keep your existing `com.centurylinklabs.watchtower.enable=true` labels. Swap the sidecar. Done.**
+Castellan can read the same `com.centurylinklabs.watchtower.enable=true` labels Watchtower used. Swap the sidecar and Castellan discovers labeled containers automatically.
 
-[Watchtower](https://github.com/containrrr/watchtower) was archived in December 2025. Castellan reads the same labels, so migration is a one-line change: replace the Watchtower container with Castellan. No relabeling, no config rewrite.
+For **rolling restarts, health verification, and rollback** — the features that make Castellan more than Watchtower — add a config file. Label-only mode works for basic auto-updates but skips the safety layer.
 
-Remove your Watchtower service and add Castellan. No config file is needed for basic label-based updates:
+Remove your Watchtower service and add Castellan. No config file needed for basic label-based updates:
 
 ```yaml
 services:
@@ -160,7 +221,7 @@ services:
       - com.centurylinklabs.watchtower.enable=true
 ```
 
-Castellan discovers every container carrying the Watchtower label and manages it immediately — same behavior you already rely on, plus health verification and rollback.
+Castellan discovers every container carrying the Watchtower label and manages it — same starting point as Watchtower, plus optional health verification and rollback when configured.
 
 For grouped services (e.g. multiple API replicas that need zero-downtime rolling restarts), add a config file — see [Configuration reference](#configuration-reference).
 
@@ -224,8 +285,8 @@ Set `api.authToken` in your config to require authentication. External clients (
 
 The dashboard is built into the image and served at `/`. It gives you:
 
--  Live service status with current vs desired image digests.
-- One-click **Force check**, **Pause**, and **Resume** controls.
+- Live service status with current vs desired image digests.
+- **Check now** and **Pause/Resume polling** controls.
 - Docker container table with live CPU, memory, disk usage, state, and one-click log viewing.
 - Deployment / rollback / failure history timeline.
 - Zero-config auth — authenticates via a same-site session cookie, no token to paste.
@@ -241,23 +302,17 @@ The dashboard is built into the image and served at `/`. It gives you:
 5. If health checks fail, it rolls back to the last known-good digest and marks the failing digest as bad.
 6. State is persisted atomically to a JSON file so restarts are safe.
 
-## Roadmap / ideas
+## Roadmap
 
-Castellan is already useful, but the sky is the limit. Ideas we are excited about:
+Castellan is beta — these are planned next, informed by what heavier alternatives like WatchWarden already ship:
 
-- **Container stats panel** — live CPU, memory, and network graphs for selected containers.
-- **Images, networks, and volumes views** — browse all Docker resources from the dashboard.
-- **Prometheus metrics export** — expose deployment counts, health results, and poll latency.
-- **Webhook / Slack / Discord notifications** — ping your team on deploy, rollback, or failure.
-- **CLI companion** — `castellan status`, `castellan force-check`, `castellan rollback <service>`.
-- **OpenAPI / REST spec** — a formal public API for integrations.
-- **Multi-host and Swarm support** — watch deployments across a fleet of nodes.
-- **Dry-run mode** — preview what would change without touching containers.
-- **Maintenance windows** — pause polling automatically during scheduled deploys.
-- **Image promotion & retention policies** — prune old images and keep only the last N known-good digests.
-- **Audit log** — immutable, exportable record of every deployment decision.
-- **Dark / light mode** and mobile-friendly dashboard.
-- **Alerting on health drift** — notify when a service has been unhealthy for too long.
+- **Notifications** — Slack/webhook on deploy, rollback, or failure.
+- **Prometheus metrics** — poll latency, deploy outcomes, health results.
+- **CLI companion** — `castellan status`, `castellan check`, `castellan rollback <service>`.
+- **Minimum update age** — hold a new digest for N minutes before deploying.
+- **Crash-loop detection** — rollback when a container restart-loops after update.
+- **Image diff preview** — show env/port changes before restart.
+- **Multi-host support** — manage several compose hosts from one place (maybe; today Castellan is single-host by design).
 
 Have an idea? Open an issue or discussion.
 
