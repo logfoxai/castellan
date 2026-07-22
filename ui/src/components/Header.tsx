@@ -15,7 +15,8 @@ export function Header(): JSX.Element {
     return (
         <header className="header">
             <div className="container header-content">
-                <img src="/assets/castellan-logo.png" alt="Castellan" className="header-logo" />
+                <img src="/assets/castellan-logo-light.png" alt="Castellan" className="header-logo logo-light" />
+                <img src="/assets/castellan-logo-dark.png" alt="" aria-hidden="true" className="header-logo logo-dark" />
                 <div className="header-brand">
                     <h1>Castellan</h1>
                     <p className="header-tagline">Drop-in Watchtower replacement for docker-compose</p>

@@ -115,8 +115,19 @@ body {
 .header-logo {
   width: 34px;
   height: 34px;
-  border-radius: 8px;
   flex-shrink: 0;
+}
+
+.header-logo.logo-dark {
+  display: none;
+}
+
+html[data-theme="dark"] .header-logo.logo-light {
+  display: none;
+}
+
+html[data-theme="dark"] .header-logo.logo-dark {
+  display: block;
 }
 
 .header-brand {

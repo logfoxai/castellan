@@ -1,7 +1,10 @@
 # Castellan
 
 <p align="center">
-  <img src="assets/castellan-logo.png" alt="Castellan logo" width="120" />
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="assets/castellan-logo-dark.png" />
+    <img src="assets/castellan-logo-light.png" alt="Castellan logo" width="120" />
+  </picture>
 </p>
 
 <p align="center">
