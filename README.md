@@ -1,10 +1,19 @@
-<h1 align="center">
-  <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="assets/castellan-logo-dark.png" />
-    <img src="assets/castellan-logo-light.png" alt="" width="52" style="vertical-align: middle; margin-right: 10px;" />
-  </picture>
-  Castellan
-</h1>
+<p align="center">
+  <table>
+    <tr>
+      <td valign="middle" style="padding-right: 16px;">
+        <picture>
+          <source media="(prefers-color-scheme: dark)" srcset="assets/castellan-logo-dark.png" />
+          <img src="assets/castellan-logo-light.png" alt="" width="80" />
+        </picture>
+      </td>
+      <td valign="middle" align="left">
+        <h1 style="margin: 0; line-height: 1.1;">Castellan</h1>
+        <strong>Deployment control &amp; monitoring for docker-compose.</strong>
+      </td>
+    </tr>
+  </table>
+</p>
 
 <p align="center">
   <a href="https://github.com/logfoxai/castellan/actions/workflows/ci.yml"><img src="https://github.com/logfoxai/castellan/actions/workflows/ci.yml/badge.svg" alt="CI" /></a>
@@ -14,8 +23,6 @@
   <img src="https://img.shields.io/badge/status-beta-orange.svg" alt="Beta" />
   <a href="https://github.com/mhweiner/autorel"><img src="https://img.shields.io/badge/%F0%9F%9A%80%20AutoRel-2D4DDE" alt="AutoRel" /></a>
 </p>
-
-<p align="center"><strong>Deployment control &amp; monitoring for docker-compose.</strong></p>
 
 <p align="center">
   Polls your registry, rolls out updates safely, verifies health, rolls back on failure — with a built-in dashboard.
