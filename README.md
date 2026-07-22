@@ -81,7 +81,7 @@ See [docs/comparisons.md](docs/comparisons.md) for detailed comparisons with Wat
 - **Supported registries** — Amazon ECR, Docker Hub, GHCR, and other OCI Distribution v2 hosts (see [Supported registries](#supported-registries)).
 - **API secret auth** — shared API key for scripts/CLI; dashboard auth is automatic (see [Access & API auth](#access--api-auth)).
 - **YAML and JSON config** — use whichever format you prefer.
-- **Lightweight sidecar** — TypeScript, MIT licensed, published to [GHCR](https://github.com/logfoxai/castellan/pkgs/container/castellan); dashboard and API ship in the same container.
+- **Lightweight sidecar** — TypeScript, MIT licensed, published to [Docker Hub](https://hub.docker.com/r/logfoxai/castellan); dashboard and API ship in the same container.
 
 # Supported registries
 
@@ -98,14 +98,14 @@ Need another registry? [Open a PR](https://github.com/logfoxai/castellan/pulls) 
 
 # Quick start
 
-Castellan runs as a Docker sidecar — pull `ghcr.io/logfoxai/castellan:latest` (or a release tag from GitHub). There is no npm package; the container is the distribution.
+Castellan runs as a Docker sidecar — pull `logfoxai/castellan:latest` (or a release tag from GitHub). There is no npm package; the container is the distribution.
 
 Add Castellan to your `docker-compose.yml`:
 
 ```yaml
 services:
   castellan:
-    image: ghcr.io/logfoxai/castellan:latest
+    image: logfoxai/castellan:latest
     restart: unless-stopped
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
@@ -151,6 +151,7 @@ Create `castellan-config.json` (or `castellan-config.yaml`):
     }
   },
   "poll": {
+    "enabled": true,
     "intervalMs": 60000,
     "jitterMs": 5000
   }
@@ -191,7 +192,9 @@ On Logfox hosts, `infra/scripts/write-castellan-config.sh` generates Castellan c
 }
 ```
 
-When GitHub Actions pushes a new `api-service:prime` image, the digest changes; Castellan rolls `api-1` and `api-2` with health checks. The tag string stays `prime`; the dashboard shows **deploying new build** while the rollout runs.
+When GitHub Actions pushes a new `api-service:prime` image, `deploy-compose-service` calls Castellan **`forceCheck`** over Tailscale. Castellan rolls `api-1` and `api-2` with health checks. If `forceCheck` fails, fallback polling (`castellan.poll` in host-config, default **30 minutes**) eventually picks up the new digest.
+
+Castellan does **not** manage itself — only api / ingest-worker / issue-worker appear in `managedServices`.
 
 ### Choosing tags
 
@@ -212,7 +215,7 @@ Remove your Watchtower service and add Castellan. No config file needed for basi
 ```yaml
 services:
   castellan:
-    image: ghcr.io/logfoxai/castellan:latest
+    image: logfoxai/castellan:latest
     restart: unless-stopped
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
@@ -252,6 +255,7 @@ For grouped services (e.g. multiple API replicas that need zero-downtime rolling
     "envFile": "/app/.env"
   },
   "poll": {
+    "enabled": true,
     "intervalMs": 60000,
     "jitterMs": 5000
   },
@@ -274,6 +278,14 @@ For grouped services (e.g. multiple API replicas that need zero-downtime rolling
 | `authToken` | *(auto)* | Optional API secret — see [Access & API auth](#access--api-auth). |
 
 `api.authToken` is optional — see [Access & API auth](#access--api-auth). If omitted, Castellan generates a secret on first start and saves it under your state directory (`auth-token`). Not used when `api.enabled` is `false`.
+
+`poll` options:
+
+| Key | Default | Description |
+|---|---|---|
+| `enabled` | `true` | When `false` (or `intervalMs` is `0`), periodic polling is off — use API **`forceCheck`** for deploys. |
+| `intervalMs` | `60000` | Milliseconds between registry checks when `enabled` is true. |
+| `jitterMs` | `5000` | Random extra delay per tick to avoid synchronized polls. |
 
 Each `managedServices` entry:
 

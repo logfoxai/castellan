@@ -3,7 +3,7 @@ import {existsSync} from 'fs';
 import path from 'path';
 import yaml from 'js-yaml';
 import type {DockerClient} from './docker.js';
-import type {Config, ManagedService, RegistryCredentials, ApiConfig} from './types.js';
+import type {Config, ManagedService, RegistryCredentials, ApiConfig, PollConfig} from './types.js';
 import {discoverConfig} from './watchtower.js';
 
 const DEFAULT_CONFIG_PATHS = ['/app/config.json', '/app/config.yaml', '/app/config.yml'];
@@ -207,18 +207,21 @@ function normalizeCompose(input: unknown): {file: string; project?: string; envF
 
 }
 
-function normalizePoll(input: unknown): {intervalMs: number; jitterMs: number} {
+function normalizePoll(input: unknown): PollConfig {
 
     if (typeof input !== 'object' || input === null) {
 
-        return {intervalMs: 60000, jitterMs: 5000};
+        return {enabled: true, intervalMs: 60000, jitterMs: 5000};
 
 }
 
     const p = input as Record<string, unknown>;
+    const intervalMs = getNumber(p, 'intervalMs', 60000);
+    const enabled = getBoolean(p, 'enabled', intervalMs > 0);
 
     return {
-        intervalMs: getNumber(p, 'intervalMs', 60000),
+        enabled: enabled && intervalMs > 0,
+        intervalMs,
         jitterMs: getNumber(p, 'jitterMs', 5000),
     };
 

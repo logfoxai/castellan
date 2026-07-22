@@ -233,8 +233,32 @@ test('normalizeConfig applies partial poll defaults', async (assert) => {
         poll: {intervalMs: 10000},
     });
 
+    assert.equal(config.poll.enabled, true);
     assert.equal(config.poll.intervalMs, 10000);
     assert.equal(config.poll.jitterMs, 5000);
+
+});
+
+test('normalizeConfig disables poll when enabled is false', async (assert) => {
+
+    const config = normalizeConfig({
+        managedServices: [],
+        poll: {enabled: false, intervalMs: 60000},
+    });
+
+    assert.equal(config.poll.enabled, false);
+
+});
+
+test('normalizeConfig disables poll when intervalMs is zero', async (assert) => {
+
+    const config = normalizeConfig({
+        managedServices: [],
+        poll: {intervalMs: 0},
+    });
+
+    assert.equal(config.poll.enabled, false);
+    assert.equal(config.poll.intervalMs, 0);
 
 });
 

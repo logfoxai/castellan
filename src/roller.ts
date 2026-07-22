@@ -145,6 +145,18 @@ export class Roller {
 }
 
         this.running = true;
+
+        if (!this.config.poll.enabled) {
+
+            console.log(
+                'Periodic registry polling disabled (poll.enabled=false or poll.intervalMs=0); '
+                + 'use API forceCheck to deploy',
+            );
+
+            return;
+
+}
+
         this.scheduleNext();
 
 }
