@@ -1,7 +1,7 @@
 {
   "name": "castellan",
   "version": "0.0.0",
-  "description": "Drop-in Watchtower replacement for docker-compose. Polls registries, restarts services with zero downtime, rolls back on failure, and includes a built-in observability dashboard.",
+  "description": "Beta. Deployment control and monitoring for docker-compose. Polls registries, rolling restarts with health verification, automatic rollback, and a built-in dashboard.",
   "keywords": [
     "docker",
     "docker-compose",
