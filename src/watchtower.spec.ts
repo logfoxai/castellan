@@ -61,8 +61,10 @@ test('hasDiscoveryLabel accepts Castellan and Watchtower opt-in labels', (assert
     assert.equal(hasDiscoveryLabel({}), false);
     assert.equal(hasDiscoveryLabel({[CASTELLAN_AUTUPDATE_LABEL]: 'false'}), false);
     assert.equal(hasDiscoveryLabel({[WATCHTOWER_ENABLE_LABEL]: 'false'}), false);
+    assert.equal(hasDiscoveryLabel({[CASTELLAN_AUTUPDATE_LABEL]: ''}), true);
     assert.equal(hasDiscoveryLabel({[CASTELLAN_AUTUPDATE_LABEL]: 'true'}), true);
     assert.equal(hasDiscoveryLabel({[WATCHTOWER_ENABLE_LABEL]: 'true'}), true);
+    assert.equal(hasDiscoveryLabel({[WATCHTOWER_ENABLE_LABEL]: 'yes'}), false);
 
 });
 
@@ -78,7 +80,7 @@ test('discoverConfig discovers containers with Castellan autoupdate label', asyn
                 Labels: {
                     'com.docker.compose.service': 'api',
                     'com.docker.compose.project': 'myapp',
-                    [CASTELLAN_AUTUPDATE_LABEL]: 'true',
+                    [CASTELLAN_AUTUPDATE_LABEL]: '',
                 },
                 State: 'running',
                 Status: 'Up 1 hour',

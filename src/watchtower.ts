@@ -21,7 +21,15 @@ export function hasDiscoveryLabel(labels: Record<string, string> | undefined): b
 
 }
 
-    return DISCOVERY_LABELS.some((key) => labels[key] === 'true');
+    const castellan = labels[CASTELLAN_AUTUPDATE_LABEL];
+
+    if (castellan !== undefined && castellan !== 'false') {
+
+        return true;
+
+}
+
+    return labels[WATCHTOWER_ENABLE_LABEL] === 'true';
 
 }
 

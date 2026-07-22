@@ -32,7 +32,7 @@ Castellan is a **single-container sidecar** for docker-compose. It watches conta
 
 ## Watchtower compatible
 
-Migrating from [Watchtower](https://containrrr.dev/watchtower/)? Castellan supports **opt-in label discovery** — the same model as Watchtower with `--label-enable`. Label the compose services you want updated; unlabeled containers are ignored. Use **`ai.logfox.castellan.autoupdate=true`** (recommended) or keep the legacy **`com.centurylinklabs.watchtower.enable=true`**. This is **not** Watchtower’s default “update every running container” mode. Details: [Label discovery](#label-discovery-watchtower-compatible).
+Migrating from [Watchtower](https://containrrr.dev/watchtower/)? Castellan supports **opt-in label discovery** — the same model as Watchtower with `--label-enable`. Label the compose services you want updated; unlabeled containers are ignored. Use **`ai.logfox.castellan.autoupdate`** (recommended) or keep the legacy **`com.centurylinklabs.watchtower.enable=true`**. This is **not** Watchtower’s default “update every running container” mode. Details: [Label discovery](#label-discovery-watchtower-compatible).
 
 ## What it does
 
@@ -52,7 +52,7 @@ Castellan supports **config file** mode and **label discovery** mode. You pick o
 | | **[Label discovery](#label-discovery-watchtower-compatible)** | **[Config file](#config-file-recommended)** |
 |---|---|---|
 | **Config file** | Not required | JSON or YAML (`config.json`, etc.) |
-| **How services are chosen** | Containers with `ai.logfox.castellan.autoupdate=true` or legacy Watchtower label | Explicit `managedServices` list |
+| **How services are chosen** | Containers with `ai.logfox.castellan.autoupdate` or legacy Watchtower `enable=true` | Explicit `managedServices` list |
 | **Which tag is watched** | Parsed from each container’s **running** image (e.g. `:latest` → watches `latest`) | Tag you set in config (e.g. `staging`) |
 | **Rolling restarts** | One compose service per container | Group replicas: `composeServices: ["api-1", "api-2"]` |
 | **HTTP health URLs** | Docker healthchecks only | `healthUrl` per service |
@@ -105,7 +105,7 @@ services:
   my-service:
     image: myorg/my-service:staging
     labels:
-      - ai.logfox.castellan.autoupdate=true
+      - ai.logfox.castellan.autoupdate
 ```
 
 **Config file** — rolling restarts, health URLs, private registries:
@@ -155,16 +155,16 @@ Full examples: [Setup paths](#setup-paths) · [Configuration reference](#configu
 
 ## Label discovery (Watchtower compatible)
 
-If Castellan starts **without** a config file, it scans running containers for an **opt-in autoupdate label**. A container is managed when **either** label is `true`:
+If Castellan starts **without** a config file, it scans running containers for an **opt-in autoupdate label**:
 
-| Label | Notes |
+| Label | Match rule |
 |---|---|
-| **`ai.logfox.castellan.autoupdate=true`** | Castellan native (recommended for new compose files) |
-| **`com.centurylinklabs.watchtower.enable=true`** | Legacy Watchtower opt-in label |
+| **`ai.logfox.castellan.autoupdate`** | Label present (any value, or none). Set to `false` to opt out. |
+| **`com.centurylinklabs.watchtower.enable=true`** | Legacy Watchtower opt-in — value must be `true`. |
 
 ```yaml
 labels:
-  - ai.logfox.castellan.autoupdate=true
+  - ai.logfox.castellan.autoupdate
 ```
 
 Watchtower users: this matches **`watchtower --label-enable`** — only labeled services are updated. Castellan does **not** mirror Watchtower’s default mode (update all containers except those labeled `enable=false`). If you relied on default-all Watchtower, add an autoupdate label to each service you want managed (or use a [config file](#config-file-recommended)).
@@ -176,7 +176,7 @@ For each labeled container Castellan builds a managed service from:
 
 Discovery runs **once at startup**. One labeled container → one compose service restarted at a time. Docker healthchecks apply; there is no `healthUrl` or `registries` block without a config file.
 
-Remove Watchtower, add Castellan, keep legacy labels or switch to `ai.logfox.castellan.autoupdate=true` — one line per service.
+Remove Watchtower, add Castellan, keep legacy labels or switch to `ai.logfox.castellan.autoupdate` — one line per service.
 
 When you outgrow label-only mode — grouped rolling restarts, explicit tags, HTTP health probes, private registry auth — add a config file. Mounting `config.json` (or setting `CASTELLAN_CONFIG`) **takes precedence**; label discovery is skipped.
 

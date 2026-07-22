@@ -15,7 +15,7 @@ Most tools marketed as "Watchtower replacements" solve a different problem or re
 | [freshdock](https://github.com/Turbootzz/freshdock) | ❌ `freshdock.*` labels | ✅ | ✅ | ❌ | ❌ | Per-container updates |
 
 **Reading the table:**
-- **Migration** — what you can keep from Watchtower. Castellan supports Watchtower’s opt-in label (`com.centurylinklabs.watchtower.enable=true`) and native `ai.logfox.castellan.autoupdate=true`; not Watchtower’s default watch-all mode. WatchWarden supports `WATCHTOWER_*` env vars in solo mode.
+- **Migration** — what you can keep from Watchtower. Castellan supports Watchtower’s opt-in label (`com.centurylinklabs.watchtower.enable=true`) and native `ai.logfox.castellan.autoupdate` (label present); not Watchtower’s default watch-all mode. WatchWarden supports `WATCHTOWER_*` env vars in solo mode.
 - **Zero-downtime** varies: Castellan does compose-service rolling; WatchWarden does per-container blue-green (falls back to stop-first when ports conflict).
 - **Dashboard** — Castellan's ships in the same container (optional — disable via `api.dashboard: false` or run fully headless with `api.enabled: false`). WatchWarden's dashboard requires the managed stack (controller + PostgreSQL + UI); solo agent mode has no UI.
 
