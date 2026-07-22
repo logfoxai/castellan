@@ -108,13 +108,21 @@ body {
 .header-content {
   display: flex;
   align-items: center;
+  justify-content: space-between;
   gap: 16px;
-  padding: 20px 28px;
+  padding: 12px 28px;
+}
+
+.header-lockup {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
 }
 
 .header-logo {
-  width: 48px;
-  height: 48px;
+  width: 32px;
+  height: 32px;
   flex-shrink: 0;
   object-fit: contain;
 }
@@ -131,25 +139,13 @@ html[data-theme="dark"] .header-logo.logo-dark {
   display: block;
 }
 
-.header-brand {
-  display: flex;
-  flex-direction: column;
-  flex: 1;
-  min-width: 0;
-}
-
 .header h1 {
   margin: 0;
-  font-size: 1.15rem;
+  font-size: 1.05rem;
   font-weight: 650;
   letter-spacing: -0.02em;
-  line-height: 1.2;
-}
-
-.header-tagline {
-  margin: 0;
-  font-size: 0.82rem;
-  color: var(--muted);
+  line-height: 1;
+  white-space: nowrap;
 }
 
 .header-controls {
@@ -355,6 +351,25 @@ button:hover {
 .status-rollback .status-badge { color: var(--error); }
 .status-idle .status-badge { color: var(--muted); }
 
+.status-version {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.status-image-ref {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-size: 0.92rem;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.status-version-note {
+  font-size: 0.76rem;
+  color: var(--muted);
+  text-transform: lowercase;
+}
+
 .status-meta {
   font-size: 0.78rem;
   color: var(--muted);
@@ -376,6 +391,56 @@ button:hover {
   overflow-wrap: anywhere;
 }
 
+.status-error {
+  color: var(--error);
+}
+
+.status-details {
+  font-size: 0.74rem;
+  color: var(--muted);
+}
+
+.status-details summary {
+  cursor: pointer;
+  user-select: none;
+  color: var(--muted);
+}
+
+.status-details summary:hover {
+  color: var(--text);
+}
+
+.status-details dl {
+  margin: 10px 0 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.status-details dl > div {
+  display: grid;
+  grid-template-columns: 7.5rem minmax(0, 1fr);
+  gap: 8px;
+  align-items: baseline;
+}
+
+.status-details dt {
+  margin: 0;
+  color: var(--muted);
+}
+
+.status-details dd {
+  margin: 0;
+  min-width: 0;
+}
+
+.status-details code {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  color: var(--text);
+  font-size: 0.72rem;
+  overflow-wrap: anywhere;
+}
+
 /* ---------- History list ---------- */
 
 .history-list {
@@ -390,7 +455,7 @@ button:hover {
 
 .docker-table {
   display: grid;
-  grid-template-columns: minmax(0, 2.4fr) 0.9fr 1.3fr 0.9fr auto;
+  grid-template-columns: minmax(0, 2.6fr) 1fr 1.5fr 0.9fr;
   column-gap: 16px;
 }
 
@@ -404,6 +469,7 @@ button:hover {
 
 .docker-head {
   padding: 0 12px 10px;
+  margin: 0 -12px;
   font-size: 0.68rem;
   font-weight: 650;
   text-transform: uppercase;
@@ -411,13 +477,9 @@ button:hover {
   color: var(--muted);
 }
 
-.docker-head > span:first-child {
+.docker-head > span {
   justify-self: start;
-}
-
-.docker-head .num {
-  justify-self: end;
-  text-align: right;
+  text-align: left;
 }
 
 .docker-row {
@@ -441,7 +503,7 @@ button:hover {
   padding: 0;
   display: flex;
   flex-direction: column;
-  gap: 1px;
+  gap: 3px;
   min-width: 0;
   text-align: left;
 }
@@ -453,6 +515,11 @@ button:hover {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+.docker-state {
+  align-self: flex-start;
+  font-size: 0.72rem;
 }
 
 .docker-image {
@@ -485,6 +552,59 @@ button:hover {
   font-style: normal;
   font-size: 0.72rem;
   margin-left: 6px;
+}
+
+.docker-metric {
+  display: inline-flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.docker-metric-value {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 0;
+}
+
+.usage-ring {
+  display: inline-flex;
+  flex-shrink: 0;
+  width: 18px;
+  height: 18px;
+}
+
+.usage-ring svg {
+  width: 18px;
+  height: 18px;
+  transform: rotate(-90deg);
+}
+
+.usage-ring-track,
+.usage-ring-fill {
+  fill: none;
+  stroke-width: 3;
+}
+
+.usage-ring-track {
+  stroke: var(--border);
+}
+
+.usage-ring-fill {
+  stroke-linecap: round;
+  transition: stroke-dashoffset 0.25s ease;
+}
+
+.usage-ring-cpu .usage-ring-fill {
+  stroke: var(--accent);
+}
+
+.usage-ring-memory .usage-ring-fill {
+  stroke: #7c9cff;
+}
+
+html[data-theme="light"] .usage-ring-memory .usage-ring-fill {
+  stroke: #4f6fd8;
 }
 
 .mlabel {
@@ -610,19 +730,16 @@ button:hover {
   }
 
   .header-content {
-    flex-wrap: wrap;
     gap: 12px;
-    padding: 16px 18px;
+    padding: 12px 18px;
   }
 
   .header-controls {
-    flex: 1 1 100%;
-    justify-content: flex-end;
+    flex-shrink: 0;
   }
 
   .theme-select {
     min-width: 0;
-    flex: 1;
   }
 
   main.container {
@@ -650,7 +767,7 @@ button:hover {
   }
 
   .docker-table {
-    grid-template-columns: 1fr 1fr 1fr;
+    grid-template-columns: 1fr 1fr;
     column-gap: 10px;
     row-gap: 8px;
   }
@@ -660,18 +777,18 @@ button:hover {
   }
 
   .docker-name {
-    grid-column: 1 / span 2;
-    grid-row: 1;
-  }
-
-  .docker-row .right {
-    grid-column: 3;
+    grid-column: 1 / -1;
     grid-row: 1;
   }
 
   .docker-row .num {
     grid-row: 2;
     text-align: left;
+    justify-self: start;
+  }
+
+  .docker-metric {
+    justify-content: flex-start;
   }
 
   .mlabel {
@@ -685,12 +802,11 @@ button:hover {
 }
 
 @media (max-width: 480px) {
-  .header-controls {
-    flex-direction: column;
-    align-items: stretch;
+  .header h1 {
+    font-size: 1rem;
   }
 
-  .header h1 {
-    font-size: 1.05rem;
+  .theme-select {
+    min-width: 88px;
   }
 }

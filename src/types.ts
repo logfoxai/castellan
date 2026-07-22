@@ -70,6 +70,9 @@ export type ServiceState =
 
 export type ServiceRuntime = {
     name: string;
+    registry: string;
+    repository: string;
+    tag: string;
     state: ServiceState;
     currentDigest: string | null;
     desiredDigest: string | null;

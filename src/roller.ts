@@ -35,7 +35,7 @@ export class Roller {
 
         for (const service of config.managedServices) {
 
-            const runtime = createRuntime(service.name);
+            const runtime = createRuntime(service);
             const knownGood = this.state.getKnownGood(service.name);
 
             if (knownGood) {
@@ -742,10 +742,13 @@ export class Roller {
 
 }
 
-function createRuntime(name: string): ServiceRuntime {
+function createRuntime(service: ManagedService): ServiceRuntime {
 
     return {
-        name,
+        name: service.name,
+        registry: service.registry,
+        repository: service.repository,
+        tag: service.tag,
         state: 'idle',
         currentDigest: null,
         desiredDigest: null,

@@ -1,5 +1,7 @@
 import {usePolling} from '../hooks/usePolling.js';
 import {rpc} from '../api.js';
+import type {ServiceStatus} from '../api.js';
+import {formatDigestShort, formatServiceImageRef, serviceVersionNote} from '../serviceDisplay.js';
 
 export function StatusPanel(): JSX.Element {
     const {data, error, loading, refresh} = usePolling(() => rpc('status'), 5000);
@@ -24,24 +26,7 @@ export function StatusPanel(): JSX.Element {
             </div>
             <div className="status-grid">
                 {(data?.services ?? []).map((service) => (
-                    <div key={service.name} className={`status-card status-${service.state}`}>
-                        <div className="status-card-header">
-                            <strong>{service.name}</strong>
-                            <span className="status-badge">{service.state}</span>
-                        </div>
-                        <div className="status-meta">
-                            <span>
-                                Current: <code>{service.currentDigest ? service.currentDigest.slice(0, 19) : 'unknown'}</code>
-                            </span>
-                            <span>
-                                Desired: <code>{service.desiredDigest ? service.desiredDigest.slice(0, 19) : 'unknown'}</code>
-                            </span>
-                            <span>
-                                Last check: {service.lastCheckAt ? new Date(service.lastCheckAt).toLocaleTimeString() : 'never'}
-                            </span>
-                            {service.lastError ? <span style={{color: 'var(--error)'}}>{service.lastError}</span> : null}
-                        </div>
-                    </div>
+                    <ServiceCard key={service.name} service={service} />
                 ))}
             </div>
             <div className="actions">
@@ -72,5 +57,64 @@ export function StatusPanel(): JSX.Element {
                 pausing stops automatic updates until you resume.
             </p>
         </section>
+    );
+}
+
+function ServiceCard({service}: { service: ServiceStatus }): JSX.Element {
+    const inSync = Boolean(
+        service.currentDigest
+        && service.desiredDigest
+        && service.currentDigest === service.desiredDigest,
+    );
+    const fullImage = `${service.registry}/${formatServiceImageRef(service)}`;
+
+    return (
+        <div className={`status-card status-${service.state}`}>
+            <div className="status-card-header">
+                <strong>{service.name}</strong>
+                <span className="status-badge">{service.state}</span>
+            </div>
+            <div className="status-version">
+                <code className="status-image-ref">{formatServiceImageRef(service)}</code>
+                <span className="status-version-note">{serviceVersionNote(service)}</span>
+            </div>
+            <div className="status-meta">
+                <span>
+                    Last check: {service.lastCheckAt ? new Date(service.lastCheckAt).toLocaleTimeString() : 'never'}
+                </span>
+                {service.lastError ? <span className="status-error">{service.lastError}</span> : null}
+            </div>
+            <details className="status-details">
+                <summary>{inSync ? 'Image details' : 'Image details · digest changed'}</summary>
+                <dl>
+                    <div>
+                        <dt>Watched tag</dt>
+                        <dd><code>{service.tag}</code></dd>
+                    </div>
+                    <div>
+                        <dt>Full image</dt>
+                        <dd><code>{fullImage}</code></dd>
+                    </div>
+                    <div>
+                        <dt>Running digest</dt>
+                        <dd><code>{service.currentDigest ?? 'unknown'}</code></dd>
+                    </div>
+                    <div>
+                        <dt>Registry digest</dt>
+                        <dd><code>{service.desiredDigest ?? 'unknown'}</code></dd>
+                    </div>
+                    {!inSync && service.currentDigest && service.desiredDigest ? (
+                        <div>
+                            <dt>Change</dt>
+                            <dd>
+                                <code>{formatDigestShort(service.currentDigest)}</code>
+                                {' → '}
+                                <code>{formatDigestShort(service.desiredDigest)}</code>
+                            </dd>
+                        </div>
+                    ) : null}
+                </dl>
+            </details>
+        </div>
     );
 }
