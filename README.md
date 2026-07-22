@@ -30,6 +30,10 @@
 
 Castellan is a **single-container sidecar** for docker-compose. It watches container images in a registry, redeploys when something new is published, and optionally gives you a dashboard and HTTP API. No database — just a config file (optional) and a state directory.
 
+## Watchtower compatible
+
+Migrating from [Watchtower](https://containrrr.dev/watchtower/)? Castellan supports **opt-in label discovery** — the same model as Watchtower with `--label-enable`. Label the compose services you want updated; unlabeled containers are ignored. Use **`ai.logfox.castellan.autoupdate`** (recommended) or keep the legacy **`com.centurylinklabs.watchtower.enable=true`**. This is **not** Watchtower’s default “update every running container” mode. Details: [Label discovery](#label-discovery-watchtower-compatible).
+
 ## What it does
 
 1. **Polls** a registry **tag** on an interval (or on demand via API).
@@ -45,15 +49,15 @@ See [How it works](#how-it-works) for the runtime loop and [Tags and versions](#
 
 Castellan supports **config file** mode and **label discovery** mode. You pick one at startup — not both layered together.
 
-| | **[Label discovery](#label-discovery-watchtower-compat)** | **[Config file](#config-file-recommended)** |
+| | **[Label discovery](#label-discovery-watchtower-compatible)** | **[Config file](#config-file-recommended)** |
 |---|---|---|
 | **Config file** | Not required | JSON or YAML (`config.json`, etc.) |
-| **How services are chosen** | Containers with `com.centurylinklabs.watchtower.enable=true` | Explicit `managedServices` list |
+| **How services are chosen** | Containers with `ai.logfox.castellan.autoupdate` or legacy Watchtower `enable=true` | Explicit `managedServices` list |
 | **Which tag is watched** | Parsed from each container’s **running** image (e.g. `:latest` → watches `latest`) | Tag you set in config (e.g. `staging`) |
 | **Rolling restarts** | One compose service per container | Group replicas: `composeServices: ["api-1", "api-2"]` |
 | **HTTP health URLs** | Docker healthchecks only | `healthUrl` per service |
 | **Private registry creds** | Not available without config | `registries` block |
-| **Best for** | Drop-in Watchtower replacement | Production rollouts with safety features |
+| **Best for** | Watchtower opt-in migration | Production rollouts with safety features |
 
 If no config file is found at the default paths, Castellan **automatically falls back** to label discovery. Mount a config file when you want the full feature set.
 
@@ -86,7 +90,7 @@ Amazon **ECR**, **Docker Hub**, **GHCR**, and other **OCI Distribution v2** host
 
 **Image:** `ghcr.io/logfoxai/castellan:latest` — [GHCR package](https://github.com/logfoxai/castellan/pkgs/container/castellan). No npm package.
 
-**Label discovery** — swap Watchtower, no config file:
+**Label discovery** — Watchtower-style opt-in, no config file:
 
 ```yaml
 services:
@@ -101,7 +105,7 @@ services:
   my-service:
     image: myorg/my-service:staging
     labels:
-      - com.centurylinklabs.watchtower.enable=true
+      - ai.logfox.castellan.autoupdate
 ```
 
 **Config file** — rolling restarts, health URLs, private registries:
@@ -138,6 +142,7 @@ Full examples: [Setup paths](#setup-paths) · [Configuration reference](#configu
 | Topic | Section |
 |---|---|
 | Config vs label discovery | [Setup paths](#setup-paths) |
+| Watchtower opt-in labels | [Label discovery](#label-discovery-watchtower-compatible) |
 | Tags, digests, CI `forceCheck` | [Tags and versions](#tags-and-versions) |
 | Headless / API-only | [Operating modes](#operating-modes) |
 | All config keys | [Configuration reference](#configuration-reference) |
@@ -148,23 +153,30 @@ Full examples: [Setup paths](#setup-paths) · [Configuration reference](#configu
 
 # Setup paths
 
-## Label discovery (Watchtower compat)
+## Label discovery (Watchtower compatible)
 
-If Castellan starts **without** a config file, it scans running containers for the same label Watchtower used:
+If Castellan starts **without** a config file, it scans running containers for an **opt-in autoupdate label**:
+
+| Label | Match rule |
+|---|---|
+| **`ai.logfox.castellan.autoupdate`** | Label present (any value, or none). Set to `false` to opt out. |
+| **`com.centurylinklabs.watchtower.enable=true`** | Legacy Watchtower opt-in — value must be `true`. |
 
 ```yaml
 labels:
-  - com.centurylinklabs.watchtower.enable=true
+  - ai.logfox.castellan.autoupdate
 ```
 
-For each labeled container it builds a managed service from:
+Watchtower users: this matches **`watchtower --label-enable`** — only labeled services are updated. Castellan does **not** mirror Watchtower’s default mode (update all containers except those labeled `enable=false`). If you relied on default-all Watchtower, add an autoupdate label to each service you want managed (or use a [config file](#config-file-recommended)).
+
+For each labeled container Castellan builds a managed service from:
 
 - **Compose service name** — `com.docker.compose.service` label
 - **Registry / repository / tag** — parsed from the container’s current `Image` ref
 
 Discovery runs **once at startup**. One labeled container → one compose service restarted at a time. Docker healthchecks apply; there is no `healthUrl` or `registries` block without a config file.
 
-This is the fastest migration path from Watchtower: remove Watchtower, add Castellan, keep your labels.
+Remove Watchtower, add Castellan, keep legacy labels or switch to `ai.logfox.castellan.autoupdate` — one line per service.
 
 When you outgrow label-only mode — grouped rolling restarts, explicit tags, HTTP health probes, private registry auth — add a config file. Mounting `config.json` (or setting `CASTELLAN_CONFIG`) **takes precedence**; label discovery is skipped.
 
@@ -411,7 +423,7 @@ Served at `/` when `api.enabled` and `api.dashboard` are both `true` (the defaul
 
 # How it works
 
-1. Castellan loads a config file **or** discovers Watchtower-labeled containers (see [Setup paths](#setup-paths)).
+1. Castellan loads a config file **or** discovers opt-in autoupdate labels (see [Setup paths](#setup-paths)).
 2. On every poll interval it fetches the manifest for each managed image, with per-image TTL and global jitter.
 3. When a digest changes, it pulls the image and performs a rolling restart of the associated compose services.
 4. It waits for Docker and/or HTTP health checks to pass.
