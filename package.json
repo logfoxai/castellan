@@ -8,6 +8,8 @@
     "watchtower",
     "deployment",
     "ecr",
+    "ghcr",
+    "docker-hub",
     "rollback",
     "sidecar",
     "containers",

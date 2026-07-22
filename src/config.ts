@@ -3,7 +3,7 @@ import {existsSync} from 'fs';
 import path from 'path';
 import yaml from 'js-yaml';
 import type {DockerClient} from './docker.js';
-import type {Config, ManagedService} from './types.js';
+import type {Config, ManagedService, RegistryCredentials} from './types.js';
 import {discoverConfig} from './watchtower.js';
 
 const DEFAULT_CONFIG_PATHS = ['/app/config.json', '/app/config.yaml', '/app/config.yml'];
@@ -151,6 +151,7 @@ export function normalizeConfig(input: unknown): Config {
         poll: normalizePoll(data.poll),
         rollback: normalizeRollback(data.rollback),
         api: normalizeApi(data.api),
+        registries: normalizeRegistries(data.registries),
     };
 
 }
@@ -237,6 +238,43 @@ function normalizeRollback(input: unknown): {healthTimeoutMs: number; maxAttempt
         healthTimeoutMs: getNumber(r, 'healthTimeoutMs', 120000),
         maxAttempts: getNumber(r, 'maxAttempts', 1),
     };
+
+}
+
+function normalizeRegistries(input: unknown): Record<string, RegistryCredentials> | undefined {
+
+    if (input === undefined) {
+
+        return undefined;
+
+}
+
+    if (typeof input !== 'object' || input === null) {
+
+        throw new Error('registries must be an object');
+
+}
+
+    const result: Record<string, RegistryCredentials> = {};
+
+    for (const [host, value] of Object.entries(input as Record<string, unknown>)) {
+
+        if (typeof value !== 'object' || value === null) {
+
+            throw new Error(`registries.${host} must be an object`);
+
+}
+
+        const creds = value as Record<string, unknown>;
+
+        result[host] = {
+            username: getString(creds, 'username'),
+            password: getString(creds, 'password'),
+        };
+
+}
+
+    return result;
 
 }
 

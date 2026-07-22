@@ -1,12 +1,12 @@
 import {createECRRegistry, ECRRegistry} from './ecr.js';
 import {HttpRegistry} from './registry-http.js';
 import type {Registry} from './registry.js';
-import type {RegistryImage, RegistryManifest} from './types.js';
+import type {RegistryCredentials, RegistryImage, RegistryManifest} from './types.js';
 
-export function createRegistry(): Registry {
+export function createRegistry(registries?: Record<string, RegistryCredentials>): Registry {
 
     const ecr = createECRRegistry();
-    const http = new HttpRegistry();
+    const http = new HttpRegistry(registries ?? {});
 
     return new RouterRegistry(ecr, http);
 

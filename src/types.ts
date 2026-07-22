@@ -30,12 +30,18 @@ export type ComposeConfig = {
     envFile?: string;
 };
 
+export type RegistryCredentials = {
+    username: string;
+    password: string;
+};
+
 export type Config = {
     managedServices: ManagedService[];
     compose: ComposeConfig;
     poll: PollConfig;
     rollback: RollbackConfig;
     api: ApiConfig;
+    registries?: Record<string, RegistryCredentials>;
 };
 
 export type RegistryImage = {

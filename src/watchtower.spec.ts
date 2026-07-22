@@ -31,6 +31,16 @@ test('parseImageRef handles namespaced docker images', (assert) => {
 
 });
 
+test('parseImageRef handles GHCR images', (assert) => {
+
+    const parsed = parseImageRef('ghcr.io/logfoxai/castellan:latest');
+
+    assert.equal(parsed?.registry, 'ghcr.io');
+    assert.equal(parsed?.repository, 'logfoxai/castellan');
+    assert.equal(parsed?.tag, 'latest');
+
+});
+
 test('parseImageRef returns null for digest refs', (assert) => {
 
     assert.equal(parseImageRef('sha256:abc123'), null);

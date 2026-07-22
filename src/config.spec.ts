@@ -262,6 +262,22 @@ test('normalizeConfig applies partial api defaults', async (assert) => {
 
 });
 
+test('normalizeConfig parses registry credentials', async (assert) => {
+
+    const config = normalizeConfig({
+        managedServices: [],
+        registries: {
+            'ghcr.io': {username: 'myuser', password: 'ghp_secret'},
+            'docker.io': {username: 'hubuser', password: 'hubtoken'},
+        },
+    });
+
+    assert.equal(config.registries?.['ghcr.io'].username, 'myuser');
+    assert.equal(config.registries?.['ghcr.io'].password, 'ghp_secret');
+    assert.equal(config.registries?.['docker.io'].username, 'hubuser');
+
+});
+
 test('normalizeConfig throws when input is not an object', async (assert) => {
 
     let error: Error | undefined;
