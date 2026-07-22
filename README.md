@@ -26,40 +26,21 @@
   </p>
 </div>
 
-> **Beta.** Castellan is actively developed and dogfooded by [Logfox](https://logfox.ai), but it has not seen wide production use outside our own stacks yet. Test in staging before trusting it with critical workloads. APIs and config may change before v1.0.
+> **Beta.** Castellan is built and dogfooded on [Logfox](https://logfox.ai) production hosts today. APIs and config may change before v1.0. Test in staging before trusting it elsewhere.
 
 # What is Castellan?
 
 Castellan is a **lightweight, single-container sidecar** that sits beside your docker-compose stack. It:
 
-1. **Polls** your container registry for new image digests on a tunable schedule.
-2. **Deploys** updates via `docker compose` — rolling through grouped services (`api-1`, then `api-2`) so one replica stays up.
+1. **Polls** a configured registry **tag** (e.g. `prime`, `latest`) and compares the **digest** behind it.
+2. **Deploys** when the digest changes — CI pushed a new build to the same tag — via `docker compose` rolling restarts.
 3. **Verifies** health with HTTP checks and Docker health status before continuing.
-4. **Rolls back** automatically if a new digest fails — reverting to the last known-good image like an ECS circuit breaker.
-5. **Observes** everything from a self-hosted dashboard: digests, history, container metrics, logs.
+4. **Rolls back** automatically if a new digest fails — reverting to the last known-good image.
+5. **Observes** everything from a built-in dashboard: **tag/version at a glance**, history, container metrics, logs.
 
-One image. No database. No separate controller. Dashboard included — same sidecar footprint as Watchtower, with safety and observability built in.
+One image. No database. Config file in JSON/YAML. Dashboard included.
 
-# Castellan vs Watchtower
-
-[Watchtower](https://containrrr.dev/watchtower/) was archived in December 2025. It was a **simple auto-updater**: poll the registry, pull new images, restart containers. That worked, but it had no health verification, no rollback, no zero-downtime strategy, and no UI.
-
-Castellan is **not a clone of Watchtower**. It is a **safety-first deployment controller** for docker-compose:
-
-| | Watchtower | Castellan |
-|---|---|---|
-| **Job** | Restart containers when a tag moves | Deploy new digests safely across compose services |
-| **Update strategy** | Stop and recreate (downtime) | Rolling restart across grouped compose services |
-| **Health checks** | None before/after update | HTTP + Docker health verification |
-| **Rollback** | None | Automatic revert to last known-good digest |
-| **Change detection** | Tag comparison | Digest comparison (no false pulls) |
-| **Dashboard** | None | Built-in, responsive, always included |
-| **Config** | Env vars + labels | JSON/YAML config + optional Watchtower labels |
-| **Footprint** | One container | One lightweight container (no DB, no extra services) |
-
-**Migrating from Watchtower?** Castellan can discover containers via the same `com.centurylinklabs.watchtower.enable=true` labels — swap the sidecar, keep your labels. For rolling restarts and rollback you will want a config file; see [Migrating from Watchtower](#migrating-from-watchtower).
-
-**Starting fresh?** Skip the Watchtower labels entirely and use JSON/YAML config — that is the recommended path for new deployments.
+See [Tags and versions](#tags-and-versions) for how image tags work — that is the core mental model.
 
 # Why Castellan?
 
@@ -86,7 +67,7 @@ See [docs/comparisons.md](docs/comparisons.md) for detailed comparisons with Wat
 ## Observability hub
 
 - **Self-hosted React dashboard** — live status, controls, and Docker inspection in one dark, fast UI.
-- **Service status cards** — current vs desired image digests, last check time, and last error.
+- **Service status cards** — watched tag and `repository:tag` at a glance; full digests in expandable details.
 - **Container metrics table** — every container with live CPU, memory (usage + %), disk (writable layer size), state, and one-click log viewing.
 - **Deployment history timeline** — check, deploy, rollback, and failure events with timestamps.
 - **Health status** — green/yellow/red state badges and detailed HTTP/Docker health verification.
@@ -179,6 +160,44 @@ Mount a **state volume** (as above). On first start, if you omit `api.authToken`
 
 Open the dashboard at `http://castellan:3003/` (or map a port to your host).
 
+# Tags and versions
+
+Castellan does **not** watch arbitrary tags on running containers. Each managed service has a **`tag` in config** — the registry tag Castellan polls. Deployments trigger when the **digest behind that tag changes**, not when the tag string changes.
+
+### How it works
+
+| Concept | Meaning |
+|---|---|
+| **`tag` in config** | The registry tag to watch — e.g. `prime`, `staging`, `latest`, `v1.2.3` |
+| **Digest** | The immutable `sha256:…` content hash of the image currently at that tag |
+| **Deploy trigger** | Registry tag points at a new digest (usually CI pushed a fresh build to the same tag) |
+
+The dashboard shows **`repository:tag`** prominently (e.g. `api-service:prime`). Expand **Image details** for the full registry path and digests.
+
+### Logfox setup
+
+On Logfox hosts, `infra/scripts/write-castellan-config.sh` generates Castellan config from `host-config.json`. Each service uses the **host environment name as the tag** — `prime`, `staging`, etc. — matching the ECR tags CI publishes:
+
+```json
+{
+  "name": "api",
+  "registry": "123456789.dkr.ecr.us-east-2.amazonaws.com",
+  "repository": "api-service",
+  "tag": "prime",
+  "composeServices": ["api-1", "api-2"]
+}
+```
+
+When GitHub Actions pushes a new `api-service:prime` image, the digest changes; Castellan rolls `api-1` and `api-2` with health checks. The tag string stays `prime`; the dashboard shows **deploying new build** while the rollout runs.
+
+### Choosing tags
+
+- **Environment tags** (`prime`, `staging`) — Logfox default; one rolling tag per host/environment.
+- **Version tags** (`v1.2.3`) — pin a host to a release; change the config tag to promote.
+- **`latest`** — fine for dev; avoid in production unless you accept surprise updates.
+
+Each `managedServices` entry watches **one tag**. To track multiple tags for the same repository, add separate entries with different `name` values.
+
 # Migrating from Watchtower
 
 Castellan can read the same `com.centurylinklabs.watchtower.enable=true` labels Watchtower used. Swap the sidecar and Castellan discovers labeled containers automatically.
@@ -253,6 +272,16 @@ For grouped services (e.g. multiple API replicas that need zero-downtime rolling
 
 `api.authToken` is optional — see [Access & API auth](#access--api-auth). If omitted, Castellan generates a secret on first start and saves it under your state directory (`auth-token`). Not used when `api.enabled` is `false`.
 
+Each `managedServices` entry:
+
+| Field | Description |
+|---|---|
+| `name` | Short id for dashboard/API (e.g. `api`, `ingest-worker`) |
+| `registry` | Registry host (ECR, `ghcr.io`, `docker.io`, …) |
+| `repository` | Image name without tag (e.g. `api-service`) |
+| `tag` | Registry tag to poll — see [Tags and versions](#tags-and-versions) |
+| `composeServices` | Compose service names to restart, in order, when the digest changes |
+
 - `healthUrl` may use `{{service}}` as a placeholder for the current compose service name.
 - `composeServices` is a list; when more than one is present, Castellan restarts them one at a time, waiting for health before proceeding.
 - `registries` is optional. Map registry hostnames to username/password credentials for private Docker Hub, GHCR, or other HTTP v2 registries. ECR uses the AWS credential chain instead.
@@ -280,7 +309,7 @@ Set `api.enabled: false` for a **headless** deployment with zero HTTP surface (u
 
 When `api.dashboard` is `true` (the default), the dashboard is built into the image and served at `/`. It gives you:
 
-- Live service status with current vs desired image digests.
+- Live service status with watched **tag** and `repository:tag`; digests in expandable details.
 - **Check now** and **Pause/Resume polling** controls.
 - Docker container table with live CPU, memory, disk usage, state, and one-click log viewing.
 - Deployment / rollback / failure history timeline.
