@@ -9,6 +9,9 @@ services:
       - ./castellan-state:/app/state
     environment:
       CASTELLAN_COMPOSE_FILE: /app/docker-compose.yml
+      # Optional: load many CASTELLAN_* vars from a file (Compose env_file:, not Castellan-specific)
+      # env_file:
+      #   - ./castellan.env
     networks:
       - backend
 

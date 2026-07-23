@@ -30,7 +30,7 @@
 
 Castellan is a **single-container sidecar** for docker-compose — a practical **Watchtower replacement** with health verification, rollback, and an optional dashboard. [Watchtower is archived](https://github.com/containrrr/watchtower); Castellan is compose-native and safety-first.
 
-Setup is **compose-only**: label the services you want managed, set `CASTELLAN_*` env vars on the sidecar, mount your compose file and state directory. No Castellan config file.
+Setup uses **compose labels + `CASTELLAN_*` env vars** — no Castellan config file. Run with Docker Compose, `docker run`, or `npm run dev` (export env vars in your shell). See [Configuration reference](#configuration-reference).
 
 ## What it does
 
@@ -103,7 +103,7 @@ Full example: [examples/docker-compose.yml](examples/docker-compose.yml)
 | Topic | Section |
 |---|---|
 | Label discovery | [Label discovery](#label-discovery) |
-| Env vars | [Configuration reference](#configuration-reference) |
+| Env vars & `env_file:` | [Configuration reference](#configuration-reference) |
 | Migrating from Watchtower | [Migrating from Watchtower](#migrating-from-watchtower) |
 | Tags, digests, CI `forceCheck` | [Tags and versions](#tags-and-versions) |
 | Headless / API-only | [Operating modes](#operating-modes) |
@@ -283,11 +283,42 @@ Public images on Docker Hub or GHCR work without login.
 
 # Configuration reference
 
-Castellan has **no application config file**. Global settings come from environment variables; managed services come from compose labels.
+Castellan has **no application config file** and **no CLI flags**. Global settings are read from **`process.env`** at startup (`CASTELLAN_*` variables). Managed services are discovered from **compose labels** on running containers.
 
 Mount a **state volume** (`./castellan-state:/app/state`). On first start, if you omit `CASTELLAN_AUTH_TOKEN`, Castellan writes a random API secret to `auth-token` in that directory — use it for curl/scripts; the dashboard sets a session cookie automatically (no login form).
 
 Open the dashboard at `http://castellan:3003/` (or map a host port).
+
+## How to set environment variables
+
+Castellan does not load a `.env` file itself. Use any standard way to populate the container (or shell) environment:
+
+| Method | When |
+|---|---|
+| Compose `environment:` | Typical — inline vars on the `castellan` service (see [Try it](#try-it)) |
+| Compose [`env_file:`](https://docs.docker.com/compose/compose-file/#env_file) | Many vars — Docker injects the file into the container before Castellan starts |
+| `docker run --env-file …` | Bare container, no compose wrapper |
+| Shell exports | Local dev — `CASTELLAN_COMPOSE_FILE=./compose.yml npm run dev` |
+
+Example with Compose `env_file:` (Docker built-in, not a Castellan feature):
+
+```yaml
+services:
+  castellan:
+    image: ghcr.io/logfoxai/castellan:latest
+    env_file:
+      - ./castellan.env
+    environment:
+      CASTELLAN_COMPOSE_FILE: /app/docker-compose.yml
+```
+
+`castellan.env` holds `CASTELLAN_*` lines only. Explicit `environment:` entries override `env_file:` on conflict.
+
+### `CASTELLAN_COMPOSE_ENV_FILE` is not Castellan config
+
+`CASTELLAN_COMPOSE_ENV_FILE` points at an env file passed to **`docker compose --env-file`** when Castellan runs `pull` / `up`. Use it when your compose YAML uses variable substitution (e.g. `image: ${API_IMAGE}`) and those values live in a separate file.
+
+That file configures **Compose rendering**, not Castellan’s own settings. Castellan’s settings are always `CASTELLAN_*` env vars (or defaults in code).
 
 ### Environment variables
 
@@ -295,7 +326,7 @@ Open the dashboard at `http://castellan:3003/` (or map a host port).
 |---|---|---|
 | `CASTELLAN_COMPOSE_FILE` | `/app/docker-compose.yml` | Compose file for pull/up |
 | `CASTELLAN_COMPOSE_PROJECT` | infer from compose `name:` | Project label filter |
-| `CASTELLAN_COMPOSE_ENV_FILE` | — | Optional env file for compose |
+| `CASTELLAN_COMPOSE_ENV_FILE` | — | Optional `--env-file` for `docker compose` pull/up |
 | `CASTELLAN_POLL_ENABLED` | `true` | Periodic polling |
 | `CASTELLAN_POLL_INTERVAL_MS` | `60000` | Poll interval |
 | `CASTELLAN_POLL_JITTER_MS` | `5000` | Jitter |
