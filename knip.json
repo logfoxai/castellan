@@ -1,0 +1,26 @@
+{
+  "$schema": "https://unpkg.com/knip@6/schema.json",
+  "workspaces": {
+    ".": {
+      "entry": [
+        "src/**/*.spec.ts",
+        "scripts/*.{mjs,js,ts}"
+      ],
+      "project": [
+        "src/**/*.ts",
+        "scripts/**/*.{mjs,js,ts}"
+      ],
+      "ignoreDependencies": [
+        "@types/js-yaml"
+      ],
+      "ignoreBinaries": [
+        "report"
+      ]
+    },
+    "ui": {
+      "project": [
+        "src/**/*.{ts,tsx}"
+      ]
+    }
+  }
+}

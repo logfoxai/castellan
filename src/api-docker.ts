@@ -49,7 +49,7 @@ export function isDockerMethod(method: ApiMethod): boolean {
 
 }
 
-export type ContainerRow = {
+type ContainerRow = {
     id: string;
     name: string;
     displayName: string;

@@ -1,5 +1,5 @@
 # Keep `name: CI` — release.yml triggers on it via workflow_run.
-# Local: npm run validate (lint --fix). CI: lint:check, never validate.
+# Local: npm run validate (lint --fix, deadcode:check). CI: lint:check, never validate.
 name: CI
 
 on:
@@ -36,6 +36,9 @@ jobs:
 
       - name: Type check
         run: npm run build:compile
+
+      - name: Dead code
+        run: npm run deadcode:check
 
       - name: Build
         run: npm run build

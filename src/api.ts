@@ -3,9 +3,6 @@ import type {DockerClient} from './docker.js';
 import {dispatchDockerMethod, isApiMethod, isDockerMethod, type ApiMethod} from './api-docker.js';
 import type {RollerPort} from './roller-port.js';
 
-export {isApiMethod} from './api-docker.js';
-export type {ApiMethod} from './api-docker.js';
-
 export function createRouter(roller: RollerPort, docker: DockerClient, authToken?: string): Router {
 
     const router = Router();

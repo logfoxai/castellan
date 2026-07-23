@@ -36,7 +36,7 @@ export function containerReportsHealthy(
 
 }
 
-export function resolveHealthUrl(healthUrl: string, composeService: string): string {
+function resolveHealthUrl(healthUrl: string, composeService: string): string {
 
     return healthUrl.replace(/\{\{service\}\}/g, composeService);
 

@@ -18,7 +18,7 @@ export type DeploymentContext = {
     recordEvent: (type: DeploymentEvent['type'], service: string, message: string) => void;
 };
 
-export async function resolveComposeServices(
+async function resolveComposeServices(
     ctx: DeploymentContext,
     service: ManagedService,
 ): Promise<string[]> {

@@ -10,14 +10,14 @@ export type ServiceStatus = {
     lastError: string | null;
 };
 
-export type DeploymentEvent = {
+type DeploymentEvent = {
     at: string;
     type: 'check' | 'deploy' | 'rollback' | 'failure';
     service: string;
     message: string;
 };
 
-export type ContainerRow = {
+type ContainerRow = {
     id: string;
     name: string;
     displayName: string;

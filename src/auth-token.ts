@@ -6,7 +6,7 @@ import path from 'path';
 export const AUTH_TOKEN_FILENAME = 'auth-token';
 export const AUTH_TOKEN_ENV = 'CASTELLAN_AUTH_TOKEN';
 
-export type AuthTokenSource = 'config' | 'env' | 'file' | 'generated';
+type AuthTokenSource = 'config' | 'env' | 'file' | 'generated';
 
 export type ResolvedAuthToken = {
     token: string | undefined;
@@ -14,7 +14,7 @@ export type ResolvedAuthToken = {
     tokenFilePath?: string;
 };
 
-export function generateAuthToken(): string {
+function generateAuthToken(): string {
 
     return randomBytes(32).toString('base64url');
 

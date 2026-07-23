@@ -1,14 +1,14 @@
-export type ManifestPlatform = {
+type ManifestPlatform = {
     architecture: string;
     os: string;
 };
 
-export type ManifestListEntry = {
+type ManifestListEntry = {
     digest: string;
     platform?: ManifestPlatform;
 };
 
-export type ManifestList = {
+type ManifestList = {
     schemaVersion?: number;
     mediaType?: string;
     manifests?: ManifestListEntry[];
@@ -67,7 +67,7 @@ export function resolveManifestList(manifest: string, platform: string = getDefa
 
 }
 
-export function getDefaultPlatform(): string {
+function getDefaultPlatform(): string {
 
     const arch = process.arch === 'x64' ? 'amd64' : process.arch;
 
