@@ -154,17 +154,6 @@ export class StateManager {
 
 }
 
-    getPersistedServiceNames(): string[] {
-
-        const names = new Set([
-            ...Object.keys(this.state.deployments),
-            ...Object.keys(this.state.pollEnabled),
-        ]);
-
-        return [...names];
-
-}
-
     hasDeploymentDigest(service: string, digest: string): boolean {
 
         return this.getDeployments(service).some((deployment) => deployment.digest === digest);

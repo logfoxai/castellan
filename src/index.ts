@@ -2,12 +2,12 @@ import path from 'path';
 import express from 'express';
 import {existsSync} from 'fs';
 import {DockerClient} from './docker.js';
+import {DockerRegistry} from './docker-registry.js';
 import {StateManager} from './state.js';
 import {Roller} from './roller.js';
 import {createRouter, SESSION_COOKIE} from './api.js';
 import {resolveAuthToken} from './auth-token.js';
-import {loadConfigOrDiscover} from './config.js';
-import {createRegistry} from './registry-factory.js';
+import {loadConfig} from './config.js';
 import {CachingRegistry} from './registry.js';
 import type {ApiConfig} from './types.js';
 
@@ -56,7 +56,7 @@ async function startApiServer(
     if (auth.source === 'generated') {
 
         console.warn(
-            `No api.authToken configured; generated an API secret at ${auth.tokenFilePath}. `
+            `No CASTELLAN_AUTH_TOKEN configured; generated an API secret at ${auth.tokenFilePath}. `
             + 'Use it as Authorization: Bearer <token> for curl/scripts. '
             + 'The dashboard sets a session cookie automatically — no login UI.',
         );
@@ -92,8 +92,8 @@ async function startApiServer(
 async function main(): Promise<void> {
 
     const docker = new DockerClient(process.env.DOCKER_SOCKET ?? DEFAULT_SOCKET_PATH);
-    const config = await loadConfigOrDiscover(docker, process.env.CASTELLAN_CONFIG);
-    const registry = new CachingRegistry(createRegistry(config.registries), config.poll.intervalMs);
+    const config = await loadConfig(docker);
+    const registry = new CachingRegistry(new DockerRegistry(docker), config.poll.intervalMs);
     const statePath = process.env.CASTELLAN_STATE ?? DEFAULT_STATE_PATH;
     const state = new StateManager(statePath);
 

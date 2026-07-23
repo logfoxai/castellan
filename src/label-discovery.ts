@@ -2,15 +2,17 @@ import type {ContainerInfo} from 'dockerode';
 import type {DockerClient} from './docker.js';
 import {mergeManagedServicesByImage} from './compose-targets.js';
 import {parseImageRef} from './image-ref.js';
-import type {ComposeConfig, Config, ManagedService} from './types.js';
+import type {ManagedService} from './types.js';
 
 /** Native Castellan opt-in label (reverse-DNS for logfox.ai). */
 export const CASTELLAN_AUTUPDATE_LABEL = 'ai.logfox.castellan.autoupdate';
 
-/** Legacy Watchtower opt-in label (`watchtower --label-enable`). */
-export const WATCHTOWER_ENABLE_LABEL = 'com.centurylinklabs.watchtower.enable';
+/** Optional logical service name when multiple replicas share one image. */
+export const CASTELLAN_GROUP_LABEL = 'ai.logfox.castellan.group';
 
-export function hasDiscoveryLabel(labels: Record<string, string> | undefined): boolean {
+const HEALTH_POLL_INTERVAL_MS = 5000;
+
+function hasDiscoveryLabel(labels: Record<string, string> | undefined): boolean {
 
     if (!labels) {
 
@@ -20,13 +22,7 @@ export function hasDiscoveryLabel(labels: Record<string, string> | undefined): b
 
     const castellan = labels[CASTELLAN_AUTUPDATE_LABEL];
 
-    if (castellan !== undefined && castellan !== 'false') {
-
-        return true;
-
-}
-
-    return labels[WATCHTOWER_ENABLE_LABEL] === 'true';
+    return castellan !== undefined && castellan !== 'false';
 
 }
 
@@ -59,22 +55,6 @@ export async function discoverManagedServices(docker: DockerClient): Promise<Man
 
 }
 
-export async function discoverConfig(
-    docker: DockerClient,
-    compose: ComposeConfig = {file: '/app/docker-compose.yml'},
-): Promise<Config> {
-
-    return {
-        managedServices: await discoverManagedServices(docker),
-        compose,
-        poll: {enabled: true, intervalMs: 60000, jitterMs: 5000},
-        rollback: {healthTimeoutMs: 120000, maxAttempts: 1},
-        api: {enabled: true, dashboard: true, port: 3003},
-        labelDiscovery: true,
-    };
-
-}
-
 function buildService(container: ContainerInfo): ManagedService | null {
 
     const composeService = container.Labels?.['com.docker.compose.service'];
@@ -94,13 +74,16 @@ function buildService(container: ContainerInfo): ManagedService | null {
 
 }
 
+    const group = container.Labels?.[CASTELLAN_GROUP_LABEL]?.trim();
+
     return {
         name: composeService,
         registry: parsed.registry,
         repository: parsed.repository,
         tag: parsed.tag,
-        healthIntervalMs: 5000,
-        healthRetries: 10,
+        group: group || undefined,
     };
 
 }
+
+export {HEALTH_POLL_INTERVAL_MS};

@@ -1,8 +1,9 @@
 import Docker, {ContainerInfo, ImageInfo, NetworkInspectInfo, VolumeInspectInfo} from 'dockerode';
 import {execFile} from 'child_process';
 import {promisify} from 'util';
-import {normalizeRegistryHost} from './image-ref.js';
-import type {ComposeConfig} from './types.js';
+import {formatImageRef, normalizeRegistryHost} from './image-ref.js';
+import {parseManifestInspectStdout} from './manifest.js';
+import type {ComposeConfig, RegistryManifest} from './types.js';
 import {parseStatsOutput, type ContainerStat} from './stats.js';
 
 const execFileAsync = promisify(execFile);
@@ -157,6 +158,22 @@ export class DockerClient {
         const {repo, tag} = parseImageRef(target);
 
         await image.tag({repo, tag});
+
+}
+
+    async manifestInspect(registry: string, repository: string, tag: string): Promise<RegistryManifest> {
+
+        const ref = formatImageRef(registry, repository, tag);
+        const {stdout} = await execFileAsync(
+            'docker',
+            ['manifest', 'inspect', '--verbose', ref],
+            {timeout: 120_000},
+        );
+
+        return {
+            digest: parseManifestInspectStdout(stdout),
+            pushedAt: null,
+        };
 
 }
 

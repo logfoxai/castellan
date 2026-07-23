@@ -7,6 +7,7 @@ import {
     AUTH_TOKEN_FILENAME,
     resolveAuthToken,
 } from './auth-token.js';
+import {withEnv} from './test-env.js';
 
 test('resolveAuthToken prefers config over env and file', async (assert) => {
 
@@ -14,17 +15,19 @@ test('resolveAuthToken prefers config over env and file', async (assert) => {
 
     try {
 
-        process.env[AUTH_TOKEN_ENV] = 'from-env';
-        await writeTokenFile(dir, 'from-file');
+        await withEnv({[AUTH_TOKEN_ENV]: 'from-env'}, async () => {
 
-        const resolved = await resolveAuthToken('from-config', path.join(dir, 'state.json'));
+            await writeTokenFile(dir, 'from-file');
 
-        assert.equal(resolved.token, 'from-config');
-        assert.equal(resolved.source, 'config');
+            const resolved = await resolveAuthToken('from-config', path.join(dir, 'state.json'));
+
+            assert.equal(resolved.token, 'from-config');
+            assert.equal(resolved.source, 'config');
+
+});
 
 } finally {
 
-        delete process.env[AUTH_TOKEN_ENV];
         await rm(dir, {recursive: true, force: true});
 
 }
@@ -37,16 +40,17 @@ test('resolveAuthToken uses env when config is missing', async (assert) => {
 
     try {
 
-        process.env[AUTH_TOKEN_ENV] = 'from-env';
+        await withEnv({[AUTH_TOKEN_ENV]: 'from-env'}, async () => {
 
-        const resolved = await resolveAuthToken(undefined, path.join(dir, 'state.json'));
+            const resolved = await resolveAuthToken(undefined, path.join(dir, 'state.json'));
 
-        assert.equal(resolved.token, 'from-env');
-        assert.equal(resolved.source, 'env');
+            assert.equal(resolved.token, 'from-env');
+            assert.equal(resolved.source, 'env');
+
+});
 
 } finally {
 
-        delete process.env[AUTH_TOKEN_ENV];
         await rm(dir, {recursive: true, force: true});
 
 }
@@ -59,14 +63,16 @@ test('resolveAuthToken reads persisted token file', async (assert) => {
 
     try {
 
-        delete process.env[AUTH_TOKEN_ENV];
+        await withEnv({[AUTH_TOKEN_ENV]: undefined}, async () => {
 
-        await writeTokenFile(dir, 'persisted-token');
+            await writeTokenFile(dir, 'persisted-token');
 
-        const resolved = await resolveAuthToken(undefined, path.join(dir, 'state.json'));
+            const resolved = await resolveAuthToken(undefined, path.join(dir, 'state.json'));
 
-        assert.equal(resolved.token, 'persisted-token');
-        assert.equal(resolved.source, 'file');
+            assert.equal(resolved.token, 'persisted-token');
+            assert.equal(resolved.source, 'file');
+
+});
 
 } finally {
 
@@ -82,24 +88,26 @@ test('resolveAuthToken generates and persists a token when unset', async (assert
 
     try {
 
-        delete process.env[AUTH_TOKEN_ENV];
+        await withEnv({[AUTH_TOKEN_ENV]: undefined}, async () => {
 
-        const statePath = path.join(dir, 'state.json');
-        const resolved = await resolveAuthToken(undefined, statePath);
+            const statePath = path.join(dir, 'state.json');
+            const resolved = await resolveAuthToken(undefined, statePath);
 
-        assert.equal(resolved.source, 'generated');
-        const token = resolved.token ?? '';
+            assert.equal(resolved.source, 'generated');
+            const token = resolved.token ?? '';
 
-        assert.equal(token.length >= 32, true);
-        assert.equal(
-            (await readFile(resolved.tokenFilePath ?? '', 'utf8')).trim(),
-            resolved.token,
-        );
+            assert.equal(token.length >= 32, true);
+            assert.equal(
+                (await readFile(resolved.tokenFilePath ?? '', 'utf8')).trim(),
+                resolved.token,
+            );
 
-        const again = await resolveAuthToken(undefined, statePath);
+            const again = await resolveAuthToken(undefined, statePath);
 
-        assert.equal(again.source, 'file');
-        assert.equal(again.token, resolved.token);
+            assert.equal(again.source, 'file');
+            assert.equal(again.token, resolved.token);
+
+});
 
 } finally {
 

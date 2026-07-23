@@ -124,7 +124,7 @@ const logsByContainer = {
     b2c3d4e5f6a7: '2026-07-21 20:31:10 INFO  Server listening on port 3000\n2026-07-21 20:31:11 INFO  Health check passed\n2026-07-21 20:31:14 INFO  Request /health 200 OK',
     c3d4e5f6a7b8: '2026-07-21 20:30:45 INFO  Worker started\n2026-07-21 20:30:46 INFO  Connected to queue\n2026-07-21 20:31:00 INFO  Processing batch 1',
     d4e5f6a7b8c9: '2026-07-21 20:32:01 INFO  Starting deployment\n2026-07-21 20:32:02 INFO  Pulled new image\n2026-07-21 20:32:03 INFO  Verifying health...',
-    e5f6a7b8c9d0: '2026-07-21 20:29:00 INFO  Castellan started\n2026-07-21 20:29:01 INFO  Loaded config\n2026-07-21 20:29:02 INFO  Polling registries',
+    e5f6a7b8c9d0: '2026-07-21 20:29:00 INFO  Castellan started\n2026-07-21 20:29:01 INFO  Discovered labeled services\n2026-07-21 20:29:02 INFO  Polling registries',
 };
 
 const app = express();

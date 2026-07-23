@@ -18,7 +18,7 @@ Tracks can ship independently. Read features should not require new write paths;
 1. **Observability is the product growth area.** Read-only UI and MCP tools are first-class, not afterthoughts.
 2. **Mutations stay minimal.** Few RPC/MCP actions, one deploy pipeline underneath.
 3. **Lightweight persistence.** Extend `state.json` with versioned schema and caps; defer SQLite until there is a concrete need (time-series metrics, log indexing, very large retention).
-4. **Managed services first.** Logs, history, and deploy actions are scoped to configured `managedServices` / compose project — not a generic Docker control plane.
+4. **Managed services first.** Logs, history, and deploy actions are scoped to labeled compose services — not a generic Docker control plane.
 5. **Dashboard and MCP share handlers.** One backend; UI and MCP are thin clients.
 
 ---

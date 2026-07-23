@@ -2,8 +2,10 @@ import {test} from 'kizu';
 import {mkdtemp, writeFile, rm} from 'fs/promises';
 import os from 'os';
 import path from 'path';
-import {loadConfig, loadConfigOrDiscover, normalizeConfig, parseConfig} from './config.js';
+import {loadConfig} from './config.js';
 import type {DockerClient} from './docker.js';
+import {CASTELLAN_AUTUPDATE_LABEL} from './label-discovery.js';
+import {withEnv} from './test-env.js';
 
 async function tempDir(): Promise<string> {
 
@@ -17,455 +19,9 @@ async function cleanup(dir: string): Promise<void> {
 
 }
 
-async function withEnv<T>(name: string, value: string | undefined, fn: () => Promise<T>): Promise<T> {
+function labeledWorkerDocker(): DockerClient {
 
-    const previous = process.env[name];
-
-    if (value === undefined) {
-
-        delete process.env[name];
-
-} else {
-
-        process.env[name] = value;
-
-}
-
-    try {
-
-        return await fn();
-
-} finally {
-
-        if (previous === undefined) {
-
-            delete process.env[name];
-
-} else {
-
-            process.env[name] = previous;
-
-}
-
-}
-
-}
-
-test('normalizeConfig parses managed services', async (assert) => {
-
-    const config = normalizeConfig({
-        managedServices: [
-            {
-                name: 'api',
-                registry: 'r.example.com',
-                repository: 'api',
-                tag: 'latest',
-                composeServices: ['api-1', 'api-2'],
-                healthUrl: 'http://{{service}}:3000/health',
-            },
-        ],
-    });
-
-    assert.equal(config.managedServices.length, 1);
-    assert.equal(config.managedServices[0].name, 'api');
-    assert.equal(config.managedServices[0].composeServices?.length, 2);
-    assert.equal(config.poll.intervalMs, 60000);
-
-});
-
-test('normalizeConfig allows omitting composeServices', async (assert) => {
-
-    const config = normalizeConfig({
-        managedServices: [
-            {
-                name: 'api',
-                registry: 'r.example.com',
-                repository: 'api',
-                tag: 'latest',
-            },
-        ],
-    });
-
-    assert.equal(config.managedServices[0].composeServices, undefined);
-
-});
-
-test('normalizeConfig uses defaults', async (assert) => {
-
-    const config = normalizeConfig({
-        managedServices: [
-            {
-                name: 'worker',
-                registry: 'r.example.com',
-                repository: 'worker',
-                tag: 'latest',
-                composeServices: ['worker'],
-                healthUrl: 'http://worker:3000/health',
-            },
-        ],
-    });
-
-    assert.equal(config.rollback.healthTimeoutMs, 120000);
-    assert.equal(config.api.port, 3003);
-    assert.equal(config.compose.file, '/app/docker-compose.yml');
-
-});
-
-test('normalizeConfig requires service name', async (assert) => {
-
-    let error: Error | undefined;
-
-    try {
-
-        normalizeConfig({managedServices: [{}]});
-
-} catch (err) {
-
-        error = err as Error;
-
-}
-
-    assert.equal(error?.message, 'Expected name to be a string');
-
-});
-
-test('normalizeConfig throws when composeServices is not an array', async (assert) => {
-
-    let error: Error | undefined;
-
-    try {
-
-        normalizeConfig({
-            managedServices: [
-                {
-                    name: 'api',
-                    registry: 'r.example.com',
-                    repository: 'api',
-                    tag: 'latest',
-                    composeServices: 'api',
-                },
-            ],
-        });
-
-} catch (err) {
-
-        error = err as Error;
-
-}
-
-    assert.equal(error?.message, 'Expected composeServices to be an array');
-
-});
-
-test('normalizeConfig applies partial section defaults', async (assert) => {
-
-    const poll = normalizeConfig({
-        managedServices: [],
-        poll: {intervalMs: 10000},
-    });
-
-    assert.equal(poll.poll.enabled, true);
-    assert.equal(poll.poll.intervalMs, 10000);
-    assert.equal(poll.poll.jitterMs, 5000);
-
-    const rollback = normalizeConfig({
-        managedServices: [],
-        rollback: {maxAttempts: 3},
-    });
-
-    assert.equal(rollback.rollback.healthTimeoutMs, 120000);
-    assert.equal(rollback.rollback.maxAttempts, 3);
-
-    const api = normalizeConfig({
-        managedServices: [],
-        api: {authToken: 'secret'},
-    });
-
-    assert.equal(api.api.enabled, true);
-    assert.equal(api.api.dashboard, true);
-    assert.equal(api.api.port, 3003);
-    assert.equal(api.api.authToken, 'secret');
-
-});
-
-test('normalizeConfig disables poll when enabled is false', async (assert) => {
-
-    const config = normalizeConfig({
-        managedServices: [],
-        poll: {enabled: false, intervalMs: 60000},
-    });
-
-    assert.equal(config.poll.enabled, false);
-
-});
-
-test('normalizeConfig disables poll when intervalMs is zero', async (assert) => {
-
-    const config = normalizeConfig({
-        managedServices: [],
-        poll: {intervalMs: 0},
-    });
-
-    assert.equal(config.poll.enabled, false);
-    assert.equal(config.poll.intervalMs, 0);
-
-});
-
-test('normalizeConfig disables api and dashboard when configured', async (assert) => {
-
-    const headless = normalizeConfig({
-        managedServices: [],
-        api: {enabled: false},
-    });
-
-    assert.equal(headless.api.enabled, false);
-    assert.equal(headless.api.dashboard, true);
-
-    const apiOnly = normalizeConfig({
-        managedServices: [],
-        api: {enabled: true, dashboard: false},
-    });
-
-    assert.equal(apiOnly.api.enabled, true);
-    assert.equal(apiOnly.api.dashboard, false);
-
-});
-
-test('normalizeConfig parses registry credentials', async (assert) => {
-
-    const config = normalizeConfig({
-        managedServices: [],
-        registries: {
-            'ghcr.io': {username: 'myuser', password: 'ghp_secret'},
-            'docker.io': {username: 'hubuser', password: 'hubtoken'},
-        },
-    });
-
-    assert.equal(config.registries?.['ghcr.io'].username, 'myuser');
-    assert.equal(config.registries?.['ghcr.io'].password, 'ghp_secret');
-    assert.equal(config.registries?.['docker.io'].username, 'hubuser');
-
-});
-
-test('parseConfig parses JSON', async (assert) => {
-
-    const parsed = parseConfig('{"managedServices": [], "poll": {"intervalMs": 10000}}', '/app/config.json') as {
-        managedServices: unknown[];
-        poll: {intervalMs: number};
-    };
-
-    assert.equal(parsed.managedServices.length, 0);
-    assert.equal(parsed.poll.intervalMs, 10000);
-
-});
-
-test('parseConfig parses YAML', async (assert) => {
-
-    const raw = `
-managedServices:
-  - name: api
-    registry: r.example.com
-    repository: api
-    tag: latest
-    composeServices:
-      - api-1
-      - api-2
-poll:
-  intervalMs: 30000
-`;
-
-    const parsed = parseConfig(raw, '/app/config.yaml') as {
-        managedServices: unknown[];
-        poll: {intervalMs: number};
-    };
-
-    assert.equal(parsed.managedServices.length, 1);
-    assert.equal(parsed.poll.intervalMs, 30000);
-
-});
-
-test('parseConfig throws on empty YAML', async (assert) => {
-
-    let error: Error | undefined;
-
-    try {
-
-        parseConfig('---', '/app/config.yaml');
-
-} catch (err) {
-
-        error = err as Error;
-
-}
-
-    assert.equal(error?.message, 'YAML config file is empty: /app/config.yaml');
-
-});
-
-test('loadConfig reads JSON config file', async (assert) => {
-
-    const dir = await tempDir();
-    const file = path.join(dir, 'config.json');
-
-    await writeFile(
-        file,
-        JSON.stringify({
-            managedServices: [
-                {
-                    name: 'api',
-                    registry: 'r.example.com',
-                    repository: 'api',
-                    tag: 'latest',
-                    composeServices: ['api'],
-                },
-            ],
-        }),
-        'utf8',
-    );
-
-    const config = await loadConfig(file);
-
-    assert.equal(config.managedServices.length, 1);
-    assert.equal(config.managedServices[0].name, 'api');
-    assert.equal(config.compose.file, '/app/docker-compose.yml');
-
-    await cleanup(dir);
-
-});
-
-test('loadConfig reads from CASTELLAN_CONFIG env var', async (assert) => {
-
-    const dir = await tempDir();
-    const file = path.join(dir, 'env-config.json');
-
-    await writeFile(
-        file,
-        JSON.stringify({
-            managedServices: [
-                {
-                    name: 'svc',
-                    registry: 'r.example.com',
-                    repository: 'svc',
-                    tag: 'latest',
-                    composeServices: ['svc'],
-                },
-            ],
-        }),
-        'utf8',
-    );
-
-    const config = await withEnv('CASTELLAN_CONFIG', file, async () => loadConfig());
-
-    assert.equal(config.managedServices.length, 1);
-    assert.equal(config.managedServices[0].name, 'svc');
-
-    await cleanup(dir);
-
-});
-
-test('loadConfig throws when config file is missing', async (assert) => {
-
-    let error: Error | undefined;
-
-    try {
-
-        await loadConfig('/nonexistent/config.json');
-
-} catch (err) {
-
-        error = err as Error;
-
-}
-
-    assert.equal(error?.message.startsWith('Config file not found'), true);
-
-});
-
-test('loadConfig infers compose project from compose file name', async (assert) => {
-
-    const dir = await tempDir();
-    const composeFile = path.join(dir, 'docker-compose.yml');
-    const configFile = path.join(dir, 'config.json');
-
-    await writeFile(composeFile, 'name: myapp\nservices:\n', 'utf8');
-    await writeFile(
-        configFile,
-        JSON.stringify({
-            managedServices: [],
-            compose: {file: composeFile},
-        }),
-        'utf8',
-    );
-
-    const config = await loadConfig(configFile);
-
-    assert.equal(config.compose.project, 'myapp');
-
-    await cleanup(dir);
-
-});
-
-test('loadConfig infers compose project from directory name', async (assert) => {
-
-    const dir = await tempDir();
-    const composeFile = path.join(dir, 'docker-compose.yml');
-    const configFile = path.join(dir, 'config.json');
-
-    await writeFile(composeFile, 'services:\n', 'utf8');
-    await writeFile(
-        configFile,
-        JSON.stringify({
-            managedServices: [],
-            compose: {file: composeFile},
-        }),
-        'utf8',
-    );
-
-    const config = await loadConfig(configFile);
-
-    assert.equal(config.compose.project, path.basename(dir));
-
-    await cleanup(dir);
-
-});
-
-test('loadConfigOrDiscover uses config file when present', async (assert) => {
-
-    const dir = await tempDir();
-    const file = path.join(dir, 'config.json');
-
-    await writeFile(
-        file,
-        JSON.stringify({
-            managedServices: [
-                {
-                    name: 'api',
-                    registry: 'r.example.com',
-                    repository: 'api',
-                    tag: 'latest',
-                    composeServices: ['api'],
-                },
-            ],
-        }),
-        'utf8',
-    );
-
-    const docker = {
-        listContainers: async () => [],
-    } as unknown as DockerClient;
-
-    const config = await loadConfigOrDiscover(docker, file);
-
-    assert.equal(config.managedServices.length, 1);
-    assert.equal(config.managedServices[0].name, 'api');
-
-    await cleanup(dir);
-
-});
-
-test('loadConfigOrDiscover falls back to Watchtower discovery when config is missing', async (assert) => {
-
-    const docker = {
+    return {
         listContainers: async () => [
             {
                 Id: 'abc123',
@@ -475,7 +31,7 @@ test('loadConfigOrDiscover falls back to Watchtower discovery when config is mis
                 Labels: {
                     'com.docker.compose.service': 'worker',
                     'com.docker.compose.project': 'myapp',
-                    'com.centurylinklabs.watchtower.enable': 'true',
+                    [CASTELLAN_AUTUPDATE_LABEL]: 'true',
                 },
                 State: 'running',
                 Status: 'Up 1 hour',
@@ -483,39 +39,40 @@ test('loadConfigOrDiscover falls back to Watchtower discovery when config is mis
         ],
     } as unknown as DockerClient;
 
-    const config = await loadConfigOrDiscover(docker, '/nonexistent/config.json');
+}
+
+test('loadConfig merges env settings with discovered services', async (assert) => {
+
+    const dir = await tempDir();
+    const composeFile = path.join(dir, 'docker-compose.yml');
+
+    await writeFile(composeFile, 'name: myapp\nservices:\n', 'utf8');
+
+    const config = await withEnv({
+        CASTELLAN_COMPOSE_FILE: composeFile,
+        CASTELLAN_POLL_INTERVAL_MS: '30000',
+        CASTELLAN_AUTH_TOKEN: 'secret',
+    }, async () => loadConfig(labeledWorkerDocker()));
 
     assert.equal(config.managedServices.length, 1);
     assert.equal(config.managedServices[0].name, 'worker');
-    assert.equal(config.managedServices[0].registry, '123456789.dkr.ecr.us-east-1.amazonaws.com');
+    assert.equal(config.compose.file, composeFile);
+    assert.equal(config.compose.project, 'myapp');
+    assert.equal(config.poll.intervalMs, 30000);
+    assert.equal(config.api.authToken, 'secret');
+
+    await cleanup(dir);
 
 });
 
-test('loadConfigOrDiscover rethrows non-missing config errors', async (assert) => {
-
-    const dir = await tempDir();
-    const file = path.join(dir, 'config.json');
-
-    await writeFile(file, 'not valid json', 'utf8');
+test('loadConfig returns empty managedServices when none are labeled yet', async (assert) => {
 
     const docker = {
         listContainers: async () => [],
     } as unknown as DockerClient;
 
-    let error: Error | undefined;
+    const config = await loadConfig(docker);
 
-    try {
-
-        await loadConfigOrDiscover(docker, file);
-
-} catch (err) {
-
-        error = err as Error;
-
-}
-
-    assert.equal(error?.message.includes('JSON'), true);
-
-    await cleanup(dir);
+    assert.equal(config.managedServices.length, 0);
 
 });

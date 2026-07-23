@@ -14,33 +14,6 @@ type ManifestList = {
     manifests?: ManifestListEntry[];
 };
 
-const MANIFEST_LIST_TYPES = new Set([
-    'application/vnd.docker.distribution.manifest.list.v2+json',
-    'application/vnd.oci.image.index.v1+json',
-]);
-
-export function isManifestList(mediaType: string | undefined, manifest: string): boolean {
-
-    if (mediaType && MANIFEST_LIST_TYPES.has(mediaType)) {
-
-        return true;
-
-}
-
-    try {
-
-        const parsed = JSON.parse(manifest) as ManifestList;
-
-        return Array.isArray(parsed.manifests);
-
-} catch {
-
-        return false;
-
-}
-
-}
-
 export function resolveManifestList(manifest: string, platform: string = getDefaultPlatform()): string {
 
     const parsed = JSON.parse(manifest) as ManifestList;
@@ -72,5 +45,67 @@ function getDefaultPlatform(): string {
     const arch = process.arch === 'x64' ? 'amd64' : process.arch;
 
     return `linux/${arch}`;
+
+}
+
+type VerboseManifestEntry = {
+    Descriptor?: {
+        digest?: string;
+        platform?: ManifestPlatform;
+    };
+    Digest?: string;
+};
+
+export function parseManifestInspectStdout(stdout: string, platform: string = getDefaultPlatform()): string {
+
+    const parsed: unknown = JSON.parse(stdout);
+
+    if (Array.isArray(parsed)) {
+
+        return digestFromVerboseEntries(parsed as VerboseManifestEntry[], platform);
+
+}
+
+    if (typeof parsed === 'object' && parsed !== null) {
+
+        const object = parsed as VerboseManifestEntry & ManifestList;
+
+        if (Array.isArray(object.manifests)) {
+
+            return resolveManifestList(stdout, platform);
+
+}
+
+        const singleDigest = object.Descriptor?.digest ?? object.Digest;
+
+        if (singleDigest) {
+
+            return singleDigest;
+
+}
+
+}
+
+    throw new Error('Unexpected docker manifest inspect output');
+
+}
+
+function digestFromVerboseEntries(entries: VerboseManifestEntry[], platform: string): string {
+
+    const [osName, architecture] = platform.split('/');
+    const match = entries.find((entry) =>
+        entry.Descriptor?.platform?.os === osName
+        && entry.Descriptor?.platform?.architecture === architecture,
+    ) ?? entries.find((entry) => entry.Descriptor?.digest);
+
+    const digest = match?.Descriptor?.digest;
+
+    if (!digest) {
+
+        throw new Error('No digest found in docker manifest inspect output');
+
+}
+
+    return digest;
 
 }

@@ -10,7 +10,7 @@ import {sleep} from './health.js';
 import type {RollerPort, RollerStatus} from './roller-port.js';
 import {StateManager} from './state.js';
 import type {ServiceDeployment, Config, DeploymentEvent, ManagedService, ServiceRuntime} from './types.js';
-import {discoverManagedServices} from './watchtower.js';
+import {discoverManagedServices} from './label-discovery.js';
 
 export type {RollerStatus} from './roller-port.js';
 
@@ -66,42 +66,39 @@ export class Roller implements RollerPort {
     async syncDiscoveredServices(): Promise<void> {
 
         const discovered = await discoverManagedServices(this.docker);
+        const discoveredNames = new Set(discovered.map((service) => service.name));
 
-        if (this.config.labelDiscovery) {
+        for (const service of discovered) {
 
-            for (const service of discovered) {
+            const existing = this.findService(service.name);
 
-                if (this.findService(service.name)) {
-
-                    continue;
-
-}
+            if (!existing) {
 
                 this.registerManagedService(service, true);
-
-}
-
-            return;
-
-}
-
-        for (const name of this.state.getPersistedServiceNames()) {
-
-            if (this.findService(name)) {
-
                 continue;
 
 }
 
-            const match = discovered.find((service) => service.name === name);
+            existing.registry = service.registry;
+            existing.repository = service.repository;
+            existing.tag = service.tag;
+            existing.composeServices = service.composeServices;
 
-            if (match) {
+}
 
-                this.registerManagedService(match, false);
+        this.managedServices = this.managedServices.filter((service) => {
+
+            if (discoveredNames.has(service.name)) {
+
+                return true;
 
 }
 
-}
+            this.runtimes.delete(service.name);
+
+            return false;
+
+});
 
 }
 
