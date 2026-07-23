@@ -102,7 +102,7 @@ async function main(): Promise<void> {
 
     const roller = new Roller(config, registry, docker, state);
 
-    await roller.hydratePersistedServices();
+    await roller.syncDiscoveredServices();
 
     roller.start();
 

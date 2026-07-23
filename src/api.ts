@@ -158,7 +158,6 @@ const ROLLER_METHODS: Partial<Record<ApiMethod, (roller: RollerPort, body: unkno
     deploy: async (roller, body) => deploy(roller, body),
     reject: async (roller, body) => reject(roller, body),
     setPollEnabled: async (roller, body) => setPollEnabled(roller, body),
-    discoverServices: async (roller) => discoverServices(roller),
     history: async (roller) => history(roller),
     deployments: async (roller, body) => deployments(roller, body),
 };
@@ -261,14 +260,6 @@ async function setPollEnabled(roller: RollerPort, body: unknown): Promise<{ok: b
     const ok = await roller.setPollEnabled(service, enabled);
 
     return {ok};
-
-}
-
-async function discoverServices(roller: RollerPort): Promise<{services: unknown[]}> {
-
-    const services = await roller.discoverServices();
-
-    return {services};
 
 }
 

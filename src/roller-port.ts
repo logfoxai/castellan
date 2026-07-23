@@ -1,4 +1,4 @@
-import type {DeploymentEvent, ManagedService, ServiceDeployment, ServiceRuntime} from './types.js';
+import type {DeploymentEvent, ServiceDeployment, ServiceRuntime} from './types.js';
 
 export type RollerStatus = {
     paused: boolean;
@@ -9,7 +9,6 @@ export type RollerPort = {
     getStatus(): RollerStatus;
     getEvents(): DeploymentEvent[];
     getDeployments(serviceName: string): ServiceDeployment[];
-    discoverServices(): Promise<ManagedService[]>;
     pause(): void;
     resume(): void;
     forceCheck(): Promise<void>;

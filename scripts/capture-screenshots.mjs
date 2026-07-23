@@ -35,16 +35,20 @@ async function capture() {
     const {chromium} = await import('playwright');
 
     const browser = await chromium.launch();
-    // Retina-quality context sized to the dashboard's max content width so the
-    // full-page capture never clips horizontally.
     const context = await browser.newContext({
-        viewport: {width: 1440, height: 960},
+        viewport: {width: 1440, height: 820},
         deviceScaleFactor: 2,
     });
     const page = await context.newPage();
 
     await page.goto(`${baseUrl}/`, {waitUntil: 'networkidle'});
     await sleep(600);
+
+    // README hero: header + service/history row only — not the full docker panel.
+    await page.evaluate(() => {
+        document.querySelector('.docker-panel')?.remove();
+    });
+    await sleep(200);
 
     const shots = [
         {file: 'screenshot.png', theme: 'dark'},
@@ -58,7 +62,7 @@ async function capture() {
         await sleep(300);
         await page.screenshot({
             path: path.join(assetsDir, shot.file),
-            fullPage: true,
+            fullPage: false,
         });
         console.log(`Saved ${shot.file}`);
     }

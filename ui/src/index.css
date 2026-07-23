@@ -256,7 +256,7 @@ main.container {
   gap: 12px;
 }
 
-.poll-state {
+.auto-state {
   display: inline-flex;
   align-items: center;
   gap: 7px;
@@ -264,7 +264,7 @@ main.container {
   color: var(--muted);
 }
 
-.poll-state::before {
+.auto-state::before {
   content: '';
   width: 7px;
   height: 7px;
@@ -272,7 +272,7 @@ main.container {
   background: var(--success);
 }
 
-.poll-state.paused::before {
+.auto-state.paused::before {
   background: var(--muted);
 }
 
@@ -420,12 +420,12 @@ button:hover {
   font-size: 0.76rem;
 }
 
-.status-card.poll-disabled {
+.status-card.auto-disabled {
   opacity: 0.92;
   border-color: color-mix(in srgb, var(--border) 80%, var(--warning) 20%);
 }
 
-.poll-badge {
+.auto-badge {
   font-size: 0.68rem;
   font-weight: 600;
   padding: 2px 8px;
@@ -433,28 +433,109 @@ button:hover {
   margin-left: auto;
 }
 
-.poll-badge.poll-on {
+.auto-badge.auto-on {
   color: var(--success);
   background: color-mix(in srgb, var(--success) 12%, transparent);
 }
 
-.poll-badge.poll-off {
+.auto-badge.auto-off {
   color: var(--warning);
   background: color-mix(in srgb, var(--warning) 14%, transparent);
 }
 
-.discover-services {
-  margin: 16px 0;
-  padding-top: 12px;
-  border-top: 1px solid var(--border);
+.service-detail-dialog {
+  width: min(560px, calc(100vw - 32px));
+  max-height: calc(100vh - 32px);
+  padding: 0;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--surface);
+  color: var(--text);
+  box-shadow: 0 12px 40px rgb(0 0 0 / 0.18);
+  overflow: auto;
 }
 
-.discover-services h3 {
-  margin: 0 0 6px;
-  font-size: 0.88rem;
+.service-detail-dialog::backdrop {
+  background: rgb(0 0 0 / 0.45);
 }
 
-.discover-services ul {
+.service-detail-body {
+  margin: 0;
+  padding: 18px 20px 16px;
+}
+
+.service-detail-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 14px;
+}
+
+.service-detail-head h3 {
+  margin: 0;
+  font-size: 1rem;
+}
+
+.service-detail-subtitle {
+  margin: 6px 0 0;
+  font-size: 0.78rem;
+  color: var(--muted);
+}
+
+.service-detail-subtitle code {
+  font-family: var(--font-mono);
+  color: var(--text);
+}
+
+.dialog-close {
+  min-width: 32px;
+  padding: 4px 10px;
+  font-size: 1.2rem;
+  line-height: 1;
+}
+
+.service-detail-section {
+  margin-bottom: 8px;
+}
+
+.service-detail-toolbar {
+  margin-bottom: 10px;
+}
+
+.service-detail-dl {
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  font-size: 0.74rem;
+  color: var(--muted);
+}
+
+.service-detail-dl > div {
+  display: grid;
+  grid-template-columns: 7.5rem minmax(0, 1fr);
+  gap: 8px;
+  align-items: baseline;
+}
+
+.service-detail-dl dt {
+  margin: 0;
+}
+
+.service-detail-dl dd {
+  margin: 0;
+  min-width: 0;
+}
+
+.service-detail-dl code {
+  font-family: var(--font-mono);
+  color: var(--text);
+  font-size: 0.72rem;
+  overflow-wrap: anywhere;
+}
+
+.discover-dialog-list {
   list-style: none;
   margin: 0;
   padding: 0;
@@ -598,52 +679,6 @@ button:hover {
 
 .deployment-actions button {
   font-size: 0.72rem;
-}
-
-.status-details {
-  font-size: 0.74rem;
-  color: var(--muted);
-}
-
-.status-details summary {
-  cursor: pointer;
-  user-select: none;
-  color: var(--muted);
-}
-
-.status-details summary:hover {
-  color: var(--text);
-}
-
-.status-details dl {
-  margin: 10px 0 0;
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-
-.status-details dl > div {
-  display: grid;
-  grid-template-columns: 7.5rem minmax(0, 1fr);
-  gap: 8px;
-  align-items: baseline;
-}
-
-.status-details dt {
-  margin: 0;
-  color: var(--muted);
-}
-
-.status-details dd {
-  margin: 0;
-  min-width: 0;
-}
-
-.status-details code {
-  font-family: var(--font-mono);
-  color: var(--text);
-  font-size: 0.72rem;
-  overflow-wrap: anywhere;
 }
 
 /* ---------- History list ---------- */

@@ -63,25 +63,19 @@ export class Roller implements RollerPort {
 
 }
 
-    async hydratePersistedServices(): Promise<void> {
+    async syncDiscoveredServices(): Promise<void> {
 
         const discovered = await discoverManagedServices(this.docker);
 
-        for (const name of this.state.getPersistedServiceNames()) {
+        for (const service of discovered) {
 
-            if (this.findService(name)) {
+            if (this.findService(service.name)) {
 
                 continue;
 
 }
 
-            const match = discovered.find((service) => service.name === name);
-
-            if (match) {
-
-                this.registerManagedService(match);
-
-}
+            this.registerManagedService(service);
 
 }
 
@@ -105,15 +99,6 @@ export class Roller implements RollerPort {
     getDeployments(serviceName: string): ServiceDeployment[] {
 
         return this.state.getDeployments(serviceName);
-
-}
-
-    async discoverServices(): Promise<ManagedService[]> {
-
-        const discovered = await discoverManagedServices(this.docker);
-        const managed = new Set(this.managedServices.map((service) => service.name));
-
-        return discovered.filter((service) => !managed.has(service.name));
 
 }
 
@@ -410,6 +395,8 @@ export class Roller implements RollerPort {
 
         try {
 
+            await this.syncDiscoveredServices();
+
             for (const service of this.managedServices) {
 
                 await this.checkService(service);
@@ -647,7 +634,7 @@ export class Roller implements RollerPort {
 
         const runtime = createRuntime(
             service,
-            this.state.getServicePollEnabled(service.name, false),
+            this.state.getServicePollEnabled(service.name, true),
         );
 
         this.syncRejectedDigests(runtime);

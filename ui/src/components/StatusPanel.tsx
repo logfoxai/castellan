@@ -6,7 +6,6 @@ import {formatDigestShort, formatServiceImageRef, serviceVersionNote} from '../s
 
 export function StatusPanel(): JSX.Element {
     const {data, error, loading, refresh} = usePolling(() => rpc('status'), 5000);
-    const {data: discoverData, refresh: refreshDiscover} = usePolling(() => rpc('discoverServices'), 10000);
 
     if (loading && !data) return <section className="panel status-panel">Loading status...</section>;
     if (error) return <section className="panel panel-error status-panel">Error loading status: {error.message}</section>;
@@ -18,77 +17,42 @@ export function StatusPanel(): JSX.Element {
         refresh();
     };
 
-    const refreshAll = (): void => {
-        refresh();
-        refreshDiscover();
-    };
-
-    const discoverable = discoverData?.services ?? [];
-
     return (
         <section className="panel status-panel">
             <div className="panel-head">
                 <h2>Service Status</h2>
-                <span className={`poll-state${paused ? ' paused' : ''}`}>
-                    {paused ? 'Polling paused' : 'Polling active'}
+                <span className={`auto-state${paused ? ' paused' : ''}`}>
+                    {paused ? 'Updates paused' : 'Watching registries'}
                 </span>
             </div>
             <div className="status-grid">
                 {(data?.services ?? []).map((service) => (
-                    <ServiceCard key={service.name} service={service} onMutate={refreshAll} />
+                    <ServiceCard key={service.name} service={service} onMutate={refresh} />
                 ))}
             </div>
-            {discoverable.length > 0 ? (
-                <div className="discover-services">
-                    <h3>Available to enable</h3>
-                    <p className="actions-hint">
-                        These compose services have autoupdate labels but are not managed yet.
-                    </p>
-                    <ul>
-                        {discoverable.map((service) => (
-                            <li key={service.name} className="discover-service-row">
-                                <code>{service.name}</code>
-                                <span>{service.registry}/{service.repository}:{service.tag}</span>
-                                <button
-                                    onClick={async () => {
-                                        await rpc('setPollEnabled', {service: service.name, enabled: true});
-                                        refreshAll();
-                                    }}
-                                >
-                                    Enable polling
-                                </button>
-                            </li>
-                        ))}
-                    </ul>
-                </div>
-            ) : null}
             <div className="actions">
                 <button
-                    title="Check registries for poll-enabled services right now."
+                    title="Check registries for auto-update services right now."
                     onClick={() => act('forceCheck')}
                 >
                     Check now
                 </button>
                 {paused ? (
                     <button
-                        title="Resume automatic polling for poll-enabled services."
+                        title="Resume automatic updates for all services."
                         onClick={() => act('resume')}
                     >
-                        Resume polling
+                        Resume all
                     </button>
                 ) : (
                     <button
-                        title="Pause automatic polling for all services until you resume."
+                        title="Pause automatic updates for all services until you resume."
                         onClick={() => act('pause')}
                     >
-                        Pause polling
+                        Pause all
                     </button>
                 )}
             </div>
-            <p className="actions-hint">
-                Each service can be poll-enabled or disabled individually. Manual deploy disables polling
-                for that service until you re-enable it.
-            </p>
         </section>
     );
 }
@@ -100,6 +64,53 @@ function ServiceCard({
     service: ServiceStatus;
     onMutate: () => void;
 }): JSX.Element {
+    const [detailOpen, setDetailOpen] = useState(false);
+
+    return (
+        <>
+            <div className={`status-card status-${service.state}${service.pollEnabled ? '' : ' auto-disabled'}`}>
+                <div className="status-card-header">
+                    <strong>{service.name}</strong>
+                    <span className="status-badge">{service.state}</span>
+                    <span className={`auto-badge${service.pollEnabled ? ' auto-on' : ' auto-off'}`}>
+                        {service.pollEnabled ? 'Auto' : 'Manual'}
+                    </span>
+                </div>
+                <div className="status-version">
+                    <code className="status-image-ref">{formatServiceImageRef(service)}</code>
+                    <span className="status-version-note">{serviceVersionNote(service)}</span>
+                </div>
+                <div className="status-meta">
+                    <span>
+                        Last check: {service.lastCheckAt ? new Date(service.lastCheckAt).toLocaleTimeString() : 'never'}
+                    </span>
+                    {service.lastError ? <span className="status-error">{service.lastError}</span> : null}
+                </div>
+                <div className="status-card-actions">
+                    <button onClick={() => setDetailOpen(true)}>Manage</button>
+                </div>
+            </div>
+            {detailOpen ? (
+                <ServiceDetailDialog
+                    service={service}
+                    onClose={() => setDetailOpen(false)}
+                    onMutate={onMutate}
+                />
+            ) : null}
+        </>
+    );
+}
+
+function ServiceDetailDialog({
+    service,
+    onClose,
+    onMutate,
+}: {
+    service: ServiceStatus;
+    onClose: () => void;
+    onMutate: () => void;
+}): JSX.Element {
+    const dialogRef = useRef<HTMLDialogElement>(null);
     const [pollBusy, setPollBusy] = useState(false);
     const inSync = Boolean(
         service.currentDigest
@@ -108,7 +119,11 @@ function ServiceCard({
     );
     const fullImage = `${service.registry}/${formatServiceImageRef(service)}`;
 
-    const togglePoll = async (): Promise<void> => {
+    useEffect(() => {
+        dialogRef.current?.showModal();
+    }, []);
+
+    const toggleAuto = async (): Promise<void> => {
         setPollBusy(true);
 
         try {
@@ -120,62 +135,66 @@ function ServiceCard({
     };
 
     return (
-        <div className={`status-card status-${service.state}${service.pollEnabled ? '' : ' poll-disabled'}`}>
-            <div className="status-card-header">
-                <strong>{service.name}</strong>
-                <span className="status-badge">{service.state}</span>
-                <span className={`poll-badge${service.pollEnabled ? ' poll-on' : ' poll-off'}`}>
-                    {service.pollEnabled ? 'Polling on' : 'Polling off'}
-                </span>
-            </div>
-            <div className="status-version">
-                <code className="status-image-ref">{formatServiceImageRef(service)}</code>
-                <span className="status-version-note">{serviceVersionNote(service)}</span>
-            </div>
-            <div className="status-meta">
-                <span>
-                    Last check: {service.lastCheckAt ? new Date(service.lastCheckAt).toLocaleTimeString() : 'never'}
-                </span>
-                {service.lastError ? <span className="status-error">{service.lastError}</span> : null}
-            </div>
-            <div className="status-card-actions">
-                <button disabled={pollBusy} onClick={togglePoll}>
-                    {service.pollEnabled ? 'Disable polling' : 'Enable polling'}
-                </button>
-            </div>
-            <details className="status-details">
-                <summary>{inSync ? 'Image details' : 'Image details · digest changed'}</summary>
-                <dl>
+        <dialog
+            ref={dialogRef}
+            className="service-detail-dialog"
+            onCancel={onClose}
+            onClose={onClose}
+        >
+            <form method="dialog" className="service-detail-body">
+                <div className="service-detail-head">
                     <div>
-                        <dt>Watched tag</dt>
-                        <dd><code>{service.tag}</code></dd>
+                        <h3>{service.name}</h3>
+                        <p className="service-detail-subtitle">
+                            <code>{formatServiceImageRef(service)}</code>
+                            {' · '}
+                            <span className={`auto-badge${service.pollEnabled ? ' auto-on' : ' auto-off'}`}>
+                                {service.pollEnabled ? 'Auto' : 'Manual'}
+                            </span>
+                        </p>
                     </div>
-                    <div>
-                        <dt>Full image</dt>
-                        <dd><code>{fullImage}</code></dd>
+                    <button type="button" className="dialog-close" aria-label="Close" onClick={onClose}>
+                        ×
+                    </button>
+                </div>
+                <div className="service-detail-section">
+                    <div className="service-detail-toolbar">
+                        <button type="button" disabled={pollBusy} onClick={toggleAuto}>
+                            {service.pollEnabled ? 'Switch to manual' : 'Enable auto updates'}
+                        </button>
                     </div>
-                    <div>
-                        <dt>Running digest</dt>
-                        <dd><code>{service.currentDigest ?? 'unknown'}</code></dd>
-                    </div>
-                    <div>
-                        <dt>Registry digest</dt>
-                        <dd><code>{service.desiredDigest ?? 'unknown'}</code></dd>
-                    </div>
-                    {!inSync && service.currentDigest && service.desiredDigest ? (
+                    <dl className="service-detail-dl">
                         <div>
-                            <dt>Change</dt>
-                            <dd>
-                                <code>{formatDigestShort(service.currentDigest)}</code>
-                                {' → '}
-                                <code>{formatDigestShort(service.desiredDigest)}</code>
-                            </dd>
+                            <dt>Watched tag</dt>
+                            <dd><code>{service.tag}</code></dd>
                         </div>
-                    ) : null}
-                </dl>
+                        <div>
+                            <dt>Full image</dt>
+                            <dd><code>{fullImage}</code></dd>
+                        </div>
+                        <div>
+                            <dt>Running digest</dt>
+                            <dd><code>{service.currentDigest ?? 'unknown'}</code></dd>
+                        </div>
+                        <div>
+                            <dt>Registry digest</dt>
+                            <dd><code>{service.desiredDigest ?? 'unknown'}</code></dd>
+                        </div>
+                        {!inSync && service.currentDigest && service.desiredDigest ? (
+                            <div>
+                                <dt>Change</dt>
+                                <dd>
+                                    <code>{formatDigestShort(service.currentDigest)}</code>
+                                    {' → '}
+                                    <code>{formatDigestShort(service.desiredDigest)}</code>
+                                </dd>
+                            </div>
+                        ) : null}
+                    </dl>
+                </div>
                 <ServiceDeployments service={service} onMutate={onMutate} />
-            </details>
-        </div>
+            </form>
+        </dialog>
     );
 }
 
@@ -255,6 +274,7 @@ function ServiceDeployments({
                             <div className="deployment-actions">
                                 {!isCurrent ? (
                                     <button
+                                        type="button"
                                         disabled={busyDigest === deployment.digest}
                                         onClick={() => setConfirmDigest(deployment.digest)}
                                     >
@@ -263,6 +283,7 @@ function ServiceDeployments({
                                 ) : null}
                                 {!deployment.reject ? (
                                     <button
+                                        type="button"
                                         disabled={busyDigest === deployment.digest}
                                         onClick={() => reject(deployment.digest)}
                                     >
@@ -311,7 +332,7 @@ function DeployConfirmDialog({
                     <strong>{serviceName}</strong>.
                 </p>
                 <p className="confirm-dialog-warning">
-                    This pauses automatic updates for this service until you re-enable polling.
+                    Manual deploy switches this service to manual mode until you re-enable auto updates.
                 </p>
                 <div className="confirm-dialog-actions">
                     <button type="button" disabled={busy} onClick={onCancel}>

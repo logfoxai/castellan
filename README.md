@@ -173,7 +173,7 @@ For each labeled container Castellan builds a managed service from:
 - **Compose service name** — `com.docker.compose.service` label
 - **Registry / repository / tag** — parsed from the container’s current `Image` ref
 
-Discovery runs **once at startup**. One labeled container → one compose service restarted at a time. Docker healthchecks apply; there is no `healthUrl` or `registries` block without a config file.
+Discovery runs **at startup and on every registry check**. New labeled containers are picked up automatically with auto updates enabled. One labeled container → one compose service restarted at a time. Docker healthchecks apply; there is no `healthUrl` or `registries` block without a config file.
 
 Remove Watchtower, add Castellan, keep legacy labels or switch to `ai.logfox.castellan.autoupdate` — one line per service.
 
@@ -401,8 +401,7 @@ When `api.enabled` is `true` (the default), Castellan exposes an internal HTTP A
   - `pause` / `resume` — pause/resume polling.
   - `deploy` — deploy a specific digest (`{"service":"api","digest":"sha256:…"}`). Disables polling for that service until re-enabled.
   - `reject` — mark a digest rejected and roll back if it is running (`{"service":"api","digest":"sha256:…"}`).
-  - `setPollEnabled` — enable or disable registry polling for one service (`{"service":"api","enabled":true}`).
-  - `discoverServices` — list autoupdate-labelled compose services not yet managed (`{}`).
+  - `setPollEnabled` — enable or disable automatic updates for one service (`{"service":"api","enabled":true}`).
   - `history` — recent events (all services).
   - `deployments` — per-service deployment history (`{"service":"api"}`).
   - `dockerContainers`, `dockerImages`, `dockerNetworks`, `dockerVolumes` — Docker inspection.
@@ -415,8 +414,8 @@ See [Access & API auth](#access--api-auth). For headless or API-only deployments
 Served at `/` when `api.enabled` and `api.dashboard` are both `true` (the default).
 
 - Live service status with watched **tag** and `repository:tag`; digests and **past deployments** in expandable details.
-- **Deploy** and **Reject** actions per deployment digest; per-service **polling on/off** toggles.
-- **Check now** and **Pause/Resume polling** controls.
+- **Deploy** and **Reject** actions per deployment digest (in the service manage dialog); per-service **Auto / Manual** badges.
+- **Check now** and **Pause all / Resume all** controls.
 - Docker container table with live CPU, memory, disk usage, state, and one-click log viewing.
 - Deployment / rollback / failure history timeline.
 - **No login screen** — open the URL on your private network (see [Security](#security)).
