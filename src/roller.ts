@@ -1,6 +1,7 @@
 import type {Registry} from './registry.js';
 import {DockerClient} from './docker.js';
-import {sleep, waitForHttpHealth} from './health.js';
+import {sleep} from './health.js';
+import {verifyDeployHealth} from './service-health.js';
 import {StateManager} from './state.js';
 import type {ContainerInfo} from 'dockerode';
 import type {Config, DeploymentEvent, ManagedService, ServiceRuntime} from './types.js';
@@ -564,97 +565,13 @@ export class Roller {
 
     private async verifyServiceHealth(service: ManagedService, composeService: string): Promise<void> {
 
-        const deadline = Date.now() + this.config.rollback.healthTimeoutMs;
-
-        while (Date.now() < deadline) {
-
-            this.checkRollbackRequested(service.name);
-
-            const container = await this.findComposeContainer(composeService);
-            const containerHealthy = container ? await this.isContainerHealthy(container.Id) : false;
-
-            if (!containerHealthy) {
-
-                await sleep(service.healthIntervalMs);
-                continue;
-
-}
-
-            if (!service.healthUrl) {
-
-                return;
-
-}
-
-            if (await this.verifyHttpHealth(service, composeService, deadline)) {
-
-                return;
-
-}
-
-            await sleep(service.healthIntervalMs);
-
-}
-
-        this.checkRollbackRequested(service.name);
-        throw new Error(`Health check failed for ${composeService}`);
-
-}
-
-    private async verifyHttpHealth(
-        service: ManagedService,
-        composeService: string,
-        deadline: number,
-    ): Promise<boolean> {
-
-        const remainingMs = deadline - Date.now();
-
-        if (remainingMs <= 0) {
-
-            return false;
-
-}
-
-        const httpHealthy = await this.httpHealth(
+        await verifyDeployHealth({
             service,
             composeService,
-            remainingMs,
-            () => this.rollbackRequested.has(service.name),
-        );
-
-        if (httpHealthy) {
-
-            return true;
-
-}
-
-        this.checkRollbackRequested(service.name);
-
-        return false;
-
-}
-
-    private async httpHealth(
-        service: ManagedService,
-        composeService: string,
-        remainingMs: number,
-        checkAbort: () => boolean,
-    ): Promise<boolean> {
-
-        if (!service.healthUrl) {
-
-            return true;
-
-}
-
-        const healthUrl = service.healthUrl.replace(/\{\{service\}\}/g, composeService);
-
-        return waitForHttpHealth({
-            url: healthUrl,
-            intervalMs: service.healthIntervalMs,
-            retries: service.healthRetries,
-            timeoutMs: remainingMs,
-            checkAbort,
+            healthTimeoutMs: this.config.rollback.healthTimeoutMs,
+            findContainer: (name) => this.findComposeContainer(name),
+            beforeCheck: () => this.checkRollbackRequested(service.name),
+            checkAbort: () => this.rollbackRequested.has(service.name),
         });
 
 }
@@ -719,41 +636,6 @@ export class Roller {
             .sort((a, b) => b.Created - a.Created);
 
         return running[0] ?? null;
-
-}
-
-    private async isContainerHealthy(containerId: string): Promise<boolean> {
-
-        const containers = await this.docker.listContainers();
-        const container = containers.find((c) => c.Id === containerId);
-
-        if (!container || container.State !== 'running') {
-
-            return false;
-
-}
-
-        const status = container.Status ?? '';
-
-        if (status.includes('unhealthy')) {
-
-            return false;
-
-}
-
-        if (status.includes('healthy')) {
-
-            return true;
-
-}
-
-        if (status.includes('health:')) {
-
-            return false;
-
-}
-
-        return true;
 
 }
 
