@@ -126,10 +126,7 @@ export async function deployManagedService(
     runtime.state = 'updating';
     ctx.recordEvent('deploy', service.name, `Updating to ${desiredDigest}`);
 
-    const composeServices = await resolveComposeServices(ctx, service);
-
-    await ctx.withComposeLock(() => ctx.docker.composePull(composeServices[0], ctx.config.compose));
-    await restartComposeServices(ctx, service, composeServices);
+    await rolloutDigest(ctx, service, desiredDigest, runtime);
     await markDeploySuccess(ctx, service, desiredDigest, runtime);
 
 }

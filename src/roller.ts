@@ -63,6 +63,30 @@ export class Roller implements RollerPort {
 
 }
 
+    async hydratePersistedServices(): Promise<void> {
+
+        const discovered = await discoverManagedServices(this.docker);
+
+        for (const name of this.state.getPersistedServiceNames()) {
+
+            if (this.findService(name)) {
+
+                continue;
+
+}
+
+            const match = discovered.find((service) => service.name === name);
+
+            if (match) {
+
+                this.registerManagedService(match);
+
+}
+
+}
+
+}
+
     getStatus(): RollerStatus {
 
         return {
@@ -183,7 +207,7 @@ export class Roller implements RollerPort {
 
 });
 
-        if (ok) {
+        if (ok && this.getRuntime(serviceName).currentDigest === digest) {
 
             await this.disableServicePoll(serviceName, 'Polling paused after manual deploy');
 
@@ -605,14 +629,29 @@ export class Roller implements RollerPort {
 
 }
 
-        this.managedServices.push(match);
-
-        const runtime = createRuntime(match, false);
-
-        this.syncRejectedDigests(runtime);
-        this.runtimes.set(match.name, runtime);
+        this.registerManagedService(match);
 
         return match;
+
+}
+
+    private registerManagedService(service: ManagedService): void {
+
+        if (this.findService(service.name)) {
+
+            return;
+
+}
+
+        this.managedServices.push(service);
+
+        const runtime = createRuntime(
+            service,
+            this.state.getServicePollEnabled(service.name, false),
+        );
+
+        this.syncRejectedDigests(runtime);
+        this.runtimes.set(service.name, runtime);
 
 }
 

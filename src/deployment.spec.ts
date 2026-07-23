@@ -64,7 +64,7 @@ function healthyContainer(): ContainerInfo {
 
 }
 
-function mockDockerForDeploy(): DockerClient {
+function mockDockerForDeploy(track: {pullImage?: string; composePullCalls: number}): DockerClient {
 
     let pulled = false;
 
@@ -73,21 +73,30 @@ function mockDockerForDeploy(): DockerClient {
         listContainers: async () => [healthyContainer()],
         composePull: async () => {
 
-            pulled = true;
+            track.composePullCalls += 1;
 
 },
         composeUp: async () => undefined,
-        pullImage: async () => undefined,
+        pullImage: async (image: string) => {
+
+            track.pullImage = image;
+            pulled = true;
+
+},
         tagImage: async () => undefined,
     } as unknown as DockerClient;
 
 }
 
-function createContext(state: StateManager, runtime: ServiceRuntime): DeploymentContext {
+function createContext(
+    state: StateManager,
+    runtime: ServiceRuntime,
+    track: {pullImage?: string; composePullCalls: number},
+): DeploymentContext {
 
     return {
         config: testConfig,
-        docker: mockDockerForDeploy(),
+        docker: mockDockerForDeploy(track),
         state,
         withComposeLock: async (run) => run(),
         findComposeContainer: async () => healthyContainer(),
@@ -102,16 +111,22 @@ function createContext(state: StateManager, runtime: ServiceRuntime): Deployment
 }
 
 async function withEmptyState(
-    fn: (ctx: DeploymentContext, state: StateManager, runtime: ServiceRuntime) => Promise<void>,
+    fn: (
+        ctx: DeploymentContext,
+        state: StateManager,
+        runtime: ServiceRuntime,
+        track: {pullImage?: string; composePullCalls: number},
+    ) => Promise<void>,
 ): Promise<void> {
 
     const dir = await mkdtemp(path.join(os.tmpdir(), 'castellan-deploy-'));
     const state = new StateManager(path.join(dir, 'state.json'));
     const runtime = baseRuntime();
+    const track = {composePullCalls: 0};
 
     try {
 
-        await fn(createContext(state, runtime), state, runtime);
+        await fn(createContext(state, runtime, track), state, runtime, track);
 
 } finally {
 
@@ -122,19 +137,25 @@ async function withEmptyState(
 }
 
 async function withContext(
-    fn: (ctx: DeploymentContext, state: StateManager, runtime: ServiceRuntime) => Promise<void>,
+    fn: (
+        ctx: DeploymentContext,
+        state: StateManager,
+        runtime: ServiceRuntime,
+        track: {pullImage?: string; composePullCalls: number},
+    ) => Promise<void>,
 ): Promise<void> {
 
     const dir = await mkdtemp(path.join(os.tmpdir(), 'castellan-deploy-'));
     const state = new StateManager(path.join(dir, 'state.json'));
     const runtime = baseRuntime();
+    const track = {composePullCalls: 0};
 
     state.appendDeployment('api', {digest: 'sha256:old', outcome: 'success'});
     await state.save();
 
     try {
 
-        await fn(createContext(state, runtime), state, runtime);
+        await fn(createContext(state, runtime, track), state, runtime, track);
 
 } finally {
 
@@ -158,6 +179,19 @@ test('handleDeployFailure does not reject digest for infrastructure errors', asy
 
         assert.equal(state.getRejectedDigests('api').length, 0);
         assert.equal(runtime.rejectedDigests.length, 0);
+
+});
+
+});
+
+test('deployManagedService pulls the requested digest', async (assert) => {
+
+    await withEmptyState(async (ctx, _state, runtime, track) => {
+
+        await deployManagedService(ctx, baseService, 'sha256:new', runtime);
+
+        assert.equal(track.pullImage, 'ghcr.io/myorg/api@sha256:new');
+        assert.equal(track.composePullCalls, 0);
 
 });
 
@@ -196,13 +230,13 @@ test('deployManagedService does not duplicate baseline when digest is already li
 
 test('deployManagedService skips baseline when current containers are unhealthy', async (assert) => {
 
-    await withEmptyState(async (ctx, state, runtime) => {
+    await withEmptyState(async (ctx, state, runtime, track) => {
 
         let healthChecks = 0;
 
         const unhealthyCtx: DeploymentContext = {
             ...ctx,
-            docker: mockDockerForDeploy(),
+            docker: mockDockerForDeploy({...track, composePullCalls: track.composePullCalls}),
             findComposeContainer: async () => {
 
                 healthChecks += 1;

@@ -56,7 +56,12 @@ function createDocker(pullStarted: {value: boolean}): DockerClient {
 
 },
         composeUp: async () => undefined,
-        pullImage: async () => undefined,
+        pullImage: async () => {
+
+            pullStarted.value = true;
+            await sleep(250);
+
+},
         tagImage: async () => undefined,
     } as unknown as DockerClient;
 
@@ -168,6 +173,53 @@ test('manual deploy disables polling for the service', async (assert) => {
 
 });
 
+function createFailingPullDocker(): DockerClient {
+
+    return {
+        listContainers: async () => [healthyContainer()],
+        getLocalDigest: async () => 'sha256:known-good',
+        composePull: async () => undefined,
+        composeUp: async () => undefined,
+        pullImage: async () => {
+
+            throw new Error('pull failed');
+
+},
+        tagImage: async () => undefined,
+    } as unknown as DockerClient;
+
+}
+
+test('failed manual deploy does not disable polling', async (assert) => {
+
+    const dir = await mkdtemp(path.join(os.tmpdir(), 'castellan-roller-'));
+    const state = new StateManager(path.join(dir, 'state.json'));
+
+    state.appendDeployment('api', {digest: 'sha256:known-good', outcome: 'success'});
+    await state.save();
+
+    const registry: Registry = {
+        getManifest: async () => ({digest: 'sha256:new', pushedAt: null}),
+        invalidate: () => undefined,
+    };
+    const roller = new Roller(config, registry, createFailingPullDocker(), state);
+
+    try {
+
+        const ok = await roller.deploy('api', 'sha256:bad');
+
+        assert.equal(ok, true);
+        assert.equal(roller.getStatus().services[0]?.pollEnabled, true);
+
+} finally {
+
+        roller.stop();
+        await rm(dir, {recursive: true, force: true});
+
+}
+
+});
+
 test('forceCheck skips services with polling disabled', async (assert) => {
 
     const dir = await mkdtemp(path.join(os.tmpdir(), 'castellan-roller-'));
@@ -191,6 +243,39 @@ test('forceCheck skips services with polling disabled', async (assert) => {
         await roller.forceCheck();
 
         assert.equal(manifestCalls, 0);
+
+} finally {
+
+        roller.stop();
+        await rm(dir, {recursive: true, force: true});
+
+}
+
+});
+
+test('hydratePersistedServices restores discovered services from state', async (assert) => {
+
+    const dir = await mkdtemp(path.join(os.tmpdir(), 'castellan-roller-'));
+    const state = new StateManager(path.join(dir, 'state.json'));
+
+    state.setServicePollEnabled('worker-1', true);
+    await state.save();
+
+    const registry: Registry = {
+        getManifest: async () => ({digest: 'sha256:worker', pushedAt: null}),
+        invalidate: () => undefined,
+    };
+    const roller = new Roller(config, registry, createDiscoverDocker(), state);
+
+    try {
+
+        await roller.hydratePersistedServices();
+
+        assert.equal(roller.getStatus().services.some((entry) => entry.name === 'worker-1'), true);
+        assert.equal(
+            roller.getStatus().services.find((entry) => entry.name === 'worker-1')?.pollEnabled,
+            true,
+        );
 
 } finally {
 
