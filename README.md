@@ -428,13 +428,9 @@ Served at `/` when `api.enabled` and `api.dashboard` are both `true` (the defaul
 
 # Roadmap
 
-- **Notifications** — Slack/webhook on deploy, rollback, or failure.
-- **Prometheus metrics** — poll latency, deploy outcomes, health results.
-- **CLI companion** — `castellan status`, `castellan check`, `castellan rollback <service>`.
-- **Minimum update age** — hold a new digest for N minutes before deploying.
-- **Crash-loop detection** — rollback when a container restart-loops after update.
-- **Image diff preview** — show env/port changes before restart.
-- **Multi-host support** — manage several compose hosts from one place (maybe; today Castellan is single-host by design).
+Active plan: **[docs/roadmap.md](docs/roadmap.md)** — observability + MCP (read track) and minimal deploy mutations (write track): digest history, pin deploy, registry catalog, managed logs, stdio MCP.
+
+Backlog (not scheduled): notifications, Prometheus metrics, CLI companion, minimum update age, crash-loop detection, image diff preview, multi-host.
 
 Have an idea? Open an issue or discussion.
 
