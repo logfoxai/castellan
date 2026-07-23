@@ -4,7 +4,7 @@ import os from 'os';
 import path from 'path';
 import {loadConfig} from './config.js';
 import type {DockerClient} from './docker.js';
-import {CASTELLAN_AUTUPDATE_LABEL} from './watchtower.js';
+import {CASTELLAN_AUTUPDATE_LABEL} from './label-discovery.js';
 
 async function tempDir(): Promise<string> {
 

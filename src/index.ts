@@ -57,7 +57,7 @@ async function startApiServer(
     if (auth.source === 'generated') {
 
         console.warn(
-            `No api.authToken configured; generated an API secret at ${auth.tokenFilePath}. `
+            `No CASTELLAN_AUTH_TOKEN configured; generated an API secret at ${auth.tokenFilePath}. `
             + 'Use it as Authorization: Bearer <token> for curl/scripts. '
             + 'The dashboard sets a session cookie automatically — no login UI.',
         );

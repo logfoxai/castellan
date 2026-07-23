@@ -5,7 +5,7 @@ import {
     CASTELLAN_GROUP_LABEL,
     discoverManagedServices,
     hasDiscoveryLabel,
-} from './watchtower.js';
+} from './label-discovery.js';
 
 function labeledRunningContainer(
     id: string,

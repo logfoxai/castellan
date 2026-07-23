@@ -108,7 +108,6 @@ export function mergeManagedServicesByImage(services: ManagedService[]): Managed
         groups.set(key, {
             ...existing,
             composeServices: mergeComposeServiceNames(existing, service),
-            healthUrl: existing.healthUrl ?? service.healthUrl,
             group: mergeGroupLabel(existing.group, service.group),
         });
 

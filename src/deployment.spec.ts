@@ -19,8 +19,6 @@ const baseService: ManagedService = {
     repository: 'myorg/api',
     tag: 'prime',
     composeServices: ['api-1'],
-    healthIntervalMs: 5000,
-    healthRetries: 3,
 };
 
 const testConfig: Config = {

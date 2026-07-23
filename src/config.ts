@@ -3,7 +3,7 @@ import path from 'path';
 import type {DockerClient} from './docker.js';
 import {loadEnvConfig} from './env-config.js';
 import type {Config} from './types.js';
-import {discoverManagedServices} from './watchtower.js';
+import {discoverManagedServices} from './label-discovery.js';
 
 export async function loadConfig(docker: DockerClient): Promise<Config> {
 

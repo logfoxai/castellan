@@ -1,5 +1,6 @@
 import type {ContainerInfo} from 'dockerode';
-import {sleep, waitForHttpHealth} from './health.js';
+import {sleep} from './health.js';
+import {HEALTH_POLL_INTERVAL_MS} from './label-discovery.js';
 import type {ManagedService} from './types.js';
 
 export class DeployHealthError extends Error {
@@ -47,12 +48,6 @@ export function containerReportsHealthy(
 
 }
 
-function resolveHealthUrl(healthUrl: string, composeService: string): string {
-
-    return healthUrl.replace(/\{\{service\}\}/g, composeService);
-
-}
-
 export type VerifyDeployHealthOptions = {
     service: ManagedService;
     composeService: string;
@@ -61,103 +56,46 @@ export type VerifyDeployHealthOptions = {
     beforeCheck?: () => void;
     checkAbort?: () => boolean;
     sleepFn?: (ms: number) => Promise<void>;
+    pollIntervalMs?: number;
 };
 
-async function probeHttpHealth(
-    service: ManagedService,
-    composeService: string,
-    remainingMs: number,
-    checkAbort?: () => boolean,
-): Promise<boolean> {
-
-    if (!service.healthUrl || remainingMs <= 0) {
-
-        return false;
-
-}
-
-    return waitForHttpHealth({
-        url: resolveHealthUrl(service.healthUrl, composeService),
-        intervalMs: service.healthIntervalMs,
-        retries: service.healthRetries,
-        timeoutMs: remainingMs,
-        checkAbort,
-    });
-
-}
-
 export async function snapshotComposeServiceHealth(
-    service: ManagedService,
+    _service: ManagedService,
     composeService: string,
     findContainer: (composeService: string) => Promise<ContainerInfo | null>,
 ): Promise<boolean> {
 
     const container = await findContainer(composeService);
 
-    if (!containerReportsHealthy(container)) {
-
-        return false;
-
-}
-
-    if (!service.healthUrl) {
-
-        return true;
-
-}
-
-    try {
-
-        const response = await fetch(resolveHealthUrl(service.healthUrl, composeService));
-
-        return response.ok;
-
-} catch {
-
-        return false;
-
-}
+    return containerReportsHealthy(container);
 
 }
 
 export async function verifyDeployHealth(options: VerifyDeployHealthOptions): Promise<void> {
 
     const sleepMs = options.sleepFn ?? sleep;
+    const pollIntervalMs = options.pollIntervalMs ?? HEALTH_POLL_INTERVAL_MS;
     const deadline = Date.now() + options.healthTimeoutMs;
 
     while (Date.now() < deadline) {
+
+        if (options.checkAbort?.()) {
+
+            throw new DeployHealthError(options.composeService);
+
+}
 
         options.beforeCheck?.();
 
         const container = await options.findContainer(options.composeService);
 
-        if (!containerReportsHealthy(container)) {
-
-            await sleepMs(options.service.healthIntervalMs);
-            continue;
-
-}
-
-        if (!options.service.healthUrl) {
+        if (containerReportsHealthy(container)) {
 
             return;
 
 }
 
-        const httpHealthy = await probeHttpHealth(
-            options.service,
-            options.composeService,
-            deadline - Date.now(),
-            options.checkAbort,
-        );
-
-        if (httpHealthy) {
-
-            return;
-
-}
-
-        await sleepMs(options.service.healthIntervalMs);
+        await sleepMs(pollIntervalMs);
 
 }
 

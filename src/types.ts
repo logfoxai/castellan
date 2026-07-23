@@ -6,9 +6,6 @@ export type ManagedService = {
     composeServices?: string[];
     /** Optional logical name from ai.logfox.castellan.group during label discovery. */
     group?: string;
-    healthUrl?: string;
-    healthIntervalMs: number;
-    healthRetries: number;
 };
 
 export type PollConfig = {

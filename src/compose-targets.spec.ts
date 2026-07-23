@@ -8,8 +8,6 @@ test('mergeManagedServicesByImage groups same image ref', (assert) => {
         registry: 'ghcr.io',
         repository: 'myorg/api',
         tag: 'staging',
-        healthIntervalMs: 5000,
-        healthRetries: 10,
     };
 
     const merged = mergeManagedServicesByImage([
@@ -29,8 +27,6 @@ test('mergeManagedServicesByImage uses agreed group label', (assert) => {
         registry: 'ghcr.io',
         repository: 'myorg/api-service',
         tag: 'staging',
-        healthIntervalMs: 5000,
-        healthRetries: 10,
     };
 
     const merged = mergeManagedServicesByImage([

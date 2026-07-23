@@ -10,7 +10,7 @@ import {sleep} from './health.js';
 import type {RollerPort, RollerStatus} from './roller-port.js';
 import {StateManager} from './state.js';
 import type {ServiceDeployment, Config, DeploymentEvent, ManagedService, ServiceRuntime} from './types.js';
-import {discoverManagedServices} from './watchtower.js';
+import {discoverManagedServices} from './label-discovery.js';
 
 export type {RollerStatus} from './roller-port.js';
 
