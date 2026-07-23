@@ -70,6 +70,15 @@ type ServiceState =
     | 'rollback'
     | 'failed';
 
+export type DeploymentOutcome = 'success' | 'failed';
+
+export type ServiceDeployment = {
+    digest: string;
+    at: string;
+    outcome: DeploymentOutcome;
+    reject?: true;
+};
+
 export type ServiceRuntime = {
     name: string;
     registry: string;
@@ -78,9 +87,11 @@ export type ServiceRuntime = {
     state: ServiceState;
     currentDigest: string | null;
     desiredDigest: string | null;
-    badDigests: string[];
+    rejectedDigests: string[];
     lastCheckAt: Date | null;
     lastError: string | null;
+    /** When false, periodic checks and forceCheck skip this service. Manual deploy sets false. */
+    pollEnabled: boolean;
 };
 
 export type DeploymentEvent = {

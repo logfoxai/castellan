@@ -1,12 +1,12 @@
 import {readFile, writeFile, mkdir, rename} from 'fs/promises';
 import {existsSync} from 'fs';
 import path from 'path';
-import type {DeploymentEvent} from './types.js';
+import type {DeploymentEvent, DeploymentOutcome, ServiceDeployment} from './types.js';
 
 export type PersistedState = {
     version: number;
-    knownGood: Record<string, string>;
-    badDigests: Record<string, string[]>;
+    deployments: Record<string, ServiceDeployment[]>;
+    pollEnabled: Record<string, boolean>;
     events: {
         at: string;
         type: DeploymentEvent['type'];
@@ -15,8 +15,9 @@ export type PersistedState = {
     }[];
 };
 
-const CURRENT_VERSION = 1;
+const CURRENT_VERSION = 3;
 const MAX_EVENTS = 500;
+const MAX_DEPLOYMENTS_PER_SERVICE = 100;
 
 export class StateManager {
 
@@ -30,8 +31,8 @@ export class StateManager {
         this.filePath = filePath;
         this.state = {
             version: CURRENT_VERSION,
-            knownGood: {},
-            badDigests: {},
+            deployments: {},
+            pollEnabled: {},
             events: [],
         };
 
@@ -48,27 +49,43 @@ export class StateManager {
         try {
 
             const raw = await readFile(this.filePath, 'utf8');
-            const parsed = JSON.parse(raw) as PersistedState;
-
-            this.state = {
-                version: parsed.version ?? CURRENT_VERSION,
-                knownGood: parsed.knownGood ?? {},
-                badDigests: parsed.badDigests ?? {},
-                events: parsed.events ?? [],
+            const parsed = JSON.parse(raw) as Partial<PersistedState> & {
+                knownGood?: Record<string, string>;
+                badDigests?: Record<string, string[]>;
             };
+            const migrated = (parsed.version ?? 1) < CURRENT_VERSION;
+
+            this.state = parsePersistedState(parsed);
+            this.dirty = migrated;
 
 } catch (err) {
 
             console.error(`Failed to load state from ${this.filePath}:`, err);
-            this.state = {
-                version: CURRENT_VERSION,
-                knownGood: {},
-                badDigests: {},
-                events: [],
-            };
+            this.state = emptyState();
             this.dirty = true;
 
 }
+
+}
+
+    getServicePollEnabled(service: string, defaultEnabled = true): boolean {
+
+        const value = this.state.pollEnabled[service];
+
+        if (value === undefined) {
+
+            return defaultEnabled;
+
+}
+
+        return value;
+
+}
+
+    setServicePollEnabled(service: string, enabled: boolean): void {
+
+        this.state.pollEnabled[service] = enabled;
+        this.dirty = true;
 
 }
 
@@ -112,35 +129,153 @@ export class StateManager {
 
 }
 
-    setKnownGood(service: string, digest: string): void {
+    appendDeployment(
+        service: string,
+        entry: {digest: string; outcome: DeploymentOutcome; reject?: true; at?: Date},
+    ): void {
 
-        this.state.knownGood[service] = digest;
+        const record: ServiceDeployment = {
+            digest: entry.digest,
+            at: (entry.at ?? new Date()).toISOString(),
+            outcome: entry.outcome,
+            ...(entry.reject ? {reject: true} : {}),
+        };
+
+        const existing = this.state.deployments[service] ?? [];
+
+        this.state.deployments[service] = [record, ...existing].slice(0, MAX_DEPLOYMENTS_PER_SERVICE);
         this.dirty = true;
 
 }
 
-    getKnownGood(service: string): string | null {
+    getDeployments(service: string): ServiceDeployment[] {
 
-        return this.state.knownGood[service] ?? null;
-
-}
-
-    getBadDigests(service: string): string[] {
-
-        return this.state.badDigests[service] ?? [];
+        return [...(this.state.deployments[service] ?? [])];
 
 }
 
-    addBadDigest(service: string, digest: string): void {
+    getPersistedServiceNames(): string[] {
 
-        const existing = this.state.badDigests[service] ?? [];
+        const names = new Set([
+            ...Object.keys(this.state.deployments),
+            ...Object.keys(this.state.pollEnabled),
+        ]);
 
-        if (!existing.includes(digest)) {
+        return [...names];
 
-            this.state.badDigests[service] = [...existing, digest];
+}
+
+    hasDeploymentDigest(service: string, digest: string): boolean {
+
+        return this.getDeployments(service).some((deployment) => deployment.digest === digest);
+
+}
+
+    getRejectedDigests(service: string): string[] {
+
+        const rejected = new Set<string>();
+
+        for (const deployment of this.getDeployments(service)) {
+
+            if (deployment.reject) {
+
+                rejected.add(deployment.digest);
+
+}
+
+}
+
+        return [...rejected];
+
+}
+
+    isDigestRejected(service: string, digest: string): boolean {
+
+        return this.getDeployments(service).some(
+            (deployment) => deployment.digest === digest && deployment.reject,
+        );
+
+}
+
+    setDigestRejected(service: string, digest: string, rejected: boolean): void {
+
+        const deployments = this.state.deployments[service] ?? [];
+        let updated = false;
+
+        for (const deployment of deployments) {
+
+            if (deployment.digest === digest) {
+
+                if (rejected) {
+
+                    deployment.reject = true;
+
+} else {
+
+                    delete deployment.reject;
+
+}
+
+                updated = true;
+
+}
+
+}
+
+        if (!updated && rejected) {
+
+            this.appendDeployment(service, {digest, outcome: 'success', reject: true});
+
+            return;
+
+}
+
+        if (updated) {
+
             this.dirty = true;
 
 }
+
+}
+
+    isSuccessfulDeployment(service: string, digest: string): boolean {
+
+        return this.getDeployments(service).some(
+            (deployment) => (
+                deployment.digest === digest
+                && deployment.outcome === 'success'
+                && !deployment.reject
+            ),
+        );
+
+}
+
+    findRollbackDigest(service: string, currentDigest: string | null): string | null {
+
+        if (!currentDigest) {
+
+            return null;
+
+}
+
+        const deployments = this.getDeployments(service);
+        const currentIndex = deployments.findIndex((deployment) => deployment.digest === currentDigest);
+
+        if (currentIndex >= 0) {
+
+            return deployments.slice(currentIndex + 1).find(
+                (deployment) => deployment.outcome === 'success' && !deployment.reject,
+            )?.digest ?? null;
+
+}
+
+        return deployments.find(
+            (deployment) => (
+                deployment.outcome === 'success'
+                && !deployment.reject
+                && deployment.digest !== currentDigest
+            ),
+        )?.digest ?? null;
 
 }
 
@@ -173,5 +308,50 @@ export class StateManager {
         }));
 
 }
+
+}
+
+function emptyState(): PersistedState {
+
+    return {
+        version: CURRENT_VERSION,
+        deployments: {},
+        pollEnabled: {},
+        events: [],
+    };
+
+}
+
+function parsePersistedState(parsed: Partial<PersistedState> & {
+    knownGood?: Record<string, string>;
+    badDigests?: Record<string, string[]>;
+}): PersistedState {
+
+    if ((parsed.version ?? 1) < CURRENT_VERSION) {
+
+        return migrateState(parsed);
+
+}
+
+    return {
+        version: CURRENT_VERSION,
+        deployments: parsed.deployments ?? {},
+        pollEnabled: parsed.pollEnabled ?? {},
+        events: parsed.events ?? [],
+    };
+
+}
+
+function migrateState(parsed: Partial<PersistedState> & {
+    knownGood?: Record<string, string>;
+    badDigests?: Record<string, string[]>;
+}): PersistedState {
+
+    return {
+        version: CURRENT_VERSION,
+        deployments: parsed.deployments ?? {},
+        pollEnabled: parsed.pollEnabled ?? {},
+        events: parsed.events ?? [],
+    };
 
 }

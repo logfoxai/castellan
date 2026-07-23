@@ -7,7 +7,7 @@ This roadmap splits work into two parallel tracks:
 | Track | Goal |
 |-------|------|
 | **Read** | Rich observability — history, registry catalog, logs, MCP read tools, dashboard |
-| **Write** | Small, explicit mutation surface — deploy by digest, rollback, CI `forceCheck` |
+| **Write** | Small, explicit mutation surface — deploy by digest, reject, CI `forceCheck` |
 
 Tracks can ship independently. Read features should not require new write paths; write features should reuse the same deploy pipeline.
 
@@ -28,8 +28,10 @@ Tracks can ship independently. Read features should not require new write paths;
 **Write**
 
 - `forceCheck` — poll registries now; deploy when rolling tag digest changed
-- `rollback(service)` — deploy the single saved **known-good** digest from before the last attempt
+- `deploy(service, digest)` — roll out a specific digest
+- `reject(service, digest)` — blacklist a digest; roll back if it is running
 - `pause` / `resume` — polling control
+- Rollback to a prior digest is internal (`rollbackManagedService`), used on deploy failure and by `reject`
 
 **Read**
 
@@ -56,9 +58,8 @@ Deploy semantics converge on **one implementation**: pull `@digest` → retag ro
 | Item | Detail |
 |------|--------|
 | RPC | `deploy` — `{ "service": "api", "digest": "sha256:…" }` |
-| Behavior | Same path as today’s deploy: pull, tag, rolling restart, health, update `knownGood` on success |
-| `rollback` | Keep as alias → `deploy(service, knownGood)` for CI/scripts compatibility |
-| Guards | Reject `badDigests`; respect deploy lock / in-flight deploy (same as `rollback` today) |
+| Behavior | Same path as poll deploy: pull, tag, rolling restart, health, record success |
+| Guards | Reject rejected digests; wait for deploy lock |
 | Events | Record `deploy` with trigger `manual` |
 
 **Out of scope for W1:** blocking auto-poll after manual deploy (see W3).
@@ -70,7 +71,7 @@ Deploy semantics converge on **one implementation**: pull `@digest` → retag ro
 | Item | Detail |
 |------|--------|
 | Schema | `state.json` v2 — `deployHistory[service][]`: `{ digest, at, trigger }` |
-| Triggers | `poll`, `forceCheck`, `manual`, `rollback` |
+| Triggers | `poll`, `forceCheck`, `manual`, internal rollback |
 | Caps | e.g. 30 entries per service (drop oldest) |
 | Migration | Bump `version` in `StateManager.load()`; v1 → v2 preserves existing fields |
 
@@ -92,7 +93,6 @@ Decision deferred to implementation; document chosen behavior in README.
 **Goal:** Logfox and other consumers keep working.
 
 - `forceCheck` — no breaking change
-- `rollback(service)` — no breaking change
 - `deploy-compose-service` continues to call `forceCheck` only
 
 ---
@@ -168,7 +168,7 @@ Keep Containers panel for host-wide ops; managed logs are the primary path for d
 | `castellan_logs` | read | `serviceLogs` |
 | `castellan_force_check` | write | `forceCheck` |
 | `castellan_deploy` | write | `deploy` |
-| `castellan_rollback` | write | `rollback` |
+| `castellan_reject` | write | `reject` |
 
 - **Transport:** stdio MCP (separate entrypoint or subcommand), same auth token as `/v1`
 - **Scope:** managed services only for writes; reads may include Containers summary if useful
@@ -249,7 +249,7 @@ Items from the earlier README roadmap — still valid, lower priority than obser
 
 - Notifications (Slack/webhook on deploy, rollback, failure)
 - Prometheus metrics (poll latency, deploy outcomes)
-- CLI companion (`castellan status`, `check`, `rollback`)
+- CLI companion (`castellan status`, `check`, `reject`)
 - Minimum update age before deploy
 - Crash-loop detection
 - Image diff preview (env/port changes)
@@ -262,8 +262,8 @@ Items from the earlier README roadmap — still valid, lower priority than obser
 **Write track**
 
 - Operator or CI can deploy a **specific digest** without SSH
-- `rollback` and `forceCheck` remain stable for Logfox CI
-- One deploy code path; no duplicate rollback logic
+- Bad digests are rejected via `reject`; internal rollback reuses one deploy pipeline
+- `forceCheck` remains stable for Logfox CI
 
 **Read track**
 

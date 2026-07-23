@@ -8,6 +8,22 @@ export type ServiceStatus = {
     desiredDigest: string | null;
     lastCheckAt: string | null;
     lastError: string | null;
+    pollEnabled: boolean;
+};
+
+type DiscoveredService = {
+    name: string;
+    registry: string;
+    repository: string;
+    tag: string;
+    composeServices?: string[];
+};
+
+type DeploymentRecord = {
+    digest: string;
+    at: string;
+    outcome: 'success' | 'failed';
+    reject?: true;
 };
 
 type DeploymentEvent = {
@@ -39,8 +55,12 @@ export type API = {
     forceCheck(): { ok: boolean };
     pause(): { paused: boolean };
     resume(): { paused: boolean };
-    rollback(input: { service: string }): { ok: boolean };
+    deploy(input: { service: string; digest: string }): { ok: boolean };
+    reject(input: { service: string; digest: string }): { ok: boolean };
+    setPollEnabled(input: { service: string; enabled: boolean }): { ok: boolean };
+    discoverServices(): { services: DiscoveredService[] };
     history(): { events: DeploymentEvent[] };
+    deployments(input: { service: string }): { deployments: DeploymentRecord[] };
     dockerContainers(): { containers: ContainerRow[] };
     dockerStatsAll(): { stats: ContainerStat[] };
     dockerImages(): { images: unknown[] };

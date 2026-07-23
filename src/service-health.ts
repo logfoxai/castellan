@@ -86,6 +86,40 @@ async function probeHttpHealth(
 
 }
 
+export async function snapshotComposeServiceHealth(
+    service: ManagedService,
+    composeService: string,
+    findContainer: (composeService: string) => Promise<ContainerInfo | null>,
+): Promise<boolean> {
+
+    const container = await findContainer(composeService);
+
+    if (!containerReportsHealthy(container)) {
+
+        return false;
+
+}
+
+    if (!service.healthUrl) {
+
+        return true;
+
+}
+
+    try {
+
+        const response = await fetch(resolveHealthUrl(service.healthUrl, composeService));
+
+        return response.ok;
+
+} catch {
+
+        return false;
+
+}
+
+}
+
 export async function verifyDeployHealth(options: VerifyDeployHealthOptions): Promise<void> {
 
     const sleepMs = options.sleepFn ?? sleep;

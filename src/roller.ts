@@ -1,7 +1,6 @@
 import type {Registry} from './registry.js';
 import {DockerClient} from './docker.js';
 import {
-    attemptRollback,
     createDeploymentContext,
     deployManagedService,
     handleDeployFailure,
@@ -10,7 +9,8 @@ import {
 import {sleep} from './health.js';
 import type {RollerPort, RollerStatus} from './roller-port.js';
 import {StateManager} from './state.js';
-import type {Config, DeploymentEvent, ManagedService, ServiceRuntime} from './types.js';
+import type {ServiceDeployment, Config, DeploymentEvent, ManagedService, ServiceRuntime} from './types.js';
+import {discoverManagedServices} from './watchtower.js';
 
 export type {RollerStatus} from './roller-port.js';
 
@@ -21,9 +21,9 @@ export class Roller implements RollerPort {
     private readonly docker: DockerClient;
     private readonly state: StateManager;
     private readonly deployment;
+    private managedServices: ManagedService[];
     private readonly runtimes: Map<string, ServiceRuntime> = new Map();
     private readonly locks: Map<string, boolean> = new Map();
-    private readonly rollbackRequested: Set<string> = new Set();
     private composeLock: Promise<unknown> = Promise.resolve();
     private checkingAll: boolean = false;
     private forceCheckPending: boolean = false;
@@ -37,32 +37,51 @@ export class Roller implements RollerPort {
         this.registry = registry;
         this.docker = docker;
         this.state = state;
+        this.managedServices = [...config.managedServices];
         this.deployment = createDeploymentContext(
             config,
             docker,
             state,
             (fn) => this.withComposeLock(fn),
             {
-                isRollbackRequested: (name) => this.rollbackRequested.has(name),
-                checkRollbackRequested: (name) => this.checkRollbackRequested(name),
                 recordEvent: (type, service, message) => this.recordEvent(type, service, message),
-                clearRollbackRequest: (name) => this.rollbackRequested.delete(name),
+                syncRejectedDigests: (runtime) => this.syncRejectedDigests(runtime),
             },
         );
 
-        for (const service of config.managedServices) {
+        for (const service of this.managedServices) {
 
-            const runtime = createRuntime(service);
-            const knownGood = this.state.getKnownGood(service.name);
+            const runtime = createRuntime(
+                service,
+                state.getServicePollEnabled(service.name, true),
+            );
 
-            if (knownGood) {
-
-                runtime.currentDigest = knownGood;
+            this.syncRejectedDigests(runtime);
+            this.runtimes.set(service.name, runtime);
 
 }
 
-            runtime.badDigests = this.state.getBadDigests(service.name);
-            this.runtimes.set(service.name, runtime);
+}
+
+    async hydratePersistedServices(): Promise<void> {
+
+        const discovered = await discoverManagedServices(this.docker);
+
+        for (const name of this.state.getPersistedServiceNames()) {
+
+            if (this.findService(name)) {
+
+                continue;
+
+}
+
+            const match = discovered.find((service) => service.name === name);
+
+            if (match) {
+
+                this.registerManagedService(match);
+
+}
 
 }
 
@@ -83,6 +102,21 @@ export class Roller implements RollerPort {
 
 }
 
+    getDeployments(serviceName: string): ServiceDeployment[] {
+
+        return this.state.getDeployments(serviceName);
+
+}
+
+    async discoverServices(): Promise<ManagedService[]> {
+
+        const discovered = await discoverManagedServices(this.docker);
+        const managed = new Set(this.managedServices.map((service) => service.name));
+
+        return discovered.filter((service) => !managed.has(service.name));
+
+}
+
     pause(): void {
 
         this.paused = true;
@@ -97,7 +131,15 @@ export class Roller implements RollerPort {
 
     async forceCheck(): Promise<void> {
 
-        for (const service of this.config.managedServices) {
+        for (const service of this.managedServices) {
+
+            const runtime = this.runtimes.get(service.name);
+
+            if (!runtime?.pollEnabled) {
+
+                continue;
+
+}
 
             this.registry.invalidate?.({
                 registry: service.registry,
@@ -119,7 +161,130 @@ export class Roller implements RollerPort {
 
 }
 
-    async rollback(serviceName: string): Promise<boolean> {
+    async deploy(serviceName: string, digest: string): Promise<boolean> {
+
+        const ok = await this.runServiceMutation(serviceName, async (service) => {
+
+            const runtime = this.getRuntime(serviceName);
+
+            if (this.state.isDigestRejected(service.name, digest)) {
+
+                throw new Error(`Refusing to deploy rejected digest ${digest}`);
+
+}
+
+            const current = runtime.currentDigest
+                ?? await this.docker.getLocalDigest(service.registry, service.repository, service.tag);
+
+            if (current === digest) {
+
+                runtime.currentDigest = digest;
+                runtime.desiredDigest = digest;
+                runtime.state = 'stable';
+                runtime.lastError = null;
+
+                return true;
+
+}
+
+            try {
+
+                await deployManagedService(this.deployment, service, digest, runtime);
+
+} catch (err) {
+
+                await handleDeployFailure(this.deployment, service, digest, runtime, err);
+
+                return runtime.state === 'stable';
+
+} finally {
+
+                await this.state.save();
+
+}
+
+            return true;
+
+});
+
+        if (ok && this.getRuntime(serviceName).currentDigest === digest) {
+
+            await this.disableServicePoll(serviceName, 'Polling paused after manual deploy');
+
+}
+
+        return ok;
+
+}
+
+    async reject(serviceName: string, digest: string): Promise<boolean> {
+
+        return this.runServiceMutation(serviceName, async (service) => {
+
+            this.state.setDigestRejected(service.name, digest, true);
+
+            const runtime = this.getRuntime(serviceName);
+            const current = runtime.currentDigest
+                ?? await this.docker.getLocalDigest(service.registry, service.repository, service.tag);
+
+            this.syncRejectedDigests(runtime);
+
+            if (current === digest) {
+
+                const ok = await rollbackManagedService(this.deployment, service, runtime);
+
+                await this.state.save();
+
+                return ok;
+
+}
+
+            await this.state.save();
+
+            return true;
+
+});
+
+}
+
+    async setPollEnabled(serviceName: string, enabled: boolean): Promise<boolean> {
+
+        if (enabled) {
+
+            await this.ensureManagedService(serviceName);
+
+}
+
+        const runtime = this.getRuntime(serviceName);
+
+        runtime.pollEnabled = enabled;
+        this.state.setServicePollEnabled(serviceName, enabled);
+        this.recordEvent(
+            'check',
+            serviceName,
+            enabled ? 'Polling enabled' : 'Polling disabled',
+        );
+        await this.state.save();
+
+        return true;
+
+}
+
+    private async disableServicePoll(serviceName: string, message: string): Promise<void> {
+
+        const runtime = this.getRuntime(serviceName);
+
+        runtime.pollEnabled = false;
+        this.state.setServicePollEnabled(serviceName, false);
+        this.recordEvent('check', serviceName, message);
+        await this.state.save();
+
+}
+
+    private async runServiceMutation(
+        serviceName: string,
+        fn: (service: ManagedService) => Promise<boolean>,
+    ): Promise<boolean> {
 
         const service = this.findService(serviceName);
 
@@ -129,17 +294,9 @@ export class Roller implements RollerPort {
 
 }
 
-        this.rollbackRequested.add(serviceName);
-
         if (this.locks.get(serviceName)) {
 
             await this.waitForServiceUnlock(serviceName);
-
-            if (!this.rollbackRequested.has(serviceName)) {
-
-                return true;
-
-}
 
 }
 
@@ -153,7 +310,7 @@ export class Roller implements RollerPort {
 
         try {
 
-            return await rollbackManagedService(this.deployment, service, this.getRuntime(serviceName));
+            return await fn(service);
 
 } finally {
 
@@ -253,7 +410,7 @@ export class Roller implements RollerPort {
 
         try {
 
-            for (const service of this.config.managedServices) {
+            for (const service of this.managedServices) {
 
                 await this.checkService(service);
 
@@ -275,6 +432,14 @@ export class Roller implements RollerPort {
 }
 
     private async checkService(service: ManagedService): Promise<void> {
+
+        const runtime = this.getRuntime(service.name);
+
+        if (!runtime.pollEnabled) {
+
+            return;
+
+}
 
         if (this.locks.get(service.name)) {
 
@@ -308,6 +473,12 @@ export class Roller implements RollerPort {
     private async runCheck(service: ManagedService): Promise<void> {
 
         const runtime = this.getRuntime(service.name);
+
+        if (!runtime.pollEnabled) {
+
+            return;
+
+}
 
         if (runtime.state !== 'idle' && runtime.state !== 'stable' && runtime.state !== 'failed') {
 
@@ -345,8 +516,6 @@ export class Roller implements RollerPort {
 
 }
 
-        await this.runRollbackIfRequested(service);
-
 }
 
     private async evaluateDesiredDigest(
@@ -355,7 +524,7 @@ export class Roller implements RollerPort {
         desiredDigest: string,
     ): Promise<'deploy' | 'stable' | 'failed'> {
 
-        if (await this.isBadDigest(runtime, desiredDigest)) {
+        if (await this.isRejectedDigest(runtime, desiredDigest)) {
 
             return 'failed';
 
@@ -374,30 +543,26 @@ export class Roller implements RollerPort {
 
 }
 
-    private async runRollbackIfRequested(service: ManagedService): Promise<void> {
+    private async isRejectedDigest(runtime: ServiceRuntime, digest: string): Promise<boolean> {
 
-        if (this.rollbackRequested.has(service.name)) {
-
-            await attemptRollback(this.deployment, service, this.getRuntime(service.name));
-
-}
-
-}
-
-    private async isBadDigest(runtime: ServiceRuntime, digest: string): Promise<boolean> {
-
-        if (!runtime.badDigests.includes(digest)) {
+        if (!runtime.rejectedDigests.includes(digest)) {
 
             return false;
 
 }
 
         runtime.state = 'failed';
-        runtime.lastError = `Refusing to deploy known-bad digest ${digest}`;
+        runtime.lastError = `Refusing to deploy rejected digest ${digest}`;
         this.recordEvent('failure', runtime.name, runtime.lastError);
         await this.state.save();
 
         return true;
+
+}
+
+    private syncRejectedDigests(runtime: ServiceRuntime): void {
+
+        runtime.rejectedDigests = this.state.getRejectedDigests(runtime.name);
 
 }
 
@@ -416,16 +581,6 @@ export class Roller implements RollerPort {
 } finally {
 
             await this.state.save();
-
-}
-
-}
-
-    private checkRollbackRequested(serviceName: string): void {
-
-        if (this.rollbackRequested.has(serviceName)) {
-
-            throw new Error(`Rollback requested for ${serviceName}`);
 
 }
 
@@ -451,7 +606,52 @@ export class Roller implements RollerPort {
 
     private findService(name: string): ManagedService | undefined {
 
-        return this.config.managedServices.find((service) => service.name === name);
+        return this.managedServices.find((service) => service.name === name);
+
+}
+
+    private async ensureManagedService(serviceName: string): Promise<ManagedService> {
+
+        const existing = this.findService(serviceName);
+
+        if (existing) {
+
+            return existing;
+
+}
+
+        const discovered = await discoverManagedServices(this.docker);
+        const match = discovered.find((service) => service.name === serviceName);
+
+        if (!match) {
+
+            throw new Error(`Unknown service: ${serviceName}`);
+
+}
+
+        this.registerManagedService(match);
+
+        return match;
+
+}
+
+    private registerManagedService(service: ManagedService): void {
+
+        if (this.findService(service.name)) {
+
+            return;
+
+}
+
+        this.managedServices.push(service);
+
+        const runtime = createRuntime(
+            service,
+            this.state.getServicePollEnabled(service.name, false),
+        );
+
+        this.syncRejectedDigests(runtime);
+        this.runtimes.set(service.name, runtime);
 
 }
 
@@ -477,7 +677,7 @@ export class Roller implements RollerPort {
 
 }
 
-function createRuntime(service: ManagedService): ServiceRuntime {
+function createRuntime(service: ManagedService, pollEnabled: boolean): ServiceRuntime {
 
     return {
         name: service.name,
@@ -487,9 +687,10 @@ function createRuntime(service: ManagedService): ServiceRuntime {
         state: 'idle',
         currentDigest: null,
         desiredDigest: null,
-        badDigests: [],
+        rejectedDigests: [],
         lastCheckAt: null,
         lastError: null,
+        pollEnabled,
     };
 
 }

@@ -4,58 +4,36 @@ import type {DockerClient} from './docker.js';
 import type {DeploymentEvent} from './types.js';
 import type {RollerPort, RollerStatus} from './roller-port.js';
 
-type MockRoller = RollerPort;
-
 type MockDocker = {
     [K in keyof DockerClient]: DockerClient[K];
 };
 
-function createRoller(): MockRoller {
+function createRoller(): RollerPort {
 
     let paused = false;
 
     return {
-        getStatus(): RollerStatus {
+        getStatus: (): RollerStatus => ({paused, services: []}),
+        forceCheck: async (): Promise<void> => undefined,
+        pause: (): void => {
 
-            return {paused, services: []};
+ paused = true;
 
-        },
-        async forceCheck(): Promise<void> {
+},
+        resume: (): void => {
 
-            return undefined;
+ paused = false;
 
-        },
-        pause(): void {
-
-            paused = true;
-
-        },
-        resume(): void {
-
-            paused = false;
-
-        },
-        async rollback(): Promise<boolean> {
-
-            return true;
-
-        },
-        getEvents(): DeploymentEvent[] {
-
-            return [];
-
-        },
-        start(): void {
-
-            return undefined;
-
-        },
-        stop(): void {
-
-            return undefined;
-
-        },
-    } as unknown as MockRoller;
+},
+        deploy: async (): Promise<boolean> => true,
+        reject: async (): Promise<boolean> => true,
+        setPollEnabled: async (): Promise<boolean> => true,
+        discoverServices: async () => [],
+        getEvents: (): DeploymentEvent[] => [],
+        getDeployments: () => [],
+        start: (): void => undefined,
+        stop: (): void => undefined,
+    };
 
 }
 
