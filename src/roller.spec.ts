@@ -26,13 +26,11 @@ const config: Config = {
     poll: {enabled: false, intervalMs: 0, jitterMs: 0},
     rollback: {healthTimeoutMs: 50, maxAttempts: 1},
     api: {enabled: false, dashboard: false, port: 3003},
-    labelDiscovery: false,
 };
 
-const labelDiscoveryConfig: Config = {
+const discoveryConfig: Config = {
     ...config,
     managedServices: [],
-    labelDiscovery: true,
 };
 
 function healthyContainer(): ContainerInfo {
@@ -46,6 +44,8 @@ function healthyContainer(): ContainerInfo {
         Labels: {
             'com.docker.compose.service': 'api-1',
             'com.docker.compose.project': 'logfox',
+            'ai.logfox.castellan.autoupdate': 'true',
+            'ai.logfox.castellan.group': 'api',
         },
     } as unknown as ContainerInfo;
 
@@ -300,7 +300,7 @@ test('syncDiscoveredServices auto-registers labeled services in label discovery 
         getManifest: async () => ({digest: 'sha256:worker', pushedAt: null}),
         invalidate: () => undefined,
     };
-    const roller = new Roller(labelDiscoveryConfig, registry, createDiscoverDocker(), state);
+    const roller = new Roller(discoveryConfig, registry, createDiscoverDocker(), state);
 
     try {
 
@@ -321,54 +321,55 @@ test('syncDiscoveredServices auto-registers labeled services in label discovery 
 
 });
 
-test('syncDiscoveredServices skips unlisted labeled services in config mode', async (assert) => {
+function createToggleDiscoverDocker(includeWorker: {value: boolean}): DockerClient {
 
-    const dir = await mkdtemp(path.join(os.tmpdir(), 'castellan-roller-'));
-    const state = new StateManager(path.join(dir, 'state.json'));
-    const registry: Registry = {
-        getManifest: async () => ({digest: 'sha256:worker', pushedAt: null}),
-        invalidate: () => undefined,
-    };
-    const roller = new Roller(config, registry, createDiscoverDocker(), state);
+    return {
+        listContainers: async () => {
 
-    try {
+            const containers = [healthyContainer()];
 
-        await roller.syncDiscoveredServices();
+            if (includeWorker.value) {
 
-        assert.equal(roller.getStatus().services.some((entry) => entry.name === 'worker-1'), false);
-
-} finally {
-
-        roller.stop();
-        await rm(dir, {recursive: true, force: true});
+                containers.push(workerContainer());
 
 }
 
-});
+            return containers;
 
-test('syncDiscoveredServices restores deployment history as manual in config mode', async (assert) => {
+},
+        getLocalDigest: async () => 'sha256:known-good',
+        composePull: async () => undefined,
+        composeUp: async () => undefined,
+        pullImage: async () => undefined,
+        tagImage: async () => undefined,
+    } as unknown as DockerClient;
+
+}
+
+test('syncDiscoveredServices removes services when labels disappear', async (assert) => {
 
     const dir = await mkdtemp(path.join(os.tmpdir(), 'castellan-roller-'));
     const state = new StateManager(path.join(dir, 'state.json'));
-
-    state.appendDeployment('worker-1', {digest: 'sha256:worker', outcome: 'success'});
-    await state.save();
-
     const registry: Registry = {
         getManifest: async () => ({digest: 'sha256:worker', pushedAt: null}),
         invalidate: () => undefined,
     };
-    const roller = new Roller(config, registry, createDiscoverDocker(), state);
+    const includeWorker = {value: true};
+    const roller = new Roller(
+        discoveryConfig,
+        registry,
+        createToggleDiscoverDocker(includeWorker),
+        state,
+    );
 
     try {
 
         await roller.syncDiscoveredServices();
-
         assert.equal(roller.getStatus().services.some((entry) => entry.name === 'worker-1'), true);
-        assert.equal(
-            roller.getStatus().services.find((entry) => entry.name === 'worker-1')?.pollEnabled,
-            false,
-        );
+
+        includeWorker.value = false;
+        await roller.syncDiscoveredServices();
+        assert.equal(roller.getStatus().services.some((entry) => entry.name === 'worker-1'), false);
 
 } finally {
 

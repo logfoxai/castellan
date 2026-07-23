@@ -24,49 +24,30 @@
   </p>
 </div>
 
-> **Beta.** APIs and config may change before v1.0. Test in staging before trusting it in production.
+> **Beta.** APIs and setup may change before v1.0. Test in staging before trusting it in production.
 
 # Crash course
 
-Castellan is a **single-container sidecar** for docker-compose. It watches container images in a registry, redeploys when something new is published, and optionally gives you a dashboard and HTTP API. No database — just a config file (optional) and a state directory.
+Castellan is a **single-container sidecar** for docker-compose — a practical **Watchtower replacement** with health verification, rollback, and an optional dashboard. [Watchtower is archived](https://github.com/containrrr/watchtower); Castellan is compose-native and safety-first.
 
-## Watchtower compatible
-
-Migrating from [Watchtower](https://containrrr.dev/watchtower/)? Castellan supports **opt-in label discovery** — the same model as Watchtower with `--label-enable`. Label the compose services you want updated; unlabeled containers are ignored. Use **`ai.logfox.castellan.autoupdate`** (recommended) or keep the legacy **`com.centurylinklabs.watchtower.enable=true`**. This is **not** Watchtower’s default “update every running container” mode. Details: [Label discovery](#label-discovery-watchtower-compatible).
+Setup is **compose-only**: label the services you want managed, set `CASTELLAN_*` env vars on the sidecar, mount your compose file and state directory. No Castellan config file.
 
 ## What it does
 
 1. **Polls** a registry **tag** on an interval (or on demand via API).
 2. Compares the tag’s current **digest** (`sha256:…`) to what is running.
 3. **Deploys** when the digest changed — usually CI pushed a new build to the same tag — via `docker compose pull` / rolling restarts.
-4. **Verifies** health (Docker healthchecks and/or HTTP URLs you configure).
+4. **Verifies** health via Docker compose healthchecks.
 5. **Rolls back** to the last known-good digest if a deploy fails.
 6. **Observes** everything from an optional dashboard and RPC API — or run **headless** with no HTTP at all.
 
 See [How it works](#how-it-works) for the runtime loop and [Tags and versions](#tags-and-versions) for the tag/digest model.
 
-## Two ways to set it up
-
-Castellan supports **config file** mode and **label discovery** mode. You pick one at startup — not both layered together.
-
-| | **[Label discovery](#label-discovery-watchtower-compatible)** | **[Config file](#config-file-recommended)** |
-|---|---|---|
-| **Config file** | Not required | JSON or YAML (`config.json`, etc.) |
-| **How services are chosen** | Containers with `ai.logfox.castellan.autoupdate` or legacy Watchtower `enable=true` | Explicit `managedServices` list |
-| **Which tag is watched** | Parsed from each container’s **running** image (e.g. `:latest` → watches `latest`) | Tag you set in config (e.g. `staging`) |
-| **Rolling restarts** | Auto-groups containers sharing the same image ref | Auto-discovers compose services from running containers |
-| **HTTP health URLs** | Docker healthchecks only | `healthUrl` per service |
-| **Private registry creds** | Not available without config | `registries` block |
-| **Best for** | Watchtower opt-in migration | Production rollouts with safety features |
-
-If no config file is found at the default paths, Castellan **automatically falls back** to label discovery. Mount a config file when you want the full feature set.
-
 ## Tags in one minute
 
 Castellan watches **one tag per managed service** and redeploys when the **digest behind that tag** changes — not when you rename a tag string.
 
-- **Config mode:** you choose the tag (`staging`, `production`, `v1.2.3`, …).
-- **Label mode:** the tag is whatever is on the running image (`myorg/api:staging` → watches `staging`).
+The tag is whatever is on each labeled container’s running image (`myorg/api:staging` → watches `staging`).
 
 Typical CI flow: push `myorg/api-service:staging` on every merge; Castellan sees a new digest at `staging` and rolls out. Details: [Tags and versions](#tags-and-versions).
 
@@ -74,23 +55,23 @@ Typical CI flow: push `myorg/api-service:staging` on every merge; Castellan sees
 
 Castellan always runs polling and rollouts. HTTP is optional:
 
-| Mode | Config | What you get |
+| Mode | Env | What you get |
 |---|---|---|
-| **Full** (default) | `api.enabled: true`, `api.dashboard: true` | Dashboard at `/` + RPC on `/v1` |
-| **API-only** | `api.dashboard: false` | RPC on `/v1` only |
-| **Headless** | `api.enabled: false` | No HTTP, no auth token |
+| **Full** (default) | `CASTELLAN_API_ENABLED=true`, `CASTELLAN_DASHBOARD_ENABLED=true` | Dashboard at `/` + RPC on `/v1` |
+| **API-only** | `CASTELLAN_DASHBOARD_ENABLED=false` | RPC on `/v1` only |
+| **Headless** | `CASTELLAN_API_ENABLED=false` | No HTTP, no auth token |
 
 Details: [Operating modes](#operating-modes).
 
 ## Registries
 
-Amazon **ECR**, **Docker Hub**, **GHCR**, and other **OCI Distribution v2** hosts. Public images on Docker Hub and GHCR need no credentials; private repos use a `registries` block in config. Details: [Supported registries](#supported-registries).
+Amazon **ECR**, **Docker Hub**, **GHCR**, and other **OCI Distribution v2** hosts. Public images need no credentials; private repos use a **`DOCKER_CONFIG` mount** (same pattern Watchtower documented) or `CASTELLAN_REGISTRIES_JSON`. Details: [Supported registries](#supported-registries).
 
 ## Try it
 
 **Image:** `ghcr.io/logfoxai/castellan:latest` — [GHCR package](https://github.com/logfoxai/castellan/pkgs/container/castellan). No npm package.
 
-**Label discovery** — Watchtower-style opt-in, no config file:
+Replacing Watchtower? See [Migrating from Watchtower](#migrating-from-watchtower).
 
 ```yaml
 services:
@@ -99,155 +80,107 @@ services:
     restart: unless-stopped
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
+      - ./docker-compose.yml:/app/docker-compose.yml:ro
       - ./castellan-state:/app/state
+    environment:
+      CASTELLAN_COMPOSE_FILE: /app/docker-compose.yml
     networks: [backend]
 
   my-service:
     image: myorg/my-service:staging
     labels:
-      - ai.logfox.castellan.autoupdate
-```
-
-**Config file** — rolling restarts, health URLs, private registries:
-
-```yaml
-services:
-  castellan:
-    image: ghcr.io/logfoxai/castellan:latest
-    restart: unless-stopped
-    volumes:
-      - /var/run/docker.sock:/var/run/docker.sock
-      - ./castellan-config.json:/app/config.json:ro
-      - ./castellan-state:/app/state
+      ai.logfox.castellan.autoupdate: "true"
+    healthcheck: ...
     networks: [backend]
 ```
 
-```json
-{
-  "managedServices": [{
-    "name": "api",
-    "registry": "ghcr.io",
-    "repository": "myorg/api-service",
-    "tag": "staging",
-    "healthUrl": "http://{{service}}:3000/health"
-  }]
-}
-```
-
-Full examples: [Setup paths](#setup-paths) · [Configuration reference](#configuration-reference)
+Full example: [examples/docker-compose.yml](examples/docker-compose.yml)
 
 ## Go deeper
 
 | Topic | Section |
 |---|---|
-| Config vs label discovery | [Setup paths](#setup-paths) |
-| Watchtower opt-in labels | [Label discovery](#label-discovery-watchtower-compatible) |
+| Label discovery | [Label discovery](#label-discovery) |
+| Env vars | [Configuration reference](#configuration-reference) |
+| Migrating from Watchtower | [Migrating from Watchtower](#migrating-from-watchtower) |
 | Tags, digests, CI `forceCheck` | [Tags and versions](#tags-and-versions) |
 | Headless / API-only | [Operating modes](#operating-modes) |
-| All config keys | [Configuration reference](#configuration-reference) |
 | RPC methods | [API](#api) |
 | Dashboard UI | [Dashboard](#dashboard) |
 | Auth & network security | [Security](#security) |
 | vs Watchtower, WatchWarden, … | [docs/comparisons.md](docs/comparisons.md) |
 
-# Setup paths
+# Label discovery
 
-## Label discovery (Watchtower compatible)
-
-If Castellan starts **without** a config file, it scans running containers for an **opt-in autoupdate label**:
+Castellan scans running containers for an **opt-in autoupdate label**:
 
 | Label | Match rule |
 |---|---|
-| **`ai.logfox.castellan.autoupdate`** | Label present (any value, or none). Set to `false` to opt out. |
-| **`com.centurylinklabs.watchtower.enable=true`** | Legacy Watchtower opt-in — value must be `true`. |
+| **`ai.logfox.castellan.autoupdate`** | Label present (any value). Set to `false` to opt out. |
 
 ```yaml
 labels:
-  - ai.logfox.castellan.autoupdate
+  ai.logfox.castellan.autoupdate: "true"
 ```
-
-Watchtower users: this matches **`watchtower --label-enable`** — only labeled services are updated. Castellan does **not** mirror Watchtower’s default mode (update all containers except those labeled `enable=false`). If you relied on default-all Watchtower, add an autoupdate label to each service you want managed (or use a [config file](#config-file-recommended)).
 
 For each labeled container Castellan builds a managed service from:
 
 - **Compose service name** — `com.docker.compose.service` label
 - **Registry / repository / tag** — parsed from the container’s current `Image` ref
+- **Optional group name** — `ai.logfox.castellan.group` when multiple replicas share one logical name (see below)
 
-Discovery runs **at startup and on every registry check** in label-discovery mode. New labeled containers are picked up automatically with auto updates enabled. In config-file mode, only `managedServices` from config are managed unless previously persisted via `setPollEnabled`.
+Discovery runs **at startup and on every registry check**. New labeled containers are picked up automatically; unlabeled or removed containers drop off the managed set.
 
-Remove Watchtower, add Castellan, keep legacy labels or switch to `ai.logfox.castellan.autoupdate` — one line per service.
+### Rolling replicas
 
-When you outgrow label-only mode — grouped rolling restarts, explicit tags, HTTP health probes, private registry auth — add a config file. Mounting `config.json` (or setting `CASTELLAN_CONFIG`) **takes precedence**; label discovery is skipped.
+When multiple compose services share the same image ref, Castellan restarts them one at a time. By default the logical service name is the **repository** (e.g. `api-1` + `api-2` → `myorg/api-service`). Set the same **`ai.logfox.castellan.group`** on each replica to override (e.g. `group: api`).
 
-## Config file (recommended)
+This matches Watchtower’s **`--label-enable`** model — only labeled services are updated. Castellan does **not** mirror Watchtower’s default watch-all mode.
 
-Mount JSON or YAML at `/app/config.json` (or `/app/config.yaml`), or set `CASTELLAN_CONFIG`. Castellan loads `managedServices` explicitly instead of scanning labels.
+# Migrating from Watchtower
 
-Full docker-compose example:
+[Watchtower](https://github.com/containrrr/watchtower) is **archived** upstream. Community forks exist, but Castellan targets compose hosts that want a safety net (health wait, rollback, deployment history) in one lightweight sidecar.
+
+## Compose swap
+
+Remove the `watchtower` service and add `castellan`:
 
 ```yaml
 services:
   castellan:
     image: ghcr.io/logfoxai/castellan:latest
-    restart: unless-stopped
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
-      - ./castellan-config.json:/app/config.json:ro
+      - ./docker-compose.yml:/app/docker-compose.yml:ro
       - ./castellan-state:/app/state
     environment:
-      - AWS_REGION=us-east-2  # only needed for ECR-hosted images
-    networks:
-      - backend
-
-  api-1:
-    image: ghcr.io/myorg/api-service:staging
-    # ...
-
-  api-2:
-    image: ghcr.io/myorg/api-service:staging
-    # ...
+      CASTELLAN_COMPOSE_FILE: /app/docker-compose.yml
 ```
 
-Example config:
+## Label change (required)
 
-```json
-{
-  "managedServices": [
-    {
-      "name": "api",
-      "registry": "ghcr.io",
-      "repository": "myorg/api-service",
-      "tag": "staging",
-      "healthUrl": "http://{{service}}:3000/health",
-      "healthIntervalMs": 5000,
-      "healthRetries": 10
-    },
-    {
-      "name": "worker",
-      "registry": "docker.io",
-      "repository": "myorg/worker",
-      "tag": "staging",
-      "healthIntervalMs": 5000,
-      "healthRetries": 10
-    }
-  ],
-  "registries": {
-    "ghcr.io": {
-      "username": "my-github-username",
-      "password": "ghp_your_token"
-    }
-  },
-  "poll": {
-    "enabled": true,
-    "intervalMs": 60000,
-    "jitterMs": 5000
-  }
-}
+Replace on each service you want managed:
+
+```yaml
+# Before (Watchtower)
+labels:
+  com.centurylinklabs.watchtower.enable: "true"
+
+# After (Castellan)
+labels:
+  ai.logfox.castellan.autoupdate: "true"
 ```
 
-Mount a **state volume** (`./castellan-state:/app/state`). On first start, if you omit `api.authToken`, Castellan writes a random API secret to `auth-token` in that directory — use it for curl/scripts; the dashboard sets a session cookie automatically (no login form).
+Legacy Watchtower labels are **not** supported.
 
-Open the dashboard at `http://castellan:3003/` (or map a host port). YAML configs work too — use `config.yaml` or `config.yml`.
+## Behavioral differences
+
+- **Opt-in labels only** — same idea as `watchtower --label-enable`; not default watch-all / `enable=false` opt-out mode.
+- **Safety net** — health wait before proceeding, automatic rollback, per-digest reject, deployments history.
+- **Private registry creds** — `docker login` on the host + mount `~/.docker` with `DOCKER_CONFIG` (see [Supported registries](#supported-registries)).
+- **Optional `ai.logfox.castellan.group`** — keep a short logical name when rolling replicas share one image.
+
+Feature matrix vs WatchWarden and others: [docs/comparisons.md](docs/comparisons.md).
 
 # Tags and versions
 
@@ -259,9 +192,7 @@ Each managed service watches **exactly one registry tag**. Deployments fire when
 | **Digest** | Immutable `sha256:…` content hash of the image currently at that tag |
 | **Deploy trigger** | Tag now points at a different digest (CI pushed a new build to the same tag) |
 
-**Config mode:** set `tag` in `managedServices`. You can watch a tag independently of what happens to be running locally (unusual, but supported).
-
-**Label mode:** `tag` is inferred from each container’s image ref at startup — e.g. `ghcr.io/myorg/api:staging` watches `staging` on `ghcr.io/myorg/api`.
+The tag is inferred from each labeled container’s image ref — e.g. `ghcr.io/myorg/api:staging` watches `staging` on `ghcr.io/myorg/api`.
 
 The dashboard shows **`repository:tag`** at a glance (e.g. `api-service:staging`); expand **Image details** for full registry path and digests.
 
@@ -279,120 +210,111 @@ To deploy immediately after CI pushes, call **`forceCheck`** instead of waiting 
       -d '{}'
 ```
 
-Set `poll.enabled: false` if you only want CI-triggered deploys.
+Set `CASTELLAN_POLL_ENABLED=false` if you only want CI-triggered deploys.
 
 ### Choosing tags
 
 - **Environment tags** (`staging`, `production`) — one rolling tag per environment; CI retags on each deploy.
-- **Version tags** (`v1.2.3`) — pin a host to a release; change the config tag to promote.
+- **Version tags** (`v1.2.3`) — pin a host to a release; change the running image tag on the compose service to promote.
 - **`latest`** — fine for dev; risky in production unless you accept surprise updates.
 
-Each `managedServices` entry watches **one tag**. To track multiple tags for the same repository, add separate entries with different `name` values.
+Each labeled service watches **one tag** (from its running image). To track multiple tags for the same repository, run separate compose services with different image tags.
 
 # Operating modes
 
 Castellan always runs registry polling and compose rollouts. HTTP is optional:
 
-| Mode | Config | HTTP | Use when |
+| Mode | Env | HTTP | Use when |
 |---|---|---|---|
-| **Full** (default) | `api.enabled: true`, `api.dashboard: true` | Dashboard at `/` + RPC on `/v1` | Day-to-day ops with browser UI and automation |
-| **API-only** | `api.enabled: true`, `api.dashboard: false` | RPC on `/v1` only | Scripts, curl, or a future CLI — no browser UI |
-| **Headless** | `api.enabled: false` | None | Zero HTTP surface; polling and rollouts only |
+| **Full** (default) | `CASTELLAN_API_ENABLED=true`, `CASTELLAN_DASHBOARD_ENABLED=true` | Dashboard at `/` + RPC on `/v1` | Day-to-day ops with browser UI and automation |
+| **API-only** | `CASTELLAN_API_ENABLED=true`, `CASTELLAN_DASHBOARD_ENABLED=false` | RPC on `/v1` only | Scripts, curl, or a future CLI — no browser UI |
+| **Headless** | `CASTELLAN_API_ENABLED=false` | None | Zero HTTP surface; polling and rollouts only |
 
-`api.dashboard` is ignored when `api.enabled` is `false`. In headless mode no port is bound, no auth token is generated, and state is still persisted to disk.
+`CASTELLAN_DASHBOARD_ENABLED` is ignored when `CASTELLAN_API_ENABLED=false`. In headless mode no port is bound, no auth token is generated, and state is still persisted to disk.
 
-```json
-{ "api": { "enabled": false } }
+```yaml
+environment:
+  CASTELLAN_API_ENABLED: "false"
 ```
 
-```json
-{ "api": { "enabled": true, "dashboard": false, "authToken": "your-secret" } }
+```yaml
+environment:
+  CASTELLAN_API_ENABLED: "true"
+  CASTELLAN_DASHBOARD_ENABLED: "false"
+  CASTELLAN_AUTH_TOKEN: your-secret
 ```
 
 More context under [Headless & API-only setup](#headless--api-only-setup) in Security.
 
 # Supported registries
 
-| Registry | Config `registry` value | Authentication |
+| Registry | Host in image ref | Authentication |
 |---|---|---|
-| **Amazon ECR** | `{account}.dkr.ecr.{region}.amazonaws.com` | AWS credential chain (IAM role, env vars) |
-| **Docker Hub** | `docker.io` | Public images work without credentials; add `registries` for private repos |
-| **GitHub Container Registry** | `ghcr.io` | Public images work without credentials; PAT in `registries` for private repos |
-| **Other OCI Distribution v2** | any host | Standard Bearer token flow; optional `registries` credentials |
+| **Amazon ECR** | `{account}.dkr.ecr.{region}.amazonaws.com` | AWS credential chain (`AWS_*` on the castellan container) |
+| **Docker Hub** | `docker.io` | Public images work without credentials; `docker login` + `DOCKER_CONFIG` mount for private repos |
+| **GitHub Container Registry** | `ghcr.io` | Public images work without credentials; `docker login` + `DOCKER_CONFIG` mount for private repos |
+| **Other OCI Distribution v2** | any host | Standard Bearer token flow; `DOCKER_CONFIG` or `CASTELLAN_REGISTRIES_JSON` |
+
+### Private registry credentials
+
+`docker compose pull` uses the host Docker daemon. Manifest polling uses Castellan’s registry client:
+
+- **ECR** — AWS SDK + `AWS_REGION` / IAM role (no docker config needed).
+- **HTTP registries (GHCR, Docker Hub, …)** — mount the host Docker config directory:
+
+```yaml
+castellan:
+  environment:
+    DOCKER_CONFIG: /docker-config
+  volumes:
+    - ${HOME}/.docker:/docker-config:ro
+```
+
+Run `docker login` once on the host. Mount the **directory**, not a single file (bind-mount inode issues when login updates config).
+
+Optional override: `CASTELLAN_REGISTRIES_JSON='{"ghcr.io":{"username":"…","password":"…"}}'`.
 
 Need another registry? [Open a PR](https://github.com/logfoxai/castellan/pulls) — most v2-compatible hosts work via the HTTP backend.
 
 # Configuration reference
 
-```json
-{
-  "managedServices": [
-    {
-      "name": "<service-name>",
-      "registry": "<registry host>",
-      "repository": "<repo name>",
-      "tag": "<rolling tag>",
-      "healthUrl": "http://{{service}}:3000/health",
-      "healthIntervalMs": 5000,
-      "healthRetries": 10
-    }
-  ],
-  "compose": {
-    "file": "/app/docker-compose.yml",
-    "project": "myapp",
-    "envFile": "/app/.env"
-  },
-  "poll": {
-    "enabled": true,
-    "intervalMs": 60000,
-    "jitterMs": 5000
-  },
-  "rollback": {
-    "healthTimeoutMs": 120000,
-    "maxAttempts": 1
-  },
-  "api": {
-    "port": 3003
-  }
-}
-```
+Castellan has **no application config file**. Global settings come from environment variables; managed services come from compose labels.
 
-### `api`
+Mount a **state volume** (`./castellan-state:/app/state`). On first start, if you omit `CASTELLAN_AUTH_TOKEN`, Castellan writes a random API secret to `auth-token` in that directory — use it for curl/scripts; the dashboard sets a session cookie automatically (no login form).
 
-| Key | Default | Description |
+Open the dashboard at `http://castellan:3003/` (or map a host port).
+
+### Environment variables
+
+| Env var | Default | Purpose |
 |---|---|---|
-| `enabled` | `true` | When `false`, **headless** — no HTTP, no auth token. See [Operating modes](#operating-modes). |
-| `dashboard` | `true` | When `false`, RPC on `/v1` only; no web UI. Ignored when `enabled` is `false`. |
-| `port` | `3003` | HTTP listen port when `enabled` is `true`. |
-| `authToken` | *(auto)* | API secret — see [Access & API auth](#access--api-auth). |
+| `CASTELLAN_COMPOSE_FILE` | `/app/docker-compose.yml` | Compose file for pull/up |
+| `CASTELLAN_COMPOSE_PROJECT` | infer from compose `name:` | Project label filter |
+| `CASTELLAN_COMPOSE_ENV_FILE` | — | Optional env file for compose |
+| `CASTELLAN_POLL_ENABLED` | `true` | Periodic polling |
+| `CASTELLAN_POLL_INTERVAL_MS` | `60000` | Poll interval |
+| `CASTELLAN_POLL_JITTER_MS` | `5000` | Jitter |
+| `CASTELLAN_ROLLBACK_HEALTH_TIMEOUT_MS` | `120000` | Health wait on deploy |
+| `CASTELLAN_ROLLBACK_MAX_ATTEMPTS` | `1` | Auto-rollback retries |
+| `CASTELLAN_API_ENABLED` | `true` | HTTP API |
+| `CASTELLAN_DASHBOARD_ENABLED` | `true` | Dashboard at `/` |
+| `CASTELLAN_API_PORT` | `3003` | Listen port |
+| `CASTELLAN_AUTH_TOKEN` | *(auto)* | API auth secret |
+| `CASTELLAN_REGISTRIES_JSON` | — | Optional HTTP registry creds override |
+| `DOCKER_CONFIG` | — | Path to mounted Docker config **directory** |
+| `CASTELLAN_STATE` | `/app/state/state.json` | State file path |
+| `DOCKER_SOCKET` | `/var/run/docker.sock` | Docker socket |
 
-### `poll`
+### Labels
 
-| Key | Default | Description |
-|---|---|---|
-| `enabled` | `true` | When `false` (or `intervalMs` is `0`), periodic polling is off — use **`forceCheck`**. |
-| `intervalMs` | `60000` | Milliseconds between registry checks. |
-| `jitterMs` | `5000` | Random extra delay per tick to avoid synchronized polls. |
-
-### `managedServices` entries
-
-| Field | Description |
+| Label | Purpose |
 |---|---|
-| `name` | Short id for dashboard/API (e.g. `api`, `worker`) |
-| `registry` | Registry host (ECR, `ghcr.io`, `docker.io`, …) |
-| `repository` | Image name without tag |
-| `tag` | Registry tag to poll — see [Tags and versions](#tags-and-versions) |
-| `composeServices` | *(optional)* Override compose service names to restart. When omitted, Castellan discovers running containers that use `registry/repository:tag` and restarts them one at a time. |
-
-- `healthUrl` may use `{{service}}` as a placeholder for the current compose service name.
-- When multiple compose services share the same image ref, Castellan restarts them one at a time, waiting for health before proceeding.
-- `registries` maps registry hostnames to username/password for private Docker Hub, GHCR, or other HTTP v2 registries. ECR uses the AWS credential chain.
-
-Environment overrides: `CASTELLAN_CONFIG`, `CASTELLAN_STATE`, `CASTELLAN_COMPOSE_FILE`, `CASTELLAN_COMPOSE_ENV_FILE`, `CASTELLAN_AUTH_TOKEN`, `DOCKER_SOCKET`.
+| `ai.logfox.castellan.autoupdate` | Opt in to automatic updates (any value except `false`) |
+| `ai.logfox.castellan.group` | Optional logical name when merging rolling replicas |
 
 # API
 
-When `api.enabled` is `true` (the default), Castellan exposes an internal HTTP API on port `3003`:
+When `CASTELLAN_API_ENABLED=true` (the default), Castellan exposes an internal HTTP API on port `3003`:
 
 - `GET /v1/health` — liveness (no auth).
 - `POST /v1/<method>` — typed RPC (requires API auth when enabled). Request body is the method input (use `{}` when there are no parameters):
@@ -411,7 +333,7 @@ See [Access & API auth](#access--api-auth). For headless or API-only deployments
 
 # Dashboard
 
-Served at `/` when `api.enabled` and `api.dashboard` are both `true` (the default).
+Served at `/` when `CASTELLAN_API_ENABLED` and `CASTELLAN_DASHBOARD_ENABLED` are both `true` (the default).
 
 - Live service status with watched **tag** and `repository:tag`; digests and **past deployments** in expandable details.
 - **Deploy** and **Reject** actions per deployment digest (in the service manage dialog); per-service **Auto / Manual** badges.
@@ -423,10 +345,10 @@ Served at `/` when `api.enabled` and `api.dashboard` are both `true` (the defaul
 
 # How it works
 
-1. Castellan loads a config file **or** discovers opt-in autoupdate labels (see [Setup paths](#setup-paths)).
+1. Castellan loads **env settings** and discovers **opt-in autoupdate labels** (see [Label discovery](#label-discovery)).
 2. On every poll interval it fetches the manifest for each managed image, with per-image TTL and global jitter.
 3. When a digest changes, it pulls the image and performs a rolling restart of the associated compose services.
-4. It waits for Docker and/or HTTP health checks to pass.
+4. It waits for Docker healthchecks to pass.
 5. If health checks fail, it rolls back to the previous successful deployment and marks the failing digest as **rejected** (blocked from auto-deploy).
 6. State is persisted atomically to disk (`deployments` history + event log) so restarts are safe.
 
@@ -468,20 +390,15 @@ curl -sS -X POST http://127.0.0.1:3003/v1/status \
 
 ### Where the API secret comes from
 
-1. **`api.authToken` in config** — recommended for production.
-2. **`CASTELLAN_AUTH_TOKEN` env var**
-3. **`auth-token` file in the state directory**
-4. **Auto-generated on first start** — written to `<state-dir>/auth-token` if nothing else is set.
+1. **`CASTELLAN_AUTH_TOKEN` env var** (or value passed from compose env)
+2. **`auth-token` file in the state directory**
+3. **Auto-generated on first start** — written to `<state-dir>/auth-token` if nothing else is set.
 
-**Production:** set a stable `api.authToken` (or inject via your secrets manager) so restarts do not rotate the key.
+**Production:** set a stable `CASTELLAN_AUTH_TOKEN` (or inject via your secrets manager) so restarts do not rotate the key.
 
-```json
-{
-  "api": {
-    "port": 3003,
-    "authToken": "long-random-secret-from-secrets-manager"
-  }
-}
+```yaml
+environment:
+  CASTELLAN_AUTH_TOKEN: long-random-secret-from-secrets-manager
 ```
 
 ### What this is not
@@ -493,7 +410,7 @@ If you need per-user identity, put your IdP in front of Castellan at a reverse p
 
 ### Headless & API-only setup
 
-See [Operating modes](#operating-modes). Headless (`api.enabled: false`) skips HTTP entirely — check state via Docker logs and the on-disk state file.
+See [Operating modes](#operating-modes). Headless (`CASTELLAN_API_ENABLED=false`) skips HTTP entirely — check state via Docker logs and the on-disk state file.
 
 ## Keep it internal (recommended)
 
@@ -516,7 +433,7 @@ http://castellan.internal.example:8443 {
 
 - Mount the Docker socket read-only if your runtime supports it.
 - Run Castellan on an isolated Docker network.
-- Rotate the API secret if leaked — update config or delete `<state-dir>/auth-token` and restart.
+- Rotate the API secret if leaked — update `CASTELLAN_AUTH_TOKEN` or delete `<state-dir>/auth-token` and restart.
 
 # Built by the team behind [Logfox](https://logfox.ai)
 

@@ -6,7 +6,8 @@ import {StateManager} from './state.js';
 import {Roller} from './roller.js';
 import {createRouter, SESSION_COOKIE} from './api.js';
 import {resolveAuthToken} from './auth-token.js';
-import {loadConfigOrDiscover} from './config.js';
+import {loadConfig} from './config.js';
+import {loadDockerConfigCredentials, mergeRegistryCredentials} from './docker-config.js';
 import {createRegistry} from './registry-factory.js';
 import {CachingRegistry} from './registry.js';
 import type {ApiConfig} from './types.js';
@@ -92,8 +93,10 @@ async function startApiServer(
 async function main(): Promise<void> {
 
     const docker = new DockerClient(process.env.DOCKER_SOCKET ?? DEFAULT_SOCKET_PATH);
-    const config = await loadConfigOrDiscover(docker, process.env.CASTELLAN_CONFIG);
-    const registry = new CachingRegistry(createRegistry(config.registries), config.poll.intervalMs);
+    const config = await loadConfig(docker);
+    const dockerRegistries = await loadDockerConfigCredentials();
+    const registries = mergeRegistryCredentials(dockerRegistries, config.registries);
+    const registry = new CachingRegistry(createRegistry(registries), config.poll.intervalMs);
     const statePath = process.env.CASTELLAN_STATE ?? DEFAULT_STATE_PATH;
     const state = new StateManager(statePath);
 

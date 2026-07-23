@@ -13,6 +13,30 @@ function pickManagedServiceName(composeServices: string[], repository: string): 
 
 }
 
+function mergeGroupLabel(existing?: string, incoming?: string): string | undefined {
+
+    if (!existing && !incoming) {
+
+        return undefined;
+
+}
+
+    if (!existing) {
+
+        return incoming;
+
+}
+
+    if (!incoming) {
+
+        return existing;
+
+}
+
+    return existing === incoming ? existing : undefined;
+
+}
+
 function mergeComposeServiceNames(existing: ManagedService, service: ManagedService): string[] {
 
     const merged = new Set(existing.composeServices ?? []);
@@ -53,11 +77,14 @@ function toInitialGroupedService(service: ManagedService): ManagedService {
 function finalizeGroupedService(service: ManagedService): ManagedService {
 
     const composeServices = [...(service.composeServices ?? [])].sort();
+    const name = service.group
+        ?? pickManagedServiceName(composeServices, service.repository);
 
     return {
         ...service,
-        name: pickManagedServiceName(composeServices, service.repository),
+        name,
         composeServices,
+        group: undefined,
     };
 
 }
@@ -82,6 +109,7 @@ export function mergeManagedServicesByImage(services: ManagedService[]): Managed
             ...existing,
             composeServices: mergeComposeServiceNames(existing, service),
             healthUrl: existing.healthUrl ?? service.healthUrl,
+            group: mergeGroupLabel(existing.group, service.group),
         });
 
 }

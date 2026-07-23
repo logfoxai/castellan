@@ -1,0 +1,46 @@
+services:
+  castellan:
+    image: ghcr.io/logfoxai/castellan:latest
+    restart: unless-stopped
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - ./docker-compose.yml:/app/docker-compose.yml:ro
+      - ./castellan-state:/app/state
+    environment:
+      CASTELLAN_COMPOSE_FILE: /app/docker-compose.yml
+    networks:
+      - backend
+
+  api:
+    image: ghcr.io/myorg/api-service:staging
+    labels:
+      ai.logfox.castellan.autoupdate: "true"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000/health"]
+      interval: 10s
+      timeout: 3s
+      retries: 3
+    networks:
+      - backend
+
+  # Rolling replicas can share one logical service name:
+  # api-1:
+  #   image: ghcr.io/myorg/api-service:staging
+  #   labels:
+  #     ai.logfox.castellan.autoupdate: "true"
+  #     ai.logfox.castellan.group: api
+  # api-2:
+  #   image: ghcr.io/myorg/api-service:staging
+  #   labels:
+  #     ai.logfox.castellan.autoupdate: "true"
+  #     ai.logfox.castellan.group: api
+
+  # Private registry (GHCR, Docker Hub, etc.):
+  # castellan:
+  #   environment:
+  #     DOCKER_CONFIG: /docker-config
+  #   volumes:
+  #     - ${HOME}/.docker:/docker-config:ro
+
+networks:
+  backend:

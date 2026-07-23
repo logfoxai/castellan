@@ -2,15 +2,16 @@ import {test} from 'kizu';
 import type {DockerClient} from './docker.js';
 import {
     CASTELLAN_AUTUPDATE_LABEL,
-    discoverConfig,
+    CASTELLAN_GROUP_LABEL,
+    discoverManagedServices,
     hasDiscoveryLabel,
-    WATCHTOWER_ENABLE_LABEL,
 } from './watchtower.js';
 
 function labeledRunningContainer(
     id: string,
     composeService: string,
     image: string,
+    extraLabels: Record<string, string> = {},
 ): {
     Id: string;
     Names: string[];
@@ -28,6 +29,7 @@ function labeledRunningContainer(
             'com.docker.compose.service': composeService,
             'com.docker.compose.project': 'logfox',
             [CASTELLAN_AUTUPDATE_LABEL]: 'true',
+            ...extraLabels,
         },
         State: 'running',
         Status: 'Up',
@@ -35,20 +37,21 @@ function labeledRunningContainer(
 
 }
 
-test('hasDiscoveryLabel accepts Castellan and Watchtower opt-in labels', (assert) => {
+test('hasDiscoveryLabel accepts Castellan opt-in label only', (assert) => {
 
     assert.equal(hasDiscoveryLabel(undefined), false);
     assert.equal(hasDiscoveryLabel({}), false);
     assert.equal(hasDiscoveryLabel({[CASTELLAN_AUTUPDATE_LABEL]: 'false'}), false);
-    assert.equal(hasDiscoveryLabel({[WATCHTOWER_ENABLE_LABEL]: 'false'}), false);
     assert.equal(hasDiscoveryLabel({[CASTELLAN_AUTUPDATE_LABEL]: ''}), true);
     assert.equal(hasDiscoveryLabel({[CASTELLAN_AUTUPDATE_LABEL]: 'true'}), true);
-    assert.equal(hasDiscoveryLabel({[WATCHTOWER_ENABLE_LABEL]: 'true'}), true);
-    assert.equal(hasDiscoveryLabel({[WATCHTOWER_ENABLE_LABEL]: 'yes'}), false);
+    assert.equal(
+        hasDiscoveryLabel({'com.centurylinklabs.watchtower.enable': 'true'}),
+        false,
+    );
 
 });
 
-test('discoverConfig discovers containers with Castellan autoupdate label', async (assert) => {
+test('discoverManagedServices discovers containers with Castellan autoupdate label', async (assert) => {
 
     const docker = {
         listContainers: async () => [
@@ -68,15 +71,15 @@ test('discoverConfig discovers containers with Castellan autoupdate label', asyn
         ],
     } as unknown as DockerClient;
 
-    const config = await discoverConfig(docker);
+    const services = await discoverManagedServices(docker);
 
-    assert.equal(config.managedServices.length, 1);
-    assert.equal(config.managedServices[0].name, 'api');
-    assert.equal(config.managedServices[0].tag, 'staging');
+    assert.equal(services.length, 1);
+    assert.equal(services[0].name, 'api');
+    assert.equal(services[0].tag, 'staging');
 
 });
 
-test('discoverConfig coalesces labeled containers with the same image', async (assert) => {
+test('discoverManagedServices coalesces labeled containers with the same image', async (assert) => {
 
     const stagingImage = 'ghcr.io/myorg/api-service:staging';
 
@@ -87,10 +90,47 @@ test('discoverConfig coalesces labeled containers with the same image', async (a
         ],
     } as unknown as DockerClient;
 
-    const config = await discoverConfig(docker);
+    const services = await discoverManagedServices(docker);
 
-    assert.equal(config.managedServices.length, 1);
-    assert.equal(config.managedServices[0].name, 'myorg/api-service');
-    assert.equal(config.managedServices[0].composeServices?.join(','), 'api-1,api-2');
+    assert.equal(services.length, 1);
+    assert.equal(services[0].name, 'myorg/api-service');
+    assert.equal(services[0].composeServices?.join(','), 'api-1,api-2');
+
+});
+
+test('discoverManagedServices uses group label when replicas agree', async (assert) => {
+
+    const stagingImage = 'ghcr.io/myorg/api-service:staging';
+
+    const docker = {
+        listContainers: async () => [
+            labeledRunningContainer('1', 'api-1', stagingImage, {[CASTELLAN_GROUP_LABEL]: 'api'}),
+            labeledRunningContainer('2', 'api-2', stagingImage, {[CASTELLAN_GROUP_LABEL]: 'api'}),
+        ],
+    } as unknown as DockerClient;
+
+    const services = await discoverManagedServices(docker);
+
+    assert.equal(services.length, 1);
+    assert.equal(services[0].name, 'api');
+    assert.equal(services[0].composeServices?.join(','), 'api-1,api-2');
+
+});
+
+test('discoverManagedServices ignores disagreeing group labels', async (assert) => {
+
+    const stagingImage = 'ghcr.io/myorg/api-service:staging';
+
+    const docker = {
+        listContainers: async () => [
+            labeledRunningContainer('1', 'api-1', stagingImage, {[CASTELLAN_GROUP_LABEL]: 'api'}),
+            labeledRunningContainer('2', 'api-2', stagingImage, {[CASTELLAN_GROUP_LABEL]: 'web'}),
+        ],
+    } as unknown as DockerClient;
+
+    const services = await discoverManagedServices(docker);
+
+    assert.equal(services.length, 1);
+    assert.equal(services[0].name, 'myorg/api-service');
 
 });

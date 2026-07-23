@@ -4,6 +4,8 @@ export type ManagedService = {
     repository: string;
     tag: string;
     composeServices?: string[];
+    /** Optional logical name from ai.logfox.castellan.group during label discovery. */
+    group?: string;
     healthUrl?: string;
     healthIntervalMs: number;
     healthRetries: number;
@@ -46,8 +48,6 @@ export type Config = {
     rollback: RollbackConfig;
     api: ApiConfig;
     registries?: Record<string, RegistryCredentials>;
-    /** True when Castellan started without a config file and scanned autoupdate labels. */
-    labelDiscovery: boolean;
 };
 
 export type RegistryImage = {
