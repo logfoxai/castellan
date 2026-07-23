@@ -345,3 +345,36 @@ test('syncDiscoveredServices skips unlisted labeled services in config mode', as
 }
 
 });
+
+test('syncDiscoveredServices restores deployment history as manual in config mode', async (assert) => {
+
+    const dir = await mkdtemp(path.join(os.tmpdir(), 'castellan-roller-'));
+    const state = new StateManager(path.join(dir, 'state.json'));
+
+    state.appendDeployment('worker-1', {digest: 'sha256:worker', outcome: 'success'});
+    await state.save();
+
+    const registry: Registry = {
+        getManifest: async () => ({digest: 'sha256:worker', pushedAt: null}),
+        invalidate: () => undefined,
+    };
+    const roller = new Roller(config, registry, createDiscoverDocker(), state);
+
+    try {
+
+        await roller.syncDiscoveredServices();
+
+        assert.equal(roller.getStatus().services.some((entry) => entry.name === 'worker-1'), true);
+        assert.equal(
+            roller.getStatus().services.find((entry) => entry.name === 'worker-1')?.pollEnabled,
+            false,
+        );
+
+} finally {
+
+        roller.stop();
+        await rm(dir, {recursive: true, force: true});
+
+}
+
+});

@@ -77,7 +77,7 @@ export class Roller implements RollerPort {
 
 }
 
-                this.registerManagedService(service);
+                this.registerManagedService(service, true);
 
 }
 
@@ -97,7 +97,7 @@ export class Roller implements RollerPort {
 
             if (match) {
 
-                this.registerManagedService(match);
+                this.registerManagedService(match, false);
 
 }
 
@@ -640,13 +640,13 @@ export class Roller implements RollerPort {
 
 }
 
-        this.registerManagedService(match);
+        this.registerManagedService(match, false);
 
         return match;
 
 }
 
-    private registerManagedService(service: ManagedService): void {
+    private registerManagedService(service: ManagedService, defaultPollEnabled: boolean): void {
 
         if (this.findService(service.name)) {
 
@@ -658,7 +658,7 @@ export class Roller implements RollerPort {
 
         const runtime = createRuntime(
             service,
-            this.state.getServicePollEnabled(service.name, true),
+            this.state.getServicePollEnabled(service.name, defaultPollEnabled),
         );
 
         this.syncRejectedDigests(runtime);
