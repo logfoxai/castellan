@@ -4,7 +4,11 @@ import os from 'os';
 import path from 'path';
 import type {ContainerInfo} from 'dockerode';
 import type {DockerClient} from './docker.js';
-import {handleDeployFailure, type DeploymentContext} from './deployment.js';
+import {
+    deployManagedService,
+    handleDeployFailure,
+    type DeploymentContext,
+} from './deployment.js';
 import {DeployHealthError} from './service-health.js';
 import {StateManager} from './state.js';
 import type {Config, ManagedService, ServiceRuntime} from './types.js';
@@ -59,12 +63,18 @@ function healthyContainer(): ContainerInfo {
 
 }
 
-function mockDocker(): DockerClient {
+function mockDockerForDeploy(): DockerClient {
+
+    let pulled = false;
 
     return {
-        getLocalDigest: async () => 'sha256:old',
+        getLocalDigest: async () => (pulled ? 'sha256:new' : 'sha256:old'),
         listContainers: async () => [healthyContainer()],
-        composePull: async () => undefined,
+        composePull: async () => {
+
+            pulled = true;
+
+},
         composeUp: async () => undefined,
         pullImage: async () => undefined,
         tagImage: async () => undefined,
@@ -76,7 +86,7 @@ function createContext(state: StateManager, runtime: ServiceRuntime): Deployment
 
     return {
         config: testConfig,
-        docker: mockDocker(),
+        docker: mockDockerForDeploy(),
         state,
         withComposeLock: async (run) => run(),
         findComposeContainer: async () => healthyContainer(),
@@ -90,6 +100,26 @@ function createContext(state: StateManager, runtime: ServiceRuntime): Deployment
 
 },
     };
+
+}
+
+async function withEmptyState(
+    fn: (ctx: DeploymentContext, state: StateManager, runtime: ServiceRuntime) => Promise<void>,
+): Promise<void> {
+
+    const dir = await mkdtemp(path.join(os.tmpdir(), 'castellan-deploy-'));
+    const state = new StateManager(path.join(dir, 'state.json'));
+    const runtime = baseRuntime();
+
+    try {
+
+        await fn(createContext(state, runtime), state, runtime);
+
+} finally {
+
+        await rm(dir, {recursive: true, force: true});
+
+}
 
 }
 
@@ -130,6 +160,76 @@ test('handleDeployFailure does not reject digest for infrastructure errors', asy
 
         assert.equal(state.getRejectedDigests('api').length, 0);
         assert.equal(runtime.rejectedDigests.length, 0);
+
+});
+
+});
+
+test('deployManagedService records healthy current digest before updating when not in history', async (assert) => {
+
+    await withEmptyState(async (ctx, state, runtime) => {
+
+        await deployManagedService(ctx, baseService, 'sha256:new', runtime);
+
+        const digests = state.getDeployments('api').map((deployment) => deployment.digest);
+
+        assert.equal(digests.includes('sha256:old'), true);
+        assert.equal(digests.includes('sha256:new'), true);
+
+});
+
+});
+
+test('deployManagedService does not duplicate baseline when digest is already listed', async (assert) => {
+
+    await withContext(async (ctx, state, runtime) => {
+
+        await deployManagedService(ctx, baseService, 'sha256:new', runtime);
+
+        const oldEntries = state.getDeployments('api').filter(
+            (deployment) => deployment.digest === 'sha256:old',
+        );
+
+        assert.equal(oldEntries.length, 1);
+
+});
+
+});
+
+test('deployManagedService skips baseline when current containers are unhealthy', async (assert) => {
+
+    await withEmptyState(async (ctx, state, runtime) => {
+
+        let healthChecks = 0;
+
+        const unhealthyCtx: DeploymentContext = {
+            ...ctx,
+            docker: mockDockerForDeploy(),
+            findComposeContainer: async () => {
+
+                healthChecks += 1;
+
+                if (healthChecks === 1) {
+
+                    return {
+                        Id: 'abc',
+                        Created: 1,
+                        State: 'running',
+                        Status: 'Up 1 minute (unhealthy)',
+                        Labels: {},
+                    } as unknown as ContainerInfo;
+
+}
+
+                return healthyContainer();
+
+},
+        };
+
+        await deployManagedService(unhealthyCtx, baseService, 'sha256:new', runtime);
+
+        assert.equal(state.hasDeploymentDigest('api', 'sha256:old'), false);
+        assert.equal(state.getDeployments('api')[0]?.digest, 'sha256:new');
 
 });
 

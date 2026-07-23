@@ -108,3 +108,41 @@ test('rollback waits for in-flight deploy and completes rollback', async (assert
 }
 
 });
+
+test('reject cancels in-flight deploy of the same digest', async (assert) => {
+
+    const dir = await mkdtemp(path.join(os.tmpdir(), 'castellan-roller-'));
+    const state = new StateManager(path.join(dir, 'state.json'));
+
+    state.appendDeployment('api', {digest: 'sha256:known-good', outcome: 'success'});
+    await state.save();
+
+    const pullStarted = {value: false};
+    const registry: Registry = {
+        getManifest: async () => ({digest: 'sha256:new', pushedAt: null}),
+        invalidate: () => undefined,
+    };
+    const roller = new Roller(config, registry, createDocker(pullStarted), state);
+
+    try {
+
+        const deploy = roller.forceCheck();
+
+        await waitForPull(pullStarted);
+        const rejectOk = await roller.reject('api', 'sha256:new');
+
+        await deploy;
+
+        assert.equal(rejectOk, true);
+        assert.equal(state.isDigestRejected('api', 'sha256:new'), true);
+        assert.equal(roller.getStatus().services[0]?.currentDigest, 'sha256:known-good');
+        assert.equal(roller.getStatus().services[0]?.state, 'stable');
+
+} finally {
+
+        roller.stop();
+        await rm(dir, {recursive: true, force: true});
+
+}
+
+});

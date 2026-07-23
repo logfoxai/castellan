@@ -2,7 +2,7 @@ import type {ContainerInfo} from 'dockerode';
 import type {DockerClient} from './docker.js';
 import {findNewestRunningComposeContainer, listComposeServiceNamesForImage} from './compose-containers.js';
 import {sleep} from './health.js';
-import {verifyDeployHealth, DeployHealthError} from './service-health.js';
+import {snapshotComposeServiceHealth, verifyDeployHealth, DeployHealthError} from './service-health.js';
 import type {StateManager} from './state.js';
 import type {Config, DeploymentEvent, ManagedService, ServiceRuntime} from './types.js';
 
@@ -141,6 +141,8 @@ export async function deployManagedService(
 
 }
 
+    await recordHealthyBaselineIfNeeded(ctx, service, current);
+
     runtime.state = 'updating';
     ctx.recordEvent('deploy', service.name, `Updating to ${desiredDigest}`);
 
@@ -167,7 +169,7 @@ export async function rollbackManagedService(
 
     if (!targetDigest) {
 
-        return false;
+        return markStableIfAlreadySuccessful(ctx, service, runtime);
 
 }
 
@@ -191,33 +193,35 @@ async function resolveRollbackTarget(
 
     const current = runtime.currentDigest
         ?? await ctx.docker.getLocalDigest(service.registry, service.repository, service.tag);
-    const targetDigest = ctx.state.findRollbackDigest(
-        service.name,
-        current,
-        runtime.desiredDigest,
-    );
 
-    if (!targetDigest) {
-
-        runtime.state = 'failed';
-        runtime.lastError = 'No previous successful deployment to roll back to';
-        ctx.recordEvent('failure', service.name, runtime.lastError);
-
-        return null;
+    return ctx.state.findRollbackDigest(service.name, current);
 
 }
 
-    if (ctx.state.isDigestRejected(service.name, targetDigest)) {
+async function markStableIfAlreadySuccessful(
+    ctx: DeploymentContext,
+    service: ManagedService,
+    runtime: ServiceRuntime,
+): Promise<boolean> {
 
-        runtime.state = 'failed';
-        runtime.lastError = `Rollback target ${targetDigest} is rejected`;
-        ctx.recordEvent('failure', service.name, runtime.lastError);
+    const current = runtime.currentDigest
+        ?? await ctx.docker.getLocalDigest(service.registry, service.repository, service.tag);
 
-        return null;
+    if (current && ctx.state.isSuccessfulDeployment(service.name, current)) {
+
+        runtime.currentDigest = current;
+        runtime.state = 'stable';
+        runtime.lastError = null;
+
+        return true;
 
 }
 
-    return targetDigest;
+    runtime.state = 'failed';
+    runtime.lastError = 'No previous successful deployment to roll back to';
+    ctx.recordEvent('failure', service.name, runtime.lastError);
+
+    return false;
 
 }
 
@@ -263,6 +267,44 @@ export async function attemptRollback(
 }
 
 }
+
+}
+
+async function recordHealthyBaselineIfNeeded(
+    ctx: DeploymentContext,
+    service: ManagedService,
+    currentDigest: string | null,
+): Promise<void> {
+
+    if (
+        !currentDigest
+        || ctx.state.hasDeploymentDigest(service.name, currentDigest)
+        || ctx.state.isDigestRejected(service.name, currentDigest)
+    ) {
+
+        return;
+
+}
+
+    const composeServices = await resolveComposeServices(ctx, service);
+
+    for (const composeService of composeServices) {
+
+        const healthy = await snapshotComposeServiceHealth(
+            service,
+            composeService,
+            (name) => ctx.findComposeContainer(name),
+        );
+
+        if (!healthy) {
+
+            return;
+
+}
+
+}
+
+    ctx.state.appendDeployment(service.name, {digest: currentDigest, outcome: 'success'});
 
 }
 

@@ -146,6 +146,12 @@ export class StateManager {
 
 }
 
+    hasDeploymentDigest(service: string, digest: string): boolean {
+
+        return this.getDeployments(service).some((deployment) => deployment.digest === digest);
+
+}
+
     getRejectedDigests(service: string): string[] {
 
         const rejected = new Set<string>();
@@ -213,47 +219,44 @@ export class StateManager {
 
 }
 
-    findRollbackDigest(
-        service: string,
-        currentDigest: string | null,
-        desiredDigest: string | null,
-    ): string | null {
+    isSuccessfulDeployment(service: string, digest: string): boolean {
+
+        return this.getDeployments(service).some(
+            (deployment) => (
+                deployment.digest === digest
+                && deployment.outcome === 'success'
+                && !deployment.reject
+            ),
+        );
+
+}
+
+    findRollbackDigest(service: string, currentDigest: string | null): string | null {
+
+        if (!currentDigest) {
+
+            return null;
+
+}
 
         const deployments = this.getDeployments(service);
+        const currentIndex = deployments.findIndex((deployment) => deployment.digest === currentDigest);
 
-        if (desiredDigest && desiredDigest !== currentDigest) {
+        if (currentIndex >= 0) {
 
-            for (const deployment of deployments) {
-
-                if (
-                    deployment.outcome === 'success'
-                    && deployment.digest !== desiredDigest
-                    && !deployment.reject
-                ) {
-
-                    return deployment.digest;
+            return deployments.slice(currentIndex + 1).find(
+                (deployment) => deployment.outcome === 'success' && !deployment.reject,
+            )?.digest ?? null;
 
 }
 
-}
-
-}
-
-        for (const deployment of deployments) {
-
-            if (
+        return deployments.find(
+            (deployment) => (
                 deployment.outcome === 'success'
-                && deployment.digest !== currentDigest
                 && !deployment.reject
-            ) {
-
-                return deployment.digest;
-
-}
-
-}
-
-        return null;
+                && deployment.digest !== currentDigest
+            ),
+        )?.digest ?? null;
 
 }
 

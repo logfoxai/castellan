@@ -129,7 +129,7 @@ export class Roller implements RollerPort {
 
             return ok;
 
-}, {cancelInFlight: true});
+}, {cancelInFlight: true, skipFnIfCancelled: true});
 
 }
 
@@ -170,38 +170,65 @@ export class Roller implements RollerPort {
 
     async reject(serviceName: string, digest: string): Promise<boolean> {
 
-        const service = this.findService(serviceName);
+        return this.runServiceMutation(serviceName, async (service) => {
 
-        if (!service) {
+            this.state.setDigestRejected(service.name, digest, true);
 
-            throw new Error(`Unknown service: ${serviceName}`);
+            const runtime = this.getRuntime(serviceName);
+            const current = runtime.currentDigest
+                ?? await this.docker.getLocalDigest(service.registry, service.repository, service.tag);
 
-}
+            this.syncRejectedDigests(runtime);
 
-        this.state.setDigestRejected(service.name, digest, true);
+            if (current === digest) {
 
-        const runtime = this.getRuntime(serviceName);
-        const current = runtime.currentDigest
-            ?? await this.docker.getLocalDigest(service.registry, service.repository, service.tag);
+                const ok = await rollbackManagedService(this.deployment, service, runtime);
 
-        this.syncRejectedDigests(runtime);
+                await this.state.save();
 
-        if (current === digest) {
-
-            return this.rollback(serviceName);
+                return ok;
 
 }
 
-        await this.state.save();
+            await this.state.save();
 
-        return true;
+            return true;
+
+}, {cancelInFlight: true});
+
+}
+
+    private async waitForCancelOrUnlock(
+        serviceName: string,
+        options: {cancelInFlight?: boolean; skipFnIfCancelled?: boolean},
+    ): Promise<boolean | null> {
+
+        if (!this.locks.get(serviceName)) {
+
+            return null;
+
+}
+
+        await this.waitForServiceUnlock(serviceName);
+
+        if (
+            options.cancelInFlight
+            && options.skipFnIfCancelled
+            && !this.rollbackRequested.has(serviceName)
+        ) {
+
+            return true;
+
+}
+
+        return null;
 
 }
 
     private async runServiceMutation(
         serviceName: string,
         fn: (service: ManagedService) => Promise<boolean>,
-        options: {cancelInFlight?: boolean} = {},
+        options: {cancelInFlight?: boolean; skipFnIfCancelled?: boolean} = {},
     ): Promise<boolean> {
 
         const service = this.findService(serviceName);
@@ -218,15 +245,11 @@ export class Roller implements RollerPort {
 
 }
 
-        if (this.locks.get(serviceName)) {
+        const cancelled = await this.waitForCancelOrUnlock(serviceName, options);
 
-            await this.waitForServiceUnlock(serviceName);
+        if (cancelled !== null) {
 
-            if (options.cancelInFlight && !this.rollbackRequested.has(serviceName)) {
-
-                return true;
-
-}
+            return cancelled;
 
 }
 

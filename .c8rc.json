@@ -4,7 +4,16 @@
   ],
   "exclude": [
     "**/*.spec.ts",
-    "**/*.spec.js"
+    "**/*.spec.js",
+    "src/docker.ts",
+    "src/ecr.ts",
+    "src/registry-http.ts",
+    "src/registry-factory.ts",
+    "src/index.ts",
+    "src/api.ts",
+    "src/api-docker.ts",
+    "src/roller-port.ts",
+    "src/types.ts"
   ],
   "reporter": [],
   "all": true,

@@ -53,17 +53,39 @@ test('StateManager limits event and deployment history', async (assert) => {
 
 });
 
-test('StateManager findRollbackDigest prefers success before in-flight desired digest', (assert) => {
+test('StateManager findRollbackDigest returns prior success not equal to current', (assert) => {
 
     const manager = new StateManager('/tmp/unused-state.json');
 
+    manager.appendDeployment('api', {digest: 'sha256:good', outcome: 'success'});
+    manager.appendDeployment('api', {digest: 'sha256:bad', outcome: 'success'});
     manager.appendDeployment('api', {digest: 'sha256:new', outcome: 'failed', reject: true});
-    manager.appendDeployment('api', {digest: 'sha256:known-good', outcome: 'success'});
 
-    assert.equal(
-        manager.findRollbackDigest('api', 'sha256:known-good', 'sha256:new'),
-        'sha256:known-good',
-    );
+    assert.equal(manager.findRollbackDigest('api', 'sha256:bad'), 'sha256:good');
+    assert.equal(manager.findRollbackDigest('api', 'sha256:good'), null);
+
+});
+
+test('StateManager findRollbackDigest skips rejected successes', (assert) => {
+
+    const manager = new StateManager('/tmp/unused-state.json');
+
+    manager.appendDeployment('api', {digest: 'sha256:good', outcome: 'success'});
+    manager.appendDeployment('api', {digest: 'sha256:bad', outcome: 'success', reject: true});
+
+    assert.equal(manager.findRollbackDigest('api', 'sha256:bad'), 'sha256:good');
+
+});
+
+test('StateManager hasDeploymentDigest is true when digest exists at any outcome', (assert) => {
+
+    const manager = new StateManager('/tmp/unused-state.json');
+
+    assert.equal(manager.hasDeploymentDigest('api', 'sha256:missing'), false);
+
+    manager.appendDeployment('api', {digest: 'sha256:failed', outcome: 'failed', reject: true});
+
+    assert.equal(manager.hasDeploymentDigest('api', 'sha256:failed'), true);
 
 });
 
