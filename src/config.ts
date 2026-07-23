@@ -29,7 +29,6 @@ export async function loadConfig(docker: DockerClient): Promise<Config> {
         poll: env.poll,
         rollback: env.rollback,
         api: env.api,
-        registries: env.registries,
     };
 
 }

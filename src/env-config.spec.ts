@@ -69,19 +69,6 @@ test('loadEnvConfig applies env overrides', async (assert) => {
 
 });
 
-test('loadEnvConfig parses CASTELLAN_REGISTRIES_JSON', async (assert) => {
-
-    const config = await withEnv({
-        CASTELLAN_REGISTRIES_JSON: JSON.stringify({
-            'ghcr.io': {username: 'user', password: 'pass'},
-        }),
-    }, () => loadEnvConfig());
-
-    assert.equal(config.registries?.['ghcr.io'].username, 'user');
-    assert.equal(config.registries?.['ghcr.io'].password, 'pass');
-
-});
-
 test('loadEnvConfig disables poll when interval is zero', async (assert) => {
 
     const config = await withEnv({
@@ -90,25 +77,5 @@ test('loadEnvConfig disables poll when interval is zero', async (assert) => {
 
     assert.equal(config.poll.enabled, false);
     assert.equal(config.poll.intervalMs, 0);
-
-});
-
-test('loadEnvConfig rejects invalid CASTELLAN_REGISTRIES_JSON', async (assert) => {
-
-    let error: Error | undefined;
-
-    try {
-
-        await withEnv({
-            CASTELLAN_REGISTRIES_JSON: 'not-json',
-        }, () => loadEnvConfig());
-
-} catch (err) {
-
-        error = err as Error;
-
-}
-
-    assert.equal(error?.message, 'CASTELLAN_REGISTRIES_JSON must be valid JSON');
 
 });

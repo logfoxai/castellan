@@ -35,12 +35,7 @@ services:
   #     ai.logfox.castellan.autoupdate: "true"
   #     ai.logfox.castellan.group: api
 
-  # Private registry (GHCR, Docker Hub, etc.):
-  # castellan:
-  #   environment:
-  #     DOCKER_CONFIG: /docker-config
-  #   volumes:
-  #     - ${HOME}/.docker:/docker-config:ro
+  # Private registry: run `docker login` (or ECR login) on the host before starting compose.
 
 networks:
   backend:

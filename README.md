@@ -65,7 +65,7 @@ Details: [Operating modes](#operating-modes).
 
 ## Registries
 
-Amazon **ECR**, **Docker Hub**, **GHCR**, and other **OCI Distribution v2** hosts. Public images need no credentials; private repos use a **`DOCKER_CONFIG` mount** (same pattern Watchtower documented) or `CASTELLAN_REGISTRIES_JSON`. Details: [Supported registries](#supported-registries).
+Amazon **ECR**, **Docker Hub**, **GHCR**, and other **OCI Distribution v2** hosts. Castellan uses the **host Docker daemon** for registry auth — run `docker login` (or ECR login) on the host before polling private images. Details: [Supported registries](#supported-registries).
 
 ## Try it
 
@@ -177,7 +177,7 @@ Legacy Watchtower labels are **not** supported.
 
 - **Opt-in labels only** — same idea as `watchtower --label-enable`; not default watch-all / `enable=false` opt-out mode.
 - **Safety net** — health wait before proceeding, automatic rollback, per-digest reject, deployments history.
-- **Private registry creds** — `docker login` on the host + mount `~/.docker` with `DOCKER_CONFIG` (see [Supported registries](#supported-registries)).
+- **Private registry creds** — `docker login` on the host (same creds used for `compose pull` and registry polling). For ECR, refresh login periodically (e.g. cron with `aws ecr get-login-password`).
 - **Optional `ai.logfox.castellan.group`** — keep a short logical name when rolling replicas share one image.
 
 Feature matrix vs WatchWarden and others: [docs/comparisons.md](docs/comparisons.md).
@@ -248,33 +248,27 @@ More context under [Headless & API-only setup](#headless--api-only-setup) in Sec
 
 # Supported registries
 
-| Registry | Host in image ref | Authentication |
+Castellan polls registries through the **host Docker daemon** (`docker manifest inspect`) and deploys with **`docker compose pull`**. Both paths use the same host credentials.
+
+| Registry | Host in image ref | Authentication on the host |
 |---|---|---|
-| **Amazon ECR** | `{account}.dkr.ecr.{region}.amazonaws.com` | AWS credential chain (`AWS_*` on the castellan container) |
-| **Docker Hub** | `docker.io` | Public images work without credentials; `docker login` + `DOCKER_CONFIG` mount for private repos |
-| **GitHub Container Registry** | `ghcr.io` | Public images work without credentials; `docker login` + `DOCKER_CONFIG` mount for private repos |
-| **Other OCI Distribution v2** | any host | Standard Bearer token flow; `DOCKER_CONFIG` or `CASTELLAN_REGISTRIES_JSON` |
+| **Amazon ECR** | `{account}.dkr.ecr.{region}.amazonaws.com` | `aws ecr get-login-password \| docker login …` (refresh before token expiry, ~12h) |
+| **Docker Hub** | `docker.io` | `docker login` for private repos; public images need no login |
+| **GitHub Container Registry** | `ghcr.io` | `docker login ghcr.io` for private repos |
+| **Other OCI Distribution v2** | any host | `docker login <registry>` |
 
 ### Private registry credentials
 
-`docker compose pull` uses the host Docker daemon. Manifest polling uses Castellan’s registry client:
+Run **`docker login`** on the host (or your platform’s ECR login script). Castellan only needs the Docker socket mount — no separate credential env vars or config mounts inside the container.
 
-- **ECR** — AWS SDK + `AWS_REGION` / IAM role (no docker config needed).
-- **HTTP registries (GHCR, Docker Hub, …)** — mount the host Docker config directory:
+For **ECR**, tokens expire. Schedule periodic login on the host, for example:
 
-```yaml
-castellan:
-  environment:
-    DOCKER_CONFIG: /docker-config
-  volumes:
-    - ${HOME}/.docker:/docker-config:ro
+```bash
+aws ecr get-login-password --region us-east-2 \
+  | docker login --username AWS --password-stdin 123456789.dkr.ecr.us-east-2.amazonaws.com
 ```
 
-Run `docker login` once on the host. Mount the **directory**, not a single file (bind-mount inode issues when login updates config).
-
-Optional override: `CASTELLAN_REGISTRIES_JSON='{"ghcr.io":{"username":"…","password":"…"}}'`.
-
-Need another registry? [Open a PR](https://github.com/logfoxai/castellan/pulls) — most v2-compatible hosts work via the HTTP backend.
+Public images on Docker Hub or GHCR work without login.
 
 # Configuration reference
 
@@ -300,8 +294,6 @@ Open the dashboard at `http://castellan:3003/` (or map a host port).
 | `CASTELLAN_DASHBOARD_ENABLED` | `true` | Dashboard at `/` |
 | `CASTELLAN_API_PORT` | `3003` | Listen port |
 | `CASTELLAN_AUTH_TOKEN` | *(auto)* | API auth secret |
-| `CASTELLAN_REGISTRIES_JSON` | — | Optional HTTP registry creds override |
-| `DOCKER_CONFIG` | — | Path to mounted Docker config **directory** |
 | `CASTELLAN_STATE` | `/app/state/state.json` | State file path |
 | `DOCKER_SOCKET` | `/var/run/docker.sock` | Docker socket |
 

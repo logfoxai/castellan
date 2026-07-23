@@ -59,6 +59,12 @@ export function normalizeRegistryHost(registry: string): string {
 
 }
 
+export function formatImageRef(registry: string, repository: string, tag: string): string {
+
+    return `${registry}/${repository}:${tag}`;
+
+}
+
 export function imageRefKey(registry: string, repository: string, tag: string): string {
 
     return `${normalizeRegistryHost(registry)}/${repository}:${tag}`;

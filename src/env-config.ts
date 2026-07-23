@@ -1,11 +1,10 @@
-import type {ApiConfig, ComposeConfig, PollConfig, RegistryCredentials} from './types.js';
+import type {ApiConfig, ComposeConfig, PollConfig} from './types.js';
 
 export type EnvConfig = {
     compose: ComposeConfig;
     poll: PollConfig;
     rollback: {healthTimeoutMs: number; maxAttempts: number};
     api: ApiConfig;
-    registries?: Record<string, RegistryCredentials>;
 };
 
 export function loadEnvConfig(): EnvConfig {
@@ -17,7 +16,6 @@ export function loadEnvConfig(): EnvConfig {
         poll,
         rollback: loadRollbackConfig(),
         api: loadApiConfig(),
-        registries: loadRegistriesOverride(),
     };
 
 }
@@ -62,60 +60,6 @@ function loadApiConfig(): ApiConfig {
         port: envNumber('CASTELLAN_API_PORT', 3003),
         authToken: envOptionalString('CASTELLAN_AUTH_TOKEN'),
     };
-
-}
-
-function loadRegistriesOverride(): Record<string, RegistryCredentials> | undefined {
-
-    const raw = process.env.CASTELLAN_REGISTRIES_JSON;
-
-    if (!raw) {
-
-        return undefined;
-
-}
-
-    let parsed: unknown;
-
-    try {
-
-        parsed = JSON.parse(raw);
-
-} catch {
-
-        throw new Error('CASTELLAN_REGISTRIES_JSON must be valid JSON');
-
-}
-
-    if (typeof parsed !== 'object' || parsed === null) {
-
-        throw new Error('CASTELLAN_REGISTRIES_JSON must be an object');
-
-}
-
-    const result: Record<string, RegistryCredentials> = {};
-
-    for (const [host, value] of Object.entries(parsed as Record<string, unknown>)) {
-
-        if (typeof value !== 'object' || value === null) {
-
-            throw new Error(`CASTELLAN_REGISTRIES_JSON.${host} must be an object`);
-
-}
-
-        const creds = value as Record<string, unknown>;
-
-        if (typeof creds.username !== 'string' || typeof creds.password !== 'string') {
-
-            throw new Error(`CASTELLAN_REGISTRIES_JSON.${host} requires username and password strings`);
-
-}
-
-        result[host] = {username: creds.username, password: creds.password};
-
-}
-
-    return result;
 
 }
 

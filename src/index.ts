@@ -2,13 +2,12 @@ import path from 'path';
 import express from 'express';
 import {existsSync} from 'fs';
 import {DockerClient} from './docker.js';
+import {DockerRegistry} from './docker-registry.js';
 import {StateManager} from './state.js';
 import {Roller} from './roller.js';
 import {createRouter, SESSION_COOKIE} from './api.js';
 import {resolveAuthToken} from './auth-token.js';
 import {loadConfig} from './config.js';
-import {loadDockerConfigCredentials, mergeRegistryCredentials} from './docker-config.js';
-import {createRegistry} from './registry-factory.js';
 import {CachingRegistry} from './registry.js';
 import type {ApiConfig} from './types.js';
 
@@ -94,9 +93,7 @@ async function main(): Promise<void> {
 
     const docker = new DockerClient(process.env.DOCKER_SOCKET ?? DEFAULT_SOCKET_PATH);
     const config = await loadConfig(docker);
-    const dockerRegistries = await loadDockerConfigCredentials();
-    const registries = mergeRegistryCredentials(dockerRegistries, config.registries);
-    const registry = new CachingRegistry(createRegistry(registries), config.poll.intervalMs);
+    const registry = new CachingRegistry(new DockerRegistry(docker), config.poll.intervalMs);
     const statePath = process.env.CASTELLAN_STATE ?? DEFAULT_STATE_PATH;
     const state = new StateManager(statePath);
 
