@@ -1,7 +1,6 @@
 import {test} from 'kizu';
 import type {DockerClient} from './docker.js';
 import {
-    imageRefKey,
     mergeManagedServicesByImage,
     pickManagedServiceName,
     resolveComposeServicesFromContainers,
@@ -31,12 +30,6 @@ function labeledContainer(id: string, composeService: string, image: string): {
     };
 
 }
-
-test('imageRefKey normalizes docker.io hosts', (assert) => {
-
-    assert.equal(imageRefKey('docker.io', 'foo/bar', 'latest'), imageRefKey('registry-1.docker.io', 'foo/bar', 'latest'));
-
-});
 
 test('pickManagedServiceName uses compose name for a single target', (assert) => {
 

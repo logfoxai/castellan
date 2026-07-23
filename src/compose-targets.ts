@@ -1,35 +1,9 @@
 import type {DockerClient} from './docker.js';
+import {listComposeServiceNamesForImage} from './compose-containers.js';
+import {imageRefKey} from './image-ref.js';
 import type {ComposeConfig, ManagedService} from './types.js';
-import {parseImageRef} from './watchtower.js';
 
-export function normalizeRegistryHost(registry: string): string {
-
-    if (registry === 'docker.io' || registry === 'registry.hub.docker.com') {
-
-        return 'registry-1.docker.io';
-
-}
-
-    return registry;
-
-}
-
-export function imageRefKey(registry: string, repository: string, tag: string): string {
-
-    return `${normalizeRegistryHost(registry)}/${repository}:${tag}`;
-
-}
-
-export function managedServiceMatchesImage(
-    service: Pick<ManagedService, 'registry' | 'repository' | 'tag'>,
-    parsed: {registry: string; repository: string; tag: string},
-): boolean {
-
-    return normalizeRegistryHost(service.registry) === normalizeRegistryHost(parsed.registry)
-        && service.repository === parsed.repository
-        && service.tag === parsed.tag;
-
-}
+export {imageRefKey, managedServiceMatchesImage, normalizeRegistryHost} from './image-ref.js';
 
 export async function resolveComposeServicesFromContainers(
     docker: DockerClient,
@@ -38,43 +12,8 @@ export async function resolveComposeServicesFromContainers(
 ): Promise<string[]> {
 
     const containers = await docker.listContainers();
-    const names = new Set<string>();
 
-    for (const container of containers) {
-
-        const composeService = container.Labels?.['com.docker.compose.service'];
-
-        if (!composeService) {
-
-            continue;
-
-}
-
-        if (compose.project) {
-
-            const containerProject = container.Labels?.['com.docker.compose.project'];
-
-            if (containerProject && containerProject !== compose.project) {
-
-                continue;
-
-}
-
-}
-
-        const parsed = parseImageRef(container.Image);
-
-        if (!parsed || !managedServiceMatchesImage(service, parsed)) {
-
-            continue;
-
-}
-
-        names.add(composeService);
-
-}
-
-    return [...names].sort();
+    return listComposeServiceNamesForImage(containers, service, compose);
 
 }
 

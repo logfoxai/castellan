@@ -2,11 +2,9 @@ import {test} from 'kizu';
 import {dispatchMethod, isAuthorized, readCookie, SESSION_COOKIE} from './api.js';
 import type {DockerClient} from './docker.js';
 import type {DeploymentEvent} from './types.js';
-import type {Roller, RollerStatus} from './roller.js';
+import type {RollerPort, RollerStatus} from './roller-port.js';
 
-type MockRoller = {
-    [K in keyof Roller]: Roller[K];
-};
+type MockRoller = RollerPort;
 
 type MockDocker = {
     [K in keyof DockerClient]: DockerClient[K];
@@ -37,9 +35,9 @@ function createRoller(): MockRoller {
             paused = false;
 
         },
-        async rollback(): Promise<void> {
+        async rollback(): Promise<boolean> {
 
-            return undefined;
+            return true;
 
         },
         getEvents(): DeploymentEvent[] {
@@ -81,10 +79,10 @@ function createDocker(): MockDocker {
 
 }
 
-function createMocks(): {roller: Roller; docker: DockerClient} {
+function createMocks(): {roller: RollerPort; docker: DockerClient} {
 
     return {
-        roller: createRoller() as unknown as Roller,
+        roller: createRoller(),
         docker: createDocker() as unknown as DockerClient,
     };
 

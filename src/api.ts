@@ -1,51 +1,13 @@
 import {Router, type Request, type Response, type NextFunction} from 'express';
-import type {DockerClient, ContainerInfoWithSize} from './docker.js';
-import {formatContainerDisplayName} from './container-display.js';
-import type {Roller} from './roller.js';
-import {formatBytes} from './stats.js';
+import type {DockerClient} from './docker.js';
+import {dispatchDockerMethod} from './api-docker.js';
+import {isApiMethod, isDockerMethod} from './api-methods.js';
+import type {RollerPort} from './roller-port.js';
 
-export type ApiMethod =
-    | 'status'
-    | 'forceCheck'
-    | 'pause'
-    | 'resume'
-    | 'rollback'
-    | 'history'
-    | 'dockerContainers'
-    | 'dockerImages'
-    | 'dockerNetworks'
-    | 'dockerVolumes'
-    | 'dockerLogs'
-    | 'dockerStats'
-    | 'dockerStatsAll'
-    | 'dockerInfo'
-    | 'dockerEvents';
+export {isApiMethod} from './api-methods.js';
+export type {ApiMethod} from './api-methods.js';
 
-const API_METHODS = new Set<ApiMethod>([
-    'status',
-    'forceCheck',
-    'pause',
-    'resume',
-    'rollback',
-    'history',
-    'dockerContainers',
-    'dockerImages',
-    'dockerNetworks',
-    'dockerVolumes',
-    'dockerLogs',
-    'dockerStats',
-    'dockerStatsAll',
-    'dockerInfo',
-    'dockerEvents',
-]);
-
-function isApiMethod(value: string): value is ApiMethod {
-
-    return API_METHODS.has(value as ApiMethod);
-
-}
-
-export function createRouter(roller: Roller, docker: DockerClient, authToken?: string): Router {
+export function createRouter(roller: RollerPort, docker: DockerClient, authToken?: string): Router {
 
     const router = Router();
 
@@ -158,23 +120,27 @@ function requireAuth(authToken: string | undefined) {
 }
 
 export async function dispatchMethod(
-    method: ApiMethod,
+    method: import('./api-methods.js').ApiMethod,
     body: unknown,
-    roller: Roller,
+    roller: RollerPort,
     docker: DockerClient,
 ): Promise<unknown> {
 
-    if (method.startsWith('docker')) {
+    if (isDockerMethod(method)) {
 
-        return dispatchDocker(method, docker, body);
-
-}
-
-    return dispatchRoller(method, body, roller);
+        return dispatchDockerMethod(method, docker, body);
 
 }
 
-async function dispatchRoller(method: ApiMethod, body: unknown, roller: Roller): Promise<unknown> {
+    return dispatchRollerMethod(method, body, roller);
+
+}
+
+async function dispatchRollerMethod(
+    method: import('./api-methods.js').ApiMethod,
+    body: unknown,
+    roller: RollerPort,
+): Promise<unknown> {
 
     switch (method) {
 
@@ -200,62 +166,7 @@ async function dispatchRoller(method: ApiMethod, body: unknown, roller: Roller):
 
 }
 
-async function dispatchDocker(method: ApiMethod, docker: DockerClient, body: unknown): Promise<unknown> {
-
-    switch (method) {
-
-        case 'dockerContainers':
-            return {containers: (await docker.listContainers()).map(toContainerRow)};
-        case 'dockerStatsAll':
-            return {stats: await docker.getAllStats()};
-        case 'dockerImages':
-            return {images: await docker.listImages()};
-        case 'dockerNetworks':
-            return {networks: await docker.listNetworks()};
-        case 'dockerVolumes':
-            return {volumes: await docker.listVolumes()};
-        case 'dockerLogs':
-            return dockerLogs(docker, body);
-        case 'dockerStats':
-            return dockerStats(docker, body);
-        case 'dockerInfo':
-            return {info: await docker.getInfo()};
-        case 'dockerEvents':
-            return dockerEvents(docker, body);
-        default:
-            throw new Error(`Unknown method: ${method}`);
-
-}
-
-}
-
-export type ContainerRow = {
-    id: string;
-    name: string;
-    displayName: string;
-    image: string;
-    state: string;
-    status: string;
-    disk: string;
-};
-
-function toContainerRow(container: ContainerInfoWithSize): ContainerRow {
-
-    const name = (container.Names?.[0] ?? '').replace(/^\//, '') || container.Id.slice(0, 12);
-
-    return {
-        id: container.Id,
-        name,
-        displayName: formatContainerDisplayName(name),
-        image: container.Image,
-        state: container.State,
-        status: container.Status,
-        disk: formatBytes(container.SizeRw ?? 0),
-    };
-
-}
-
-function status(roller: Roller): {services: unknown[]; paused: boolean} {
+function status(roller: RollerPort): {services: unknown[]; paused: boolean} {
 
     const {paused, services} = roller.getStatus();
 
@@ -269,7 +180,7 @@ function status(roller: Roller): {services: unknown[]; paused: boolean} {
 
 }
 
-async function rollback(roller: Roller, body: unknown): Promise<{ok: boolean}> {
+async function rollback(roller: RollerPort, body: unknown): Promise<{ok: boolean}> {
 
     if (!body || typeof body !== 'object' || !('service' in body) || typeof body.service !== 'string') {
 
@@ -283,7 +194,7 @@ async function rollback(roller: Roller, body: unknown): Promise<{ok: boolean}> {
 
 }
 
-function history(roller: Roller): {events: unknown[]} {
+function history(roller: RollerPort): {events: unknown[]} {
 
     return {
         events: roller.getEvents().map((event) => ({
@@ -291,29 +202,5 @@ function history(roller: Roller): {events: unknown[]} {
             at: event.at.toISOString(),
         })),
     };
-
-}
-
-async function dockerLogs(docker: DockerClient, body: unknown): Promise<{logs: string}> {
-
-    const input = body as {containerId: string; tail?: number};
-
-    return {logs: await docker.getContainerLogs(input.containerId, input.tail ?? 100)};
-
-}
-
-async function dockerStats(docker: DockerClient, body: unknown): Promise<{stats: unknown}> {
-
-    const input = body as {containerId: string};
-
-    return {stats: await docker.getContainerStats(input.containerId)};
-
-}
-
-async function dockerEvents(docker: DockerClient, body: unknown): Promise<{events: unknown[]}> {
-
-    const input = (body ?? {}) as {since?: number};
-
-    return {events: await docker.getEvents(input.since ?? 300)};
 
 }

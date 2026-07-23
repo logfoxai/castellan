@@ -1,7 +1,8 @@
 import type {ContainerInfo} from 'dockerode';
 import type {DockerClient} from './docker.js';
-import type {ComposeConfig, Config, ManagedService} from './types.js';
 import {mergeManagedServicesByImage} from './compose-targets.js';
+import {parseImageRef} from './image-ref.js';
+import type {ComposeConfig, Config, ManagedService} from './types.js';
 
 /** Native Castellan opt-in label (reverse-DNS for logfox.ai). */
 export const CASTELLAN_AUTUPDATE_LABEL = 'ai.logfox.castellan.autoupdate';
@@ -98,47 +99,6 @@ function buildService(container: ContainerInfo): ManagedService | null {
         tag: parsed.tag,
         healthIntervalMs: 5000,
         healthRetries: 10,
-    };
-
-}
-
-export function parseImageRef(ref: string): {registry: string; repository: string; tag: string} | null {
-
-    if (ref.startsWith('sha256:') || ref.includes('@sha256:')) {
-
-        return null;
-
-}
-
-    const tagMatch = /:([^/]+)$/.exec(ref);
-    const tag = tagMatch ? tagMatch[1] : 'latest';
-    const withoutTag = tagMatch ? ref.slice(0, -tagMatch[0].length) : ref;
-    const parts = withoutTag.split('/');
-
-    if (parts.length >= 2 && parts[0].includes('.')) {
-
-        return {
-            registry: parts[0],
-            repository: parts.slice(1).join('/'),
-            tag,
-        };
-
-}
-
-    if (parts.length === 2) {
-
-        return {
-            registry: 'docker.io',
-            repository: `${parts[0]}/${parts[1]}`,
-            tag,
-        };
-
-}
-
-    return {
-        registry: 'docker.io',
-        repository: `library/${withoutTag}`,
-        tag,
     };
 
 }
