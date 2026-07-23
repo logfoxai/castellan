@@ -21,6 +21,7 @@ const services = [
         desiredDigest: 'sha256:7d3f8a2e1c9b4a6f5e0d2c8a3b7f1e4d9c6a2b5e8f3d7c1a4b6e9f2d5c8a1b4e7',
         lastCheckAt: new Date().toISOString(),
         lastError: null,
+        pollEnabled: true,
     },
     {
         name: 'worker',
@@ -32,6 +33,7 @@ const services = [
         desiredDigest: 'sha256:9e1b4c7f2a8d5e0b3c6a9f1d4e7b2a5c8f3d6a1e4b7c0f2d5a8e1b4c7f0a3d6a9',
         lastCheckAt: new Date().toISOString(),
         lastError: null,
+        pollEnabled: true,
     },
     {
         name: 'scheduler',
@@ -43,8 +45,54 @@ const services = [
         desiredDigest: 'sha256:4d8e1b5c9f2a6d0e3b7c1a5f9d2e6b0c4a8f2d6b0c4a8f2d6b0c4a8f2d6b0c4a8f',
         lastCheckAt: new Date().toISOString(),
         lastError: null,
+        pollEnabled: false,
     },
 ];
+
+const deploymentsByService = {
+    api: [
+        {
+            digest: 'sha256:7d3f8a2e1c9b4a6f5e0d2c8a3b7f1e4d9c6a2b5e8f3d7c1a4b6e9f2d5c8a1b4e7',
+            at: new Date(Date.now() - 1000 * 60 * 60 * 2).toISOString(),
+            outcome: 'success',
+        },
+        {
+            digest: 'sha256:1a2b3c4d5e6f708192a3b4c5d6e7f8091a2b3c4d5e6f708192a3b4c5d6e7f8091',
+            at: new Date(Date.now() - 1000 * 60 * 60 * 24).toISOString(),
+            outcome: 'success',
+        },
+    ],
+    worker: [
+        {
+            digest: 'sha256:9e1b4c7f2a8d5e0b3c6a9f1d4e7b2a5c8f3d6a1e4b7c0f2d5a8e1b4c7f0a3d6a9',
+            at: new Date(Date.now() - 1000 * 60 * 60 * 3).toISOString(),
+            outcome: 'success',
+        },
+        {
+            digest: 'sha256:4d8e1b5c9f2a6d0e3b7c1a5f9d2e6b0c4a8f2d6b0c4a8f2d6b0c4a8f2d6b0c4a8f',
+            at: new Date(Date.now() - 1000 * 60 * 60 * 5).toISOString(),
+            outcome: 'failed',
+            reject: true,
+        },
+    ],
+    scheduler: [
+        {
+            digest: 'sha256:3c6f9a2d5e8b1c4f7a0d3e6b9c2f5a8d1e4b7c0a3f6d9e2b5c8f1a4d7e0b3c6a9',
+            at: new Date(Date.now() - 1000 * 60 * 5).toISOString(),
+            outcome: 'success',
+        },
+        {
+            digest: 'sha256:4d8e1b5c9f2a6d0e3b7c1a5f9d2e6b0c4a8f2d6b0c4a8f2d6b0c4a8f2d6b0c4a8f',
+            at: new Date(Date.now() - 1000 * 60 * 2).toISOString(),
+            outcome: 'success',
+        },
+        {
+            digest: 'sha256:8f2d6b0c4a8f2d6b0c4a8f2d6b0c4a8f2d6b0c4a8f2d6b0c4a8f2d6b0c4a8f2d',
+            at: new Date(Date.now() - 1000 * 60 * 60 * 12).toISOString(),
+            outcome: 'failed',
+        },
+    ],
+};
 
 const events = [
     {at: new Date(Date.now() - 1000 * 60 * 2).toISOString(), type: 'deploy', service: 'scheduler', message: 'Restarted scheduler to sha256:4d8e...'},
@@ -112,8 +160,13 @@ app.post('/v1/:method', (req, res) => {
         case 'pause':
         case 'resume':
         case 'setPollEnabled':
-        case 'discoverServices':
+        case 'deploy':
+        case 'reject':
             return res.json({ok: true});
+        case 'deployments':
+            return res.json({
+                deployments: deploymentsByService[req.body?.service] ?? [],
+            });
         default:
             return res.status(404).json({error: 'Unknown method'});
     }

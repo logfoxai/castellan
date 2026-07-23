@@ -152,6 +152,7 @@ export function normalizeConfig(input: unknown): Config {
         rollback: normalizeRollback(data.rollback),
         api: normalizeApi(data.api),
         registries: normalizeRegistries(data.registries),
+        labelDiscovery: false,
     };
 
 }

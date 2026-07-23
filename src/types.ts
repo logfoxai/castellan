@@ -46,6 +46,8 @@ export type Config = {
     rollback: RollbackConfig;
     api: ApiConfig;
     registries?: Record<string, RegistryCredentials>;
+    /** True when Castellan started without a config file and scanned autoupdate labels. */
+    labelDiscovery: boolean;
 };
 
 export type RegistryImage = {

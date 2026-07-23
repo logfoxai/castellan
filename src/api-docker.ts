@@ -10,7 +10,6 @@ export type ApiMethod =
     | 'deploy'
     | 'reject'
     | 'setPollEnabled'
-    | 'discoverServices'
     | 'history'
     | 'deployments'
     | 'dockerContainers'
@@ -31,7 +30,6 @@ const API_METHODS = new Set<ApiMethod>([
     'deploy',
     'reject',
     'setPollEnabled',
-    'discoverServices',
     'history',
     'deployments',
     'dockerContainers',

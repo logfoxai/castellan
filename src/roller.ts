@@ -63,9 +63,27 @@ export class Roller implements RollerPort {
 
 }
 
-    async hydratePersistedServices(): Promise<void> {
+    async syncDiscoveredServices(): Promise<void> {
 
         const discovered = await discoverManagedServices(this.docker);
+
+        if (this.config.labelDiscovery) {
+
+            for (const service of discovered) {
+
+                if (this.findService(service.name)) {
+
+                    continue;
+
+}
+
+                this.registerManagedService(service, true);
+
+}
+
+            return;
+
+}
 
         for (const name of this.state.getPersistedServiceNames()) {
 
@@ -79,7 +97,7 @@ export class Roller implements RollerPort {
 
             if (match) {
 
-                this.registerManagedService(match);
+                this.registerManagedService(match, false);
 
 }
 
@@ -105,15 +123,6 @@ export class Roller implements RollerPort {
     getDeployments(serviceName: string): ServiceDeployment[] {
 
         return this.state.getDeployments(serviceName);
-
-}
-
-    async discoverServices(): Promise<ManagedService[]> {
-
-        const discovered = await discoverManagedServices(this.docker);
-        const managed = new Set(this.managedServices.map((service) => service.name));
-
-        return discovered.filter((service) => !managed.has(service.name));
 
 }
 
@@ -410,6 +419,8 @@ export class Roller implements RollerPort {
 
         try {
 
+            await this.syncDiscoveredServices();
+
             for (const service of this.managedServices) {
 
                 await this.checkService(service);
@@ -629,13 +640,13 @@ export class Roller implements RollerPort {
 
 }
 
-        this.registerManagedService(match);
+        this.registerManagedService(match, false);
 
         return match;
 
 }
 
-    private registerManagedService(service: ManagedService): void {
+    private registerManagedService(service: ManagedService, defaultPollEnabled: boolean): void {
 
         if (this.findService(service.name)) {
 
@@ -647,7 +658,7 @@ export class Roller implements RollerPort {
 
         const runtime = createRuntime(
             service,
-            this.state.getServicePollEnabled(service.name, false),
+            this.state.getServicePollEnabled(service.name, defaultPollEnabled),
         );
 
         this.syncRejectedDigests(runtime);

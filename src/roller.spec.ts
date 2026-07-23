@@ -26,6 +26,13 @@ const config: Config = {
     poll: {enabled: false, intervalMs: 0, jitterMs: 0},
     rollback: {healthTimeoutMs: 50, maxAttempts: 1},
     api: {enabled: false, dashboard: false, port: 3003},
+    labelDiscovery: false,
+};
+
+const labelDiscoveryConfig: Config = {
+    ...config,
+    managedServices: [],
+    labelDiscovery: true,
 };
 
 function healthyContainer(): ContainerInfo {
@@ -253,12 +260,12 @@ test('forceCheck skips services with polling disabled', async (assert) => {
 
 });
 
-test('hydratePersistedServices restores discovered services from state', async (assert) => {
+test('syncDiscoveredServices respects persisted manual mode', async (assert) => {
 
     const dir = await mkdtemp(path.join(os.tmpdir(), 'castellan-roller-'));
     const state = new StateManager(path.join(dir, 'state.json'));
 
-    state.setServicePollEnabled('worker-1', true);
+    state.setServicePollEnabled('worker-1', false);
     await state.save();
 
     const registry: Registry = {
@@ -269,7 +276,35 @@ test('hydratePersistedServices restores discovered services from state', async (
 
     try {
 
-        await roller.hydratePersistedServices();
+        await roller.syncDiscoveredServices();
+
+        assert.equal(
+            roller.getStatus().services.find((entry) => entry.name === 'worker-1')?.pollEnabled,
+            false,
+        );
+
+} finally {
+
+        roller.stop();
+        await rm(dir, {recursive: true, force: true});
+
+}
+
+});
+
+test('syncDiscoveredServices auto-registers labeled services in label discovery mode', async (assert) => {
+
+    const dir = await mkdtemp(path.join(os.tmpdir(), 'castellan-roller-'));
+    const state = new StateManager(path.join(dir, 'state.json'));
+    const registry: Registry = {
+        getManifest: async () => ({digest: 'sha256:worker', pushedAt: null}),
+        invalidate: () => undefined,
+    };
+    const roller = new Roller(labelDiscoveryConfig, registry, createDiscoverDocker(), state);
+
+    try {
+
+        await roller.syncDiscoveredServices();
 
         assert.equal(roller.getStatus().services.some((entry) => entry.name === 'worker-1'), true);
         assert.equal(
@@ -286,7 +321,7 @@ test('hydratePersistedServices restores discovered services from state', async (
 
 });
 
-test('setPollEnabled can add a discovered service', async (assert) => {
+test('syncDiscoveredServices skips unlisted labeled services in config mode', async (assert) => {
 
     const dir = await mkdtemp(path.join(os.tmpdir(), 'castellan-roller-'));
     const state = new StateManager(path.join(dir, 'state.json'));
@@ -298,17 +333,41 @@ test('setPollEnabled can add a discovered service', async (assert) => {
 
     try {
 
-        const discovered = await roller.discoverServices();
+        await roller.syncDiscoveredServices();
 
-        assert.equal(discovered.length, 1);
-        assert.equal(discovered[0]?.name, 'worker-1');
+        assert.equal(roller.getStatus().services.some((entry) => entry.name === 'worker-1'), false);
 
-        await roller.setPollEnabled('worker-1', true);
+} finally {
+
+        roller.stop();
+        await rm(dir, {recursive: true, force: true});
+
+}
+
+});
+
+test('syncDiscoveredServices restores deployment history as manual in config mode', async (assert) => {
+
+    const dir = await mkdtemp(path.join(os.tmpdir(), 'castellan-roller-'));
+    const state = new StateManager(path.join(dir, 'state.json'));
+
+    state.appendDeployment('worker-1', {digest: 'sha256:worker', outcome: 'success'});
+    await state.save();
+
+    const registry: Registry = {
+        getManifest: async () => ({digest: 'sha256:worker', pushedAt: null}),
+        invalidate: () => undefined,
+    };
+    const roller = new Roller(config, registry, createDiscoverDocker(), state);
+
+    try {
+
+        await roller.syncDiscoveredServices();
 
         assert.equal(roller.getStatus().services.some((entry) => entry.name === 'worker-1'), true);
         assert.equal(
             roller.getStatus().services.find((entry) => entry.name === 'worker-1')?.pollEnabled,
-            true,
+            false,
         );
 
 } finally {
