@@ -1,23 +1,25 @@
 import type {Registry} from './registry.js';
 import {DockerClient} from './docker.js';
-import {sleep} from './health.js';
-import {verifyDeployHealth} from './service-health.js';
+import {
+    attemptRollback,
+    createDeploymentContext,
+    deployManagedService,
+    handleDeployFailure,
+    rollbackManagedService,
+} from './deployment.js';
+import type {RollerPort, RollerStatus} from './roller-port.js';
 import {StateManager} from './state.js';
-import type {ContainerInfo} from 'dockerode';
 import type {Config, DeploymentEvent, ManagedService, ServiceRuntime} from './types.js';
-import {resolveComposeServicesFromContainers} from './compose-targets.js';
 
-export type RollerStatus = {
-    paused: boolean;
-    services: ServiceRuntime[];
-};
+export type {RollerStatus} from './roller-port.js';
 
-export class Roller {
+export class Roller implements RollerPort {
 
     private readonly config: Config;
     private readonly registry: Registry;
     private readonly docker: DockerClient;
     private readonly state: StateManager;
+    private readonly deployment;
     private readonly runtimes: Map<string, ServiceRuntime> = new Map();
     private readonly locks: Map<string, boolean> = new Map();
     private readonly rollbackRequested: Set<string> = new Set();
@@ -34,6 +36,18 @@ export class Roller {
         this.registry = registry;
         this.docker = docker;
         this.state = state;
+        this.deployment = createDeploymentContext(
+            config,
+            docker,
+            state,
+            (fn) => this.withComposeLock(fn),
+            {
+                isRollbackRequested: (name) => this.rollbackRequested.has(name),
+                checkRollbackRequested: (name) => this.checkRollbackRequested(name),
+                recordEvent: (type, service, message) => this.recordEvent(type, service, message),
+                clearRollbackRequest: (name) => this.rollbackRequested.delete(name),
+            },
+        );
 
         for (const service of config.managedServices) {
 
@@ -128,7 +142,7 @@ export class Roller {
 
             this.rollbackRequested.delete(serviceName);
 
-            return await this.rollbackService(service);
+            return await rollbackManagedService(this.deployment, service, this.getRuntime(serviceName));
 
 } finally {
 
@@ -353,21 +367,15 @@ export class Roller {
 
         if (this.rollbackRequested.has(service.name)) {
 
-            await this.attemptRollback(service);
+            await attemptRollback(this.deployment, service, this.getRuntime(service.name));
 
 }
-
-}
-
-    private isBadDigestSync(runtime: ServiceRuntime, digest: string): boolean {
-
-        return runtime.badDigests.includes(digest);
 
 }
 
     private async isBadDigest(runtime: ServiceRuntime, digest: string): Promise<boolean> {
 
-        if (!this.isBadDigestSync(runtime, digest)) {
+        if (!runtime.badDigests.includes(digest)) {
 
             return false;
 
@@ -382,46 +390,23 @@ export class Roller {
 
 }
 
-    private async markDeploySuccess(
-        service: ManagedService,
-        desiredDigest: string,
-        runtime: ServiceRuntime,
-    ): Promise<void> {
+    private async deployService(service: ManagedService, desiredDigest: string): Promise<void> {
 
-        const localDigest = await this.docker.getLocalDigest(service.registry, service.repository, service.tag);
+        const runtime = this.getRuntime(service.name);
 
-        runtime.currentDigest = localDigest ?? desiredDigest;
-        runtime.state = 'stable';
-        runtime.lastError = null;
-        this.state.setKnownGood(service.name, runtime.currentDigest);
-        this.recordEvent('deploy', service.name, `Updated to ${runtime.currentDigest}`);
+        try {
 
-}
+            await deployManagedService(this.deployment, service, desiredDigest, runtime);
 
-    private async handleDeployFailure(
-        service: ManagedService,
-        desiredDigest: string,
-        runtime: ServiceRuntime,
-        err: unknown,
-    ): Promise<void> {
+} catch (err) {
 
-        const message = err instanceof Error ? err.message : String(err);
+            await handleDeployFailure(this.deployment, service, desiredDigest, runtime, err);
 
-        if (message.startsWith('Rollback requested')) {
+} finally {
 
-            this.recordEvent('rollback', service.name, `Deploy cancelled: ${message}`);
-            await this.attemptRollback(service);
-
-            return;
+            await this.state.save();
 
 }
-
-        this.recordEvent('failure', service.name, `Health check failed: ${message}`);
-        const failedDigest = await this.resolveFailedDigest(service, desiredDigest);
-
-        runtime.badDigests.push(failedDigest);
-        this.state.addBadDigest(service.name, failedDigest);
-        await this.attemptRollback(service);
 
 }
 
@@ -432,210 +417,6 @@ export class Roller {
             throw new Error(`Rollback requested for ${serviceName}`);
 
 }
-
-}
-
-    private async resolveFailedDigest(service: ManagedService, desiredDigest: string): Promise<string> {
-
-        const knownGood = this.state.getKnownGood(service.name);
-        const currentLocal = await this.docker.getLocalDigest(service.registry, service.repository, service.tag);
-
-        if (currentLocal && currentLocal !== knownGood) {
-
-            return currentLocal;
-
-}
-
-        return desiredDigest;
-
-}
-
-    private async resolveComposeServices(service: ManagedService): Promise<string[]> {
-
-        if (service.composeServices && service.composeServices.length > 0) {
-
-            return service.composeServices;
-
-}
-
-        const resolved = await resolveComposeServicesFromContainers(
-            this.docker,
-            service,
-            this.config.compose,
-        );
-
-        if (resolved.length === 0) {
-
-            throw new Error(
-                `No compose services found running ${service.registry}/${service.repository}:${service.tag}`,
-            );
-
-}
-
-        return resolved;
-
-}
-
-    private async deployService(service: ManagedService, desiredDigest: string): Promise<void> {
-
-        const runtime = this.getRuntime(service.name);
-        const current = await this.docker.getLocalDigest(service.registry, service.repository, service.tag);
-
-        if (current && current !== desiredDigest && !this.isBadDigestSync(runtime, current)) {
-
-            this.state.setKnownGood(service.name, current);
-
-}
-
-        runtime.state = 'updating';
-        this.recordEvent('deploy', service.name, `Updating to ${desiredDigest}`);
-
-        this.checkRollbackRequested(service.name);
-        const composeServices = await this.resolveComposeServices(service);
-
-        await this.withComposeLock(() => this.docker.composePull(composeServices[0], this.config.compose));
-
-        try {
-
-            for (const composeService of composeServices) {
-
-                this.checkRollbackRequested(service.name);
-                await this.withComposeLock(() => this.docker.composeUp(composeService, this.config.compose));
-                this.checkRollbackRequested(service.name);
-                await this.verifyServiceHealth(service, composeService);
-
-}
-
-            this.checkRollbackRequested(service.name);
-            await this.markDeploySuccess(service, desiredDigest, runtime);
-
-} catch (err) {
-
-            await this.handleDeployFailure(service, desiredDigest, runtime, err);
-
-} finally {
-
-            await this.state.save();
-
-}
-
-}
-
-    private async attemptRollback(service: ManagedService): Promise<void> {
-
-        const runtime = this.getRuntime(service.name);
-        const maxAttempts = this.config.rollback.maxAttempts;
-
-        for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
-
-            try {
-
-                const rolledBack = await this.rollbackService(service);
-
-                if (!rolledBack) {
-
-                    throw new Error('No known-good digest to rollback to');
-
-}
-
-                return;
-
-} catch (err) {
-
-                const message = err instanceof Error ? err.message : String(err);
-
-                this.recordEvent('failure', service.name, `Rollback attempt ${attempt} failed: ${message}`);
-
-                if (attempt === maxAttempts) {
-
-                    runtime.state = 'failed';
-                    runtime.lastError = `Rollback failed after ${maxAttempts} attempts: ${message}`;
-                    this.recordEvent('failure', service.name, runtime.lastError);
-                    throw new Error(runtime.lastError);
-
-}
-
-                await sleep(5000);
-
-}
-
-}
-
-}
-
-    private async verifyServiceHealth(service: ManagedService, composeService: string): Promise<void> {
-
-        await verifyDeployHealth({
-            service,
-            composeService,
-            healthTimeoutMs: this.config.rollback.healthTimeoutMs,
-            findContainer: (name) => this.findComposeContainer(name),
-            beforeCheck: () => this.checkRollbackRequested(service.name),
-            checkAbort: () => this.rollbackRequested.has(service.name),
-        });
-
-}
-
-    private async rollbackService(service: ManagedService): Promise<boolean> {
-
-        this.rollbackRequested.delete(service.name);
-
-        const runtime = this.getRuntime(service.name);
-        const knownGood = this.state.getKnownGood(service.name);
-
-        if (!knownGood) {
-
-            runtime.state = 'failed';
-            runtime.lastError = 'No known-good digest to rollback to';
-            this.recordEvent('failure', service.name, runtime.lastError);
-            await this.state.save();
-
-            return false;
-
-}
-
-        runtime.state = 'rollback';
-        this.recordEvent('rollback', service.name, `Rolling back to ${knownGood}`);
-
-        const fullImage = `${service.registry}/${service.repository}`;
-
-        await this.docker.pullImage(`${fullImage}@${knownGood}`);
-        await this.docker.tagImage(`${fullImage}@${knownGood}`, `${fullImage}:${service.tag}`);
-
-        const composeServices = await this.resolveComposeServices(service);
-
-        for (const composeService of composeServices) {
-
-            await this.withComposeLock(() => this.docker.composeUp(composeService, this.config.compose));
-            await this.verifyServiceHealth(service, composeService);
-
-}
-
-        runtime.currentDigest = knownGood;
-        runtime.desiredDigest = knownGood;
-        runtime.state = 'stable';
-        runtime.lastError = null;
-        this.recordEvent('rollback', service.name, `Rolled back to ${knownGood}`);
-
-        await this.state.save();
-
-        return true;
-
-}
-
-    private async findComposeContainer(serviceName: string): Promise<ContainerInfo | null> {
-
-        const containers = await this.docker.listContainers();
-        const project = this.config.compose.project;
-        const running = containers
-            .filter((container) =>
-                container.Labels?.['com.docker.compose.service'] === serviceName
-                && container.State === 'running'
-                && (!project || container.Labels?.['com.docker.compose.project'] === project),
-            )
-            .sort((a, b) => b.Created - a.Created);
-
-        return running[0] ?? null;
 
 }
 

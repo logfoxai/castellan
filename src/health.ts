@@ -47,33 +47,6 @@ export async function waitForHttpHealth(options: HealthOptions): Promise<boolean
 
 }
 
-export async function waitForContainerHealth(
-    containerId: string,
-    isHealthy: (id: string) => Promise<boolean>,
-    options: { intervalMs: number; retries: number; timeoutMs: number },
-): Promise<boolean> {
-
-    const deadline = Date.now() + options.timeoutMs;
-    let attempts = 0;
-
-    while (Date.now() < deadline && attempts < options.retries) {
-
-        attempts += 1;
-
-        if (await isHealthy(containerId)) {
-
-            return true;
-
-}
-
-        await sleep(options.intervalMs);
-
-}
-
-    return false;
-
-}
-
 export function sleep(ms: number): Promise<void> {
 
     return new Promise((resolve) => setTimeout(resolve, ms));
