@@ -12,13 +12,11 @@ export function matchesComposeProject(container: ContainerInfo, project?: string
 
     if (!project) {
 
-        return true;
+        return false;
 
 }
 
-    const containerProject = container.Labels?.['com.docker.compose.project'];
-
-    return !containerProject || containerProject === project;
+    return container.Labels?.['com.docker.compose.project'] === project;
 
 }
 

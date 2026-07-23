@@ -7,6 +7,7 @@ import {
     handleDeployFailure,
     rollbackManagedService,
 } from './deployment.js';
+import {sleep} from './health.js';
 import type {RollerPort, RollerStatus} from './roller-port.js';
 import {StateManager} from './state.js';
 import type {Config, DeploymentEvent, ManagedService, ServiceRuntime} from './types.js';
@@ -132,7 +133,19 @@ export class Roller implements RollerPort {
 
         if (this.locks.get(serviceName)) {
 
-            return true;
+            await this.waitForServiceUnlock(serviceName);
+
+            if (!this.rollbackRequested.has(serviceName)) {
+
+                return true;
+
+}
+
+}
+
+        if (this.locks.get(serviceName)) {
+
+            return false;
 
 }
 
@@ -413,6 +426,24 @@ export class Roller implements RollerPort {
         if (this.rollbackRequested.has(serviceName)) {
 
             throw new Error(`Rollback requested for ${serviceName}`);
+
+}
+
+}
+
+    private async waitForServiceUnlock(serviceName: string, timeoutMs = 300_000): Promise<void> {
+
+        const deadline = Date.now() + timeoutMs;
+
+        while (this.locks.get(serviceName)) {
+
+            if (Date.now() >= deadline) {
+
+                throw new Error(`Timed out waiting for ${serviceName} to finish`);
+
+}
+
+            await sleep(100);
 
 }
 

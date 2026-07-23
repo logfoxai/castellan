@@ -27,13 +27,30 @@ function container(
 
 }
 
-test('matchesComposeProject accepts containers in the configured project', (assert) => {
+test('matchesComposeProject requires an configured project', (assert) => {
 
     const row = container('1', 'api', 'ghcr.io/myorg/api:prime', 'logfox');
 
     assert.equal(matchesComposeProject(row, 'logfox'), true);
     assert.equal(matchesComposeProject(row, 'other'), false);
-    assert.equal(matchesComposeProject(row), true);
+    assert.equal(matchesComposeProject(row), false);
+
+});
+
+test('listComposeServiceNamesForImage ignores containers from other compose projects', (assert) => {
+
+    const rows = [
+        container('1', 'api-1', 'ghcr.io/myorg/api-service:prime', 'other-stack'),
+        container('2', 'api-1', 'ghcr.io/myorg/api-service:prime', 'logfox'),
+    ];
+
+    const names = listComposeServiceNamesForImage(
+        rows,
+        {registry: 'ghcr.io', repository: 'myorg/api-service', tag: 'prime'},
+        {file: '/app/docker-compose.yml', project: 'logfox'},
+    );
+
+    assert.equal(names.join(','), 'api-1');
 
 });
 

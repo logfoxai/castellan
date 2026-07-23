@@ -2,6 +2,17 @@ import type {ContainerInfo} from 'dockerode';
 import {sleep, waitForHttpHealth} from './health.js';
 import type {ManagedService} from './types.js';
 
+export class DeployHealthError extends Error {
+
+    constructor(composeService: string) {
+
+        super(`Health check failed for ${composeService}`);
+        this.name = 'DeployHealthError';
+
+}
+
+}
+
 export function containerReportsHealthy(
     container: Pick<ContainerInfo, 'State' | 'Status'> | null | undefined,
 ): boolean {
@@ -117,6 +128,6 @@ export async function verifyDeployHealth(options: VerifyDeployHealthOptions): Pr
 }
 
     options.beforeCheck?.();
-    throw new Error(`Health check failed for ${options.composeService}`);
+    throw new DeployHealthError(options.composeService);
 
 }
