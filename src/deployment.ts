@@ -16,6 +16,7 @@ export type DeploymentContext = {
     checkRollbackRequested: (serviceName: string) => void;
     clearRollbackRequest: (serviceName: string) => void;
     recordEvent: (type: DeploymentEvent['type'], service: string, message: string) => void;
+    syncRejectedDigests: (runtime: ServiceRuntime) => void;
 };
 
 async function resolveComposeServices(
@@ -90,6 +91,30 @@ async function restartComposeServices(
 
 }
 
+async function rolloutDigest(
+    ctx: DeploymentContext,
+    service: ManagedService,
+    digest: string,
+    runtime: ServiceRuntime,
+    trackRollback: boolean,
+): Promise<void> {
+
+    const fullImage = `${service.registry}/${service.repository}`;
+
+    await ctx.docker.pullImage(`${fullImage}@${digest}`);
+    await ctx.docker.tagImage(`${fullImage}@${digest}`, `${fullImage}:${service.tag}`);
+
+    const composeServices = await resolveComposeServices(ctx, service);
+
+    await restartComposeServices(ctx, service, composeServices, trackRollback);
+
+    runtime.currentDigest = digest;
+    runtime.desiredDigest = digest;
+    runtime.state = 'stable';
+    runtime.lastError = null;
+
+}
+
 export async function deployManagedService(
     ctx: DeploymentContext,
     service: ManagedService,
@@ -97,11 +122,22 @@ export async function deployManagedService(
     runtime: ServiceRuntime,
 ): Promise<void> {
 
+    if (ctx.state.isDigestRejected(service.name, desiredDigest)) {
+
+        throw new Error(`Refusing to deploy rejected digest ${desiredDigest}`);
+
+}
+
     const current = await ctx.docker.getLocalDigest(service.registry, service.repository, service.tag);
 
-    if (current && current !== desiredDigest && !runtime.badDigests.includes(current)) {
+    if (current === desiredDigest) {
 
-        ctx.state.setKnownGood(service.name, current);
+        runtime.currentDigest = current;
+        runtime.desiredDigest = desiredDigest;
+        runtime.state = 'stable';
+        runtime.lastError = null;
+
+        return;
 
 }
 
@@ -127,37 +163,61 @@ export async function rollbackManagedService(
 
     ctx.clearRollbackRequest(service.name);
 
-    const knownGood = ctx.state.getKnownGood(service.name);
+    const targetDigest = await resolveRollbackTarget(ctx, service, runtime);
 
-    if (!knownGood) {
-
-        runtime.state = 'failed';
-        runtime.lastError = 'No known-good digest to rollback to';
-        ctx.recordEvent('failure', service.name, runtime.lastError);
+    if (!targetDigest) {
 
         return false;
 
 }
 
     runtime.state = 'rollback';
-    ctx.recordEvent('rollback', service.name, `Rolling back to ${knownGood}`);
+    ctx.recordEvent('rollback', service.name, `Rolling back to ${targetDigest}`);
 
-    const fullImage = `${service.registry}/${service.repository}`;
+    await rolloutDigest(ctx, service, targetDigest, runtime, false);
 
-    await ctx.docker.pullImage(`${fullImage}@${knownGood}`);
-    await ctx.docker.tagImage(`${fullImage}@${knownGood}`, `${fullImage}:${service.tag}`);
-
-    const composeServices = await resolveComposeServices(ctx, service);
-
-    await restartComposeServices(ctx, service, composeServices, false);
-
-    runtime.currentDigest = knownGood;
-    runtime.desiredDigest = knownGood;
-    runtime.state = 'stable';
-    runtime.lastError = null;
-    ctx.recordEvent('rollback', service.name, `Rolled back to ${knownGood}`);
+    ctx.state.appendDeployment(service.name, {digest: targetDigest, outcome: 'success'});
+    ctx.recordEvent('rollback', service.name, `Rolled back to ${targetDigest}`);
 
     return true;
+
+}
+
+async function resolveRollbackTarget(
+    ctx: DeploymentContext,
+    service: ManagedService,
+    runtime: ServiceRuntime,
+): Promise<string | null> {
+
+    const current = runtime.currentDigest
+        ?? await ctx.docker.getLocalDigest(service.registry, service.repository, service.tag);
+    const targetDigest = ctx.state.findRollbackDigest(
+        service.name,
+        current,
+        runtime.desiredDigest,
+    );
+
+    if (!targetDigest) {
+
+        runtime.state = 'failed';
+        runtime.lastError = 'No previous successful deployment to roll back to';
+        ctx.recordEvent('failure', service.name, runtime.lastError);
+
+        return null;
+
+}
+
+    if (ctx.state.isDigestRejected(service.name, targetDigest)) {
+
+        runtime.state = 'failed';
+        runtime.lastError = `Rollback target ${targetDigest} is rejected`;
+        ctx.recordEvent('failure', service.name, runtime.lastError);
+
+        return null;
+
+}
+
+    return targetDigest;
 
 }
 
@@ -177,7 +237,7 @@ export async function attemptRollback(
 
             if (!rolledBack) {
 
-                throw new Error('No known-good digest to rollback to');
+                throw new Error('No previous successful deployment to roll back to');
 
 }
 
@@ -218,7 +278,8 @@ async function markDeploySuccess(
     runtime.currentDigest = localDigest ?? desiredDigest;
     runtime.state = 'stable';
     runtime.lastError = null;
-    ctx.state.setKnownGood(service.name, runtime.currentDigest);
+    ctx.state.appendDeployment(service.name, {digest: runtime.currentDigest, outcome: 'success'});
+    ctx.syncRejectedDigests(runtime);
     ctx.recordEvent('deploy', service.name, `Updated to ${runtime.currentDigest}`);
 
 }
@@ -248,8 +309,8 @@ export async function handleDeployFailure(
 
         const failedDigest = await resolveFailedDigest(ctx, service, desiredDigest);
 
-        runtime.badDigests.push(failedDigest);
-        ctx.state.addBadDigest(service.name, failedDigest);
+        ctx.state.appendDeployment(service.name, {digest: failedDigest, outcome: 'failed', reject: true});
+        ctx.syncRejectedDigests(runtime);
 
 }
 
@@ -258,19 +319,10 @@ export async function handleDeployFailure(
 }
 
 async function resolveFailedDigest(
-    ctx: DeploymentContext,
-    service: ManagedService,
+    _ctx: DeploymentContext,
+    _service: ManagedService,
     desiredDigest: string,
 ): Promise<string> {
-
-    const knownGood = ctx.state.getKnownGood(service.name);
-    const currentLocal = await ctx.docker.getLocalDigest(service.registry, service.repository, service.tag);
-
-    if (currentLocal && currentLocal !== knownGood) {
-
-        return currentLocal;
-
-}
 
     return desiredDigest;
 
@@ -283,7 +335,11 @@ export function createDeploymentContext(
     withComposeLock: DeploymentContext['withComposeLock'],
     hooks: Pick<
         DeploymentContext,
-        'isRollbackRequested' | 'checkRollbackRequested' | 'recordEvent' | 'clearRollbackRequest'
+        | 'isRollbackRequested'
+        | 'checkRollbackRequested'
+        | 'recordEvent'
+        | 'clearRollbackRequest'
+        | 'syncRejectedDigests'
     >,
 ): DeploymentContext {
 

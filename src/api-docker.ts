@@ -8,7 +8,10 @@ export type ApiMethod =
     | 'pause'
     | 'resume'
     | 'rollback'
+    | 'deploy'
+    | 'reject'
     | 'history'
+    | 'deployments'
     | 'dockerContainers'
     | 'dockerImages'
     | 'dockerNetworks'
@@ -25,7 +28,10 @@ const API_METHODS = new Set<ApiMethod>([
     'pause',
     'resume',
     'rollback',
+    'deploy',
+    'reject',
     'history',
+    'deployments',
     'dockerContainers',
     'dockerImages',
     'dockerNetworks',

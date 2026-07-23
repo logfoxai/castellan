@@ -77,7 +77,7 @@ test('rollback waits for in-flight deploy and completes rollback', async (assert
     const dir = await mkdtemp(path.join(os.tmpdir(), 'castellan-roller-'));
     const state = new StateManager(path.join(dir, 'state.json'));
 
-    state.setKnownGood('api', 'sha256:known-good');
+    state.appendDeployment('api', {digest: 'sha256:known-good', outcome: 'success'});
     await state.save();
 
     const pullStarted = {value: false};

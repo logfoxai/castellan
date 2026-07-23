@@ -10,6 +10,13 @@ export type ServiceStatus = {
     lastError: string | null;
 };
 
+type DeploymentRecord = {
+    digest: string;
+    at: string;
+    outcome: 'success' | 'failed';
+    reject?: true;
+};
+
 type DeploymentEvent = {
     at: string;
     type: 'check' | 'deploy' | 'rollback' | 'failure';
@@ -40,7 +47,10 @@ export type API = {
     pause(): { paused: boolean };
     resume(): { paused: boolean };
     rollback(input: { service: string }): { ok: boolean };
+    deploy(input: { service: string; digest: string }): { ok: boolean };
+    reject(input: { service: string; digest: string }): { ok: boolean };
     history(): { events: DeploymentEvent[] };
+    deployments(input: { service: string }): { deployments: DeploymentRecord[] };
     dockerContainers(): { containers: ContainerRow[] };
     dockerStatsAll(): { stats: ContainerStat[] };
     dockerImages(): { images: unknown[] };

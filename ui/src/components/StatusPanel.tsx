@@ -1,3 +1,4 @@
+import {useState} from 'react';
 import {usePolling} from '../hooks/usePolling.js';
 import {rpc} from '../api.js';
 import type {ServiceStatus} from '../api.js';
@@ -26,7 +27,7 @@ export function StatusPanel(): JSX.Element {
             </div>
             <div className="status-grid">
                 {(data?.services ?? []).map((service) => (
-                    <ServiceCard key={service.name} service={service} />
+                    <ServiceCard key={service.name} service={service} onMutate={refresh} />
                 ))}
             </div>
             <div className="actions">
@@ -60,13 +61,24 @@ export function StatusPanel(): JSX.Element {
     );
 }
 
-function ServiceCard({service}: { service: ServiceStatus }): JSX.Element {
+function ServiceCard({
+    service,
+    onMutate,
+}: {
+    service: ServiceStatus;
+    onMutate: () => void;
+}): JSX.Element {
     const inSync = Boolean(
         service.currentDigest
         && service.desiredDigest
         && service.currentDigest === service.desiredDigest,
     );
     const fullImage = `${service.registry}/${formatServiceImageRef(service)}`;
+
+    const mutate = async (call: Promise<unknown>): Promise<void> => {
+        await call;
+        onMutate();
+    };
 
     return (
         <div className={`status-card status-${service.state}`}>
@@ -83,6 +95,14 @@ function ServiceCard({service}: { service: ServiceStatus }): JSX.Element {
                     Last check: {service.lastCheckAt ? new Date(service.lastCheckAt).toLocaleTimeString() : 'never'}
                 </span>
                 {service.lastError ? <span className="status-error">{service.lastError}</span> : null}
+            </div>
+            <div className="status-card-actions">
+                <button
+                    title="Roll back to the previous successful deployment."
+                    onClick={() => mutate(rpc('rollback', {service: service.name}))}
+                >
+                    Roll back
+                </button>
             </div>
             <details className="status-details">
                 <summary>{inSync ? 'Image details' : 'Image details · digest changed'}</summary>
@@ -114,7 +134,81 @@ function ServiceCard({service}: { service: ServiceStatus }): JSX.Element {
                         </div>
                     ) : null}
                 </dl>
+                <ServiceDeployments service={service} onMutate={onMutate} />
             </details>
+        </div>
+    );
+}
+
+function ServiceDeployments({
+    service,
+    onMutate,
+}: {
+    service: ServiceStatus;
+    onMutate: () => void;
+}): JSX.Element {
+    const {data} = usePolling(() => rpc('deployments', {service: service.name}), 10000);
+    const [busyDigest, setBusyDigest] = useState<string | null>(null);
+    const deployments = data?.deployments ?? [];
+
+    const act = async (digest: string, method: 'deploy' | 'reject'): Promise<void> => {
+        setBusyDigest(digest);
+
+        try {
+            await rpc(method, {service: service.name, digest});
+            onMutate();
+        } finally {
+            setBusyDigest(null);
+        }
+    };
+
+    if (deployments.length === 0) {
+        return <p className="deployments-empty">No deployments recorded yet.</p>;
+    }
+
+    return (
+        <div className="deployments-list">
+            <h3>Past deployments</h3>
+            <ul>
+                {deployments.map((deployment) => {
+                    const isCurrent = deployment.digest === service.currentDigest;
+                    const flags = [
+                        isCurrent ? 'current' : null,
+                        deployment.outcome === 'failed' ? 'failed' : null,
+                        deployment.reject ? 'rejected' : null,
+                    ].filter(Boolean);
+
+                    return (
+                        <li key={`${deployment.at}-${deployment.digest}`} className="deployment-row">
+                            <div className="deployment-main">
+                                <code>{formatDigestShort(deployment.digest)}</code>
+                                <time>{new Date(deployment.at).toLocaleString()}</time>
+                                {flags.length > 0 ? (
+                                    <span className="deployment-flags">{flags.join(' · ')}</span>
+                                ) : null}
+                            </div>
+                            <div className="deployment-actions">
+                                {!isCurrent ? (
+                                    <button
+                                        disabled={busyDigest === deployment.digest}
+                                        onClick={() => act(deployment.digest, 'deploy')}
+                                    >
+                                        Deploy
+                                    </button>
+                                ) : null}
+                                {!deployment.reject ? (
+                                    <button
+                                        disabled={busyDigest === deployment.digest}
+                                        onClick={() => act(deployment.digest, 'reject')}
+                                    >
+                                        Reject
+                                    </button>
+                                ) : null}
+                            </div>
+                        </li>
+                    );
+                })}
+            </ul>
         </div>
     );
 }

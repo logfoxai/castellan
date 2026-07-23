@@ -37,7 +37,7 @@ function baseRuntime(): ServiceRuntime {
         state: 'updating',
         currentDigest: 'sha256:old',
         desiredDigest: 'sha256:new',
-        badDigests: [],
+        rejectedDigests: [],
         lastCheckAt: null,
         lastError: null,
     };
@@ -72,7 +72,7 @@ function mockDocker(): DockerClient {
 
 }
 
-function createContext(state: StateManager): DeploymentContext {
+function createContext(state: StateManager, runtime: ServiceRuntime): DeploymentContext {
 
     return {
         config: testConfig,
@@ -84,6 +84,11 @@ function createContext(state: StateManager): DeploymentContext {
         checkRollbackRequested: () => undefined,
         clearRollbackRequest: () => undefined,
         recordEvent: () => undefined,
+        syncRejectedDigests: (): void => {
+
+            runtime.rejectedDigests = state.getRejectedDigests(runtime.name);
+
+},
     };
 
 }
@@ -94,13 +99,14 @@ async function withContext(
 
     const dir = await mkdtemp(path.join(os.tmpdir(), 'castellan-deploy-'));
     const state = new StateManager(path.join(dir, 'state.json'));
+    const runtime = baseRuntime();
 
-    state.setKnownGood('api', 'sha256:old');
+    state.appendDeployment('api', {digest: 'sha256:old', outcome: 'success'});
     await state.save();
 
     try {
 
-        await fn(createContext(state), state, baseRuntime());
+        await fn(createContext(state, runtime), state, runtime);
 
 } finally {
 
@@ -110,7 +116,7 @@ async function withContext(
 
 }
 
-test('handleDeployFailure does not blocklist digest for infrastructure errors', async (assert) => {
+test('handleDeployFailure does not reject digest for infrastructure errors', async (assert) => {
 
     await withContext(async (ctx, state, runtime) => {
 
@@ -122,14 +128,14 @@ test('handleDeployFailure does not blocklist digest for infrastructure errors', 
             new Error('compose pull failed: network timeout'),
         );
 
-        assert.equal(state.getBadDigests('api').length, 0);
-        assert.equal(runtime.badDigests.length, 0);
+        assert.equal(state.getRejectedDigests('api').length, 0);
+        assert.equal(runtime.rejectedDigests.length, 0);
 
 });
 
 });
 
-test('handleDeployFailure blocklists digest after health verification fails', async (assert) => {
+test('handleDeployFailure rejects digest after health verification fails', async (assert) => {
 
     await withContext(async (ctx, state, runtime) => {
 
@@ -141,8 +147,14 @@ test('handleDeployFailure blocklists digest after health verification fails', as
             new DeployHealthError('api-1'),
         );
 
-        assert.equal(state.getBadDigests('api').includes('sha256:new'), true);
-        assert.equal(runtime.badDigests.includes('sha256:new'), true);
+        assert.equal(state.isDigestRejected('api', 'sha256:new'), true);
+        assert.equal(runtime.rejectedDigests.includes('sha256:new'), true);
+        assert.equal(
+            state.getDeployments('api').some(
+                (deployment) => deployment.digest === 'sha256:new' && deployment.outcome === 'failed',
+            ),
+            true,
+        );
 
 });
 

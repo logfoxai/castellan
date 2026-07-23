@@ -10,7 +10,7 @@ import {
 import {sleep} from './health.js';
 import type {RollerPort, RollerStatus} from './roller-port.js';
 import {StateManager} from './state.js';
-import type {Config, DeploymentEvent, ManagedService, ServiceRuntime} from './types.js';
+import type {ServiceDeployment, Config, DeploymentEvent, ManagedService, ServiceRuntime} from './types.js';
 
 export type {RollerStatus} from './roller-port.js';
 
@@ -47,21 +47,15 @@ export class Roller implements RollerPort {
                 checkRollbackRequested: (name) => this.checkRollbackRequested(name),
                 recordEvent: (type, service, message) => this.recordEvent(type, service, message),
                 clearRollbackRequest: (name) => this.rollbackRequested.delete(name),
+                syncRejectedDigests: (runtime) => this.syncRejectedDigests(runtime),
             },
         );
 
         for (const service of config.managedServices) {
 
             const runtime = createRuntime(service);
-            const knownGood = this.state.getKnownGood(service.name);
 
-            if (knownGood) {
-
-                runtime.currentDigest = knownGood;
-
-}
-
-            runtime.badDigests = this.state.getBadDigests(service.name);
+            this.syncRejectedDigests(runtime);
             this.runtimes.set(service.name, runtime);
 
 }
@@ -80,6 +74,12 @@ export class Roller implements RollerPort {
     getEvents(): DeploymentEvent[] {
 
         return this.state.getEvents();
+
+}
+
+    getDeployments(serviceName: string): ServiceDeployment[] {
+
+        return this.state.getDeployments(serviceName);
 
 }
 
@@ -121,6 +121,55 @@ export class Roller implements RollerPort {
 
     async rollback(serviceName: string): Promise<boolean> {
 
+        return this.runServiceMutation(serviceName, async (service) => {
+
+            const ok = await rollbackManagedService(this.deployment, service, this.getRuntime(serviceName));
+
+            await this.state.save();
+
+            return ok;
+
+}, {cancelInFlight: true});
+
+}
+
+    async deploy(serviceName: string, digest: string): Promise<boolean> {
+
+        return this.runServiceMutation(serviceName, async (service) => {
+
+            const runtime = this.getRuntime(serviceName);
+
+            if (this.state.isDigestRejected(service.name, digest)) {
+
+                throw new Error(`Refusing to deploy rejected digest ${digest}`);
+
+}
+
+            const current = runtime.currentDigest
+                ?? await this.docker.getLocalDigest(service.registry, service.repository, service.tag);
+
+            if (current === digest) {
+
+                runtime.currentDigest = digest;
+                runtime.desiredDigest = digest;
+                runtime.state = 'stable';
+                runtime.lastError = null;
+
+                return true;
+
+}
+
+            await deployManagedService(this.deployment, service, digest, runtime);
+            await this.state.save();
+
+            return true;
+
+});
+
+}
+
+    async reject(serviceName: string, digest: string): Promise<boolean> {
+
         const service = this.findService(serviceName);
 
         if (!service) {
@@ -129,13 +178,51 @@ export class Roller implements RollerPort {
 
 }
 
-        this.rollbackRequested.add(serviceName);
+        this.state.setDigestRejected(service.name, digest, true);
+
+        const runtime = this.getRuntime(serviceName);
+        const current = runtime.currentDigest
+            ?? await this.docker.getLocalDigest(service.registry, service.repository, service.tag);
+
+        this.syncRejectedDigests(runtime);
+
+        if (current === digest) {
+
+            return this.rollback(serviceName);
+
+}
+
+        await this.state.save();
+
+        return true;
+
+}
+
+    private async runServiceMutation(
+        serviceName: string,
+        fn: (service: ManagedService) => Promise<boolean>,
+        options: {cancelInFlight?: boolean} = {},
+    ): Promise<boolean> {
+
+        const service = this.findService(serviceName);
+
+        if (!service) {
+
+            throw new Error(`Unknown service: ${serviceName}`);
+
+}
+
+        if (options.cancelInFlight) {
+
+            this.rollbackRequested.add(serviceName);
+
+}
 
         if (this.locks.get(serviceName)) {
 
             await this.waitForServiceUnlock(serviceName);
 
-            if (!this.rollbackRequested.has(serviceName)) {
+            if (options.cancelInFlight && !this.rollbackRequested.has(serviceName)) {
 
                 return true;
 
@@ -153,7 +240,7 @@ export class Roller implements RollerPort {
 
         try {
 
-            return await rollbackManagedService(this.deployment, service, this.getRuntime(serviceName));
+            return await fn(service);
 
 } finally {
 
@@ -355,7 +442,7 @@ export class Roller implements RollerPort {
         desiredDigest: string,
     ): Promise<'deploy' | 'stable' | 'failed'> {
 
-        if (await this.isBadDigest(runtime, desiredDigest)) {
+        if (await this.isRejectedDigest(runtime, desiredDigest)) {
 
             return 'failed';
 
@@ -384,20 +471,26 @@ export class Roller implements RollerPort {
 
 }
 
-    private async isBadDigest(runtime: ServiceRuntime, digest: string): Promise<boolean> {
+    private async isRejectedDigest(runtime: ServiceRuntime, digest: string): Promise<boolean> {
 
-        if (!runtime.badDigests.includes(digest)) {
+        if (!runtime.rejectedDigests.includes(digest)) {
 
             return false;
 
 }
 
         runtime.state = 'failed';
-        runtime.lastError = `Refusing to deploy known-bad digest ${digest}`;
+        runtime.lastError = `Refusing to deploy rejected digest ${digest}`;
         this.recordEvent('failure', runtime.name, runtime.lastError);
         await this.state.save();
 
         return true;
+
+}
+
+    private syncRejectedDigests(runtime: ServiceRuntime): void {
+
+        runtime.rejectedDigests = this.state.getRejectedDigests(runtime.name);
 
 }
 
@@ -487,7 +580,7 @@ function createRuntime(service: ManagedService): ServiceRuntime {
         state: 'idle',
         currentDigest: null,
         desiredDigest: null,
-        badDigests: [],
+        rejectedDigests: [],
         lastCheckAt: null,
         lastError: null,
     };

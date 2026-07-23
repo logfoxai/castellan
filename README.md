@@ -396,11 +396,14 @@ When `api.enabled` is `true` (the default), Castellan exposes an internal HTTP A
 
 - `GET /v1/health` — liveness (no auth).
 - `POST /v1/<method>` — typed RPC (requires API auth when enabled). Request body is the method input (use `{}` when there are no parameters):
-  - `status` — service states and known-good digests.
+  - `status` — service states and current digests.
   - `forceCheck` — check registries immediately.
   - `pause` / `resume` — pause/resume polling.
-  - `rollback` — manually rollback a service (`{"service":"api"}`).
-  - `history` — recent events.
+  - `rollback` — roll back to the previous successful deployment (`{"service":"api"}`).
+  - `deploy` — deploy a specific digest (`{"service":"api","digest":"sha256:…"}`).
+  - `reject` — mark a digest rejected; rolls back if it is running (`{"service":"api","digest":"sha256:…"}`).
+  - `history` — recent events (all services).
+  - `deployments` — per-service deployment history (`{"service":"api"}`).
   - `dockerContainers`, `dockerImages`, `dockerNetworks`, `dockerVolumes` — Docker inspection.
   - `dockerLogs` (`{"containerId":"…","tail":100}`), `dockerStats` (`{"containerId":"…"}`), `dockerInfo`, `dockerEvents` (`{"since":300}`) — logs and stats.
 
@@ -410,7 +413,8 @@ See [Access & API auth](#access--api-auth). For headless or API-only deployments
 
 Served at `/` when `api.enabled` and `api.dashboard` are both `true` (the default).
 
-- Live service status with watched **tag** and `repository:tag`; digests in expandable details.
+- Live service status with watched **tag** and `repository:tag`; digests and **past deployments** in expandable details.
+- **Roll back**, **Deploy**, and **Reject** actions per deployment digest.
 - **Check now** and **Pause/Resume polling** controls.
 - Docker container table with live CPU, memory, disk usage, state, and one-click log viewing.
 - Deployment / rollback / failure history timeline.
@@ -423,8 +427,8 @@ Served at `/` when `api.enabled` and `api.dashboard` are both `true` (the defaul
 2. On every poll interval it fetches the manifest for each managed image, with per-image TTL and global jitter.
 3. When a digest changes, it pulls the image and performs a rolling restart of the associated compose services.
 4. It waits for Docker and/or HTTP health checks to pass.
-5. If health checks fail, it rolls back to the last known-good digest and marks the failing digest as bad.
-6. State is persisted atomically to disk so restarts are safe.
+5. If health checks fail, it rolls back to the previous successful deployment and marks the failing digest as **rejected** (blocked from auto-deploy).
+6. State is persisted atomically to disk (`deployments` history + event log) so restarts are safe.
 
 # Roadmap
 

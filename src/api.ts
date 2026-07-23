@@ -132,33 +132,51 @@ export async function dispatchMethod(
 
 }
 
+const ROLLER_METHODS: Partial<Record<ApiMethod, (roller: RollerPort, body: unknown) => Promise<unknown>>> = {
+    status: async (roller) => status(roller),
+    forceCheck: async (roller) => {
+
+        await roller.forceCheck();
+
+        return {ok: true};
+
+},
+    pause: async (roller) => {
+
+        roller.pause();
+
+        return {paused: roller.getStatus().paused};
+
+},
+    resume: async (roller) => {
+
+        roller.resume();
+
+        return {paused: roller.getStatus().paused};
+
+},
+    rollback: async (roller, body) => rollback(roller, body),
+    deploy: async (roller, body) => deploy(roller, body),
+    reject: async (roller, body) => reject(roller, body),
+    history: async (roller) => history(roller),
+    deployments: async (roller, body) => deployments(roller, body),
+};
+
 async function dispatchRollerMethod(
     method: ApiMethod,
     body: unknown,
     roller: RollerPort,
 ): Promise<unknown> {
 
-    switch (method) {
+    const handler = ROLLER_METHODS[method];
 
-        case 'status':
-            return status(roller);
-        case 'forceCheck':
-            await roller.forceCheck();
-            return {ok: true};
-        case 'pause':
-            roller.pause();
-            return {paused: roller.getStatus().paused};
-        case 'resume':
-            roller.resume();
-            return {paused: roller.getStatus().paused};
-        case 'rollback':
-            return rollback(roller, body);
-        case 'history':
-            return history(roller);
-        default:
-            throw new Error(`Unknown method: ${method}`);
+    if (!handler) {
+
+        throw new Error(`Unknown method: ${method}`);
 
 }
+
+    return handler(roller, body);
 
 }
 
@@ -178,15 +196,79 @@ function status(roller: RollerPort): {services: unknown[]; paused: boolean} {
 
 async function rollback(roller: RollerPort, body: unknown): Promise<{ok: boolean}> {
 
+    const service = readService(body);
+
+    const ok = await roller.rollback(service);
+
+    return {ok};
+
+}
+
+async function deploy(roller: RollerPort, body: unknown): Promise<{ok: boolean}> {
+
+    if (!body || typeof body !== 'object' || !('service' in body) || !('digest' in body)) {
+
+        throw new Error('Expected body with string service and digest properties');
+
+}
+
+    const service = readService(body);
+    const digest = (body as {digest: unknown}).digest;
+
+    if (typeof digest !== 'string' || digest.length === 0) {
+
+        throw new Error('Expected body with string service and digest properties');
+
+}
+
+    const ok = await roller.deploy(service, digest);
+
+    return {ok};
+
+}
+
+async function reject(roller: RollerPort, body: unknown): Promise<{ok: boolean}> {
+
+    if (!body || typeof body !== 'object' || !('service' in body) || !('digest' in body)) {
+
+        throw new Error('Expected body with string service and digest properties');
+
+}
+
+    const service = readService(body);
+    const digest = (body as {digest: unknown}).digest;
+
+    if (typeof digest !== 'string' || digest.length === 0) {
+
+        throw new Error('Expected body with string service and digest properties');
+
+}
+
+    const ok = await roller.reject(service, digest);
+
+    return {ok};
+
+}
+
+function deployments(roller: RollerPort, body: unknown): {deployments: unknown[]} {
+
+    const service = readService(body);
+
+    return {
+        deployments: roller.getDeployments(service),
+    };
+
+}
+
+function readService(body: unknown): string {
+
     if (!body || typeof body !== 'object' || !('service' in body) || typeof body.service !== 'string') {
 
         throw new Error('Expected body with a string service property');
 
 }
 
-    const ok = await roller.rollback(body.service);
-
-    return {ok};
+    return body.service;
 
 }
 
