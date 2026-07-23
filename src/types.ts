@@ -90,6 +90,8 @@ export type ServiceRuntime = {
     rejectedDigests: string[];
     lastCheckAt: Date | null;
     lastError: string | null;
+    /** When false, periodic checks and forceCheck skip this service. Manual deploy sets false. */
+    pollEnabled: boolean;
 };
 
 export type DeploymentEvent = {

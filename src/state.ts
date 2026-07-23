@@ -6,6 +6,7 @@ import type {DeploymentEvent, DeploymentOutcome, ServiceDeployment} from './type
 export type PersistedState = {
     version: number;
     deployments: Record<string, ServiceDeployment[]>;
+    pollEnabled: Record<string, boolean>;
     events: {
         at: string;
         type: DeploymentEvent['type'];
@@ -14,7 +15,7 @@ export type PersistedState = {
     }[];
 };
 
-const CURRENT_VERSION = 2;
+const CURRENT_VERSION = 3;
 const MAX_EVENTS = 500;
 const MAX_DEPLOYMENTS_PER_SERVICE = 100;
 
@@ -31,6 +32,7 @@ export class StateManager {
         this.state = {
             version: CURRENT_VERSION,
             deployments: {},
+            pollEnabled: {},
             events: [],
         };
 
@@ -51,33 +53,39 @@ export class StateManager {
                 knownGood?: Record<string, string>;
                 badDigests?: Record<string, string[]>;
             };
+            const migrated = (parsed.version ?? 1) < CURRENT_VERSION;
 
-            if ((parsed.version ?? 1) < CURRENT_VERSION) {
-
-                this.state = migrateState(parsed);
-                this.dirty = true;
-
-                return;
-
-}
-
-            this.state = {
-                version: CURRENT_VERSION,
-                deployments: parsed.deployments ?? {},
-                events: parsed.events ?? [],
-            };
+            this.state = parsePersistedState(parsed);
+            this.dirty = migrated;
 
 } catch (err) {
 
             console.error(`Failed to load state from ${this.filePath}:`, err);
-            this.state = {
-                version: CURRENT_VERSION,
-                deployments: {},
-                events: [],
-            };
+            this.state = emptyState();
             this.dirty = true;
 
 }
+
+}
+
+    getServicePollEnabled(service: string, defaultEnabled = true): boolean {
+
+        const value = this.state.pollEnabled[service];
+
+        if (value === undefined) {
+
+            return defaultEnabled;
+
+}
+
+        return value;
+
+}
+
+    setServicePollEnabled(service: string, enabled: boolean): void {
+
+        this.state.pollEnabled[service] = enabled;
+        this.dirty = true;
 
 }
 
@@ -292,6 +300,37 @@ export class StateManager {
 
 }
 
+function emptyState(): PersistedState {
+
+    return {
+        version: CURRENT_VERSION,
+        deployments: {},
+        pollEnabled: {},
+        events: [],
+    };
+
+}
+
+function parsePersistedState(parsed: Partial<PersistedState> & {
+    knownGood?: Record<string, string>;
+    badDigests?: Record<string, string[]>;
+}): PersistedState {
+
+    if ((parsed.version ?? 1) < CURRENT_VERSION) {
+
+        return migrateState(parsed);
+
+}
+
+    return {
+        version: CURRENT_VERSION,
+        deployments: parsed.deployments ?? {},
+        pollEnabled: parsed.pollEnabled ?? {},
+        events: parsed.events ?? [],
+    };
+
+}
+
 function migrateState(parsed: Partial<PersistedState> & {
     knownGood?: Record<string, string>;
     badDigests?: Record<string, string[]>;
@@ -300,6 +339,7 @@ function migrateState(parsed: Partial<PersistedState> & {
     return {
         version: CURRENT_VERSION,
         deployments: parsed.deployments ?? {},
+        pollEnabled: parsed.pollEnabled ?? {},
         events: parsed.events ?? [],
     };
 

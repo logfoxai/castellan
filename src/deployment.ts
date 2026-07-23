@@ -12,9 +12,6 @@ export type DeploymentContext = {
     state: StateManager;
     withComposeLock: <T>(fn: () => Promise<T>) => Promise<T>;
     findComposeContainer: (serviceName: string) => Promise<ContainerInfo | null>;
-    isRollbackRequested: (serviceName: string) => boolean;
-    checkRollbackRequested: (serviceName: string) => void;
-    clearRollbackRequest: (serviceName: string) => void;
     recordEvent: (type: DeploymentEvent['type'], service: string, message: string) => void;
     syncRejectedDigests: (runtime: ServiceRuntime) => void;
 };
@@ -56,8 +53,6 @@ async function verifyComposeServiceHealth(
         composeService,
         healthTimeoutMs: ctx.config.rollback.healthTimeoutMs,
         findContainer: ctx.findComposeContainer,
-        beforeCheck: () => ctx.checkRollbackRequested(service.name),
-        checkAbort: () => ctx.isRollbackRequested(service.name),
     });
 
 }
@@ -66,25 +61,11 @@ async function restartComposeServices(
     ctx: DeploymentContext,
     service: ManagedService,
     composeServices: string[],
-    trackRollback: boolean,
 ): Promise<void> {
 
     for (const composeService of composeServices) {
 
-        if (trackRollback) {
-
-            ctx.checkRollbackRequested(service.name);
-
-}
-
         await ctx.withComposeLock(() => ctx.docker.composeUp(composeService, ctx.config.compose));
-
-        if (trackRollback) {
-
-            ctx.checkRollbackRequested(service.name);
-
-}
-
         await verifyComposeServiceHealth(ctx, service, composeService);
 
 }
@@ -96,7 +77,6 @@ async function rolloutDigest(
     service: ManagedService,
     digest: string,
     runtime: ServiceRuntime,
-    trackRollback: boolean,
 ): Promise<void> {
 
     const fullImage = `${service.registry}/${service.repository}`;
@@ -106,7 +86,7 @@ async function rolloutDigest(
 
     const composeServices = await resolveComposeServices(ctx, service);
 
-    await restartComposeServices(ctx, service, composeServices, trackRollback);
+    await restartComposeServices(ctx, service, composeServices);
 
     runtime.currentDigest = digest;
     runtime.desiredDigest = digest;
@@ -146,13 +126,10 @@ export async function deployManagedService(
     runtime.state = 'updating';
     ctx.recordEvent('deploy', service.name, `Updating to ${desiredDigest}`);
 
-    ctx.checkRollbackRequested(service.name);
     const composeServices = await resolveComposeServices(ctx, service);
 
     await ctx.withComposeLock(() => ctx.docker.composePull(composeServices[0], ctx.config.compose));
-    await restartComposeServices(ctx, service, composeServices, true);
-
-    ctx.checkRollbackRequested(service.name);
+    await restartComposeServices(ctx, service, composeServices);
     await markDeploySuccess(ctx, service, desiredDigest, runtime);
 
 }
@@ -162,8 +139,6 @@ export async function rollbackManagedService(
     service: ManagedService,
     runtime: ServiceRuntime,
 ): Promise<boolean> {
-
-    ctx.clearRollbackRequest(service.name);
 
     const targetDigest = await resolveRollbackTarget(ctx, service, runtime);
 
@@ -176,7 +151,7 @@ export async function rollbackManagedService(
     runtime.state = 'rollback';
     ctx.recordEvent('rollback', service.name, `Rolling back to ${targetDigest}`);
 
-    await rolloutDigest(ctx, service, targetDigest, runtime, false);
+    await rolloutDigest(ctx, service, targetDigest, runtime);
 
     ctx.state.appendDeployment(service.name, {digest: targetDigest, outcome: 'success'});
     ctx.recordEvent('rollback', service.name, `Rolled back to ${targetDigest}`);
@@ -225,7 +200,7 @@ async function markStableIfAlreadySuccessful(
 
 }
 
-export async function attemptRollback(
+async function attemptRollback(
     ctx: DeploymentContext,
     service: ManagedService,
     runtime: ServiceRuntime,
@@ -336,15 +311,6 @@ export async function handleDeployFailure(
 
     const message = err instanceof Error ? err.message : String(err);
 
-    if (message.startsWith('Rollback requested')) {
-
-        ctx.recordEvent('rollback', service.name, `Deploy cancelled: ${message}`);
-        await attemptRollback(ctx, service, runtime);
-
-        return;
-
-}
-
     ctx.recordEvent('failure', service.name, message);
 
     if (err instanceof DeployHealthError) {
@@ -375,14 +341,7 @@ export function createDeploymentContext(
     docker: DockerClient,
     state: StateManager,
     withComposeLock: DeploymentContext['withComposeLock'],
-    hooks: Pick<
-        DeploymentContext,
-        | 'isRollbackRequested'
-        | 'checkRollbackRequested'
-        | 'recordEvent'
-        | 'clearRollbackRequest'
-        | 'syncRejectedDigests'
-    >,
+    hooks: Pick<DeploymentContext, 'recordEvent' | 'syncRejectedDigests'>,
 ): DeploymentContext {
 
     return {

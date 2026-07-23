@@ -111,7 +111,8 @@ app.post('/v1/:method', (req, res) => {
         case 'forceCheck':
         case 'pause':
         case 'resume':
-        case 'rollback':
+        case 'setPollEnabled':
+        case 'discoverServices':
             return res.json({ok: true});
         default:
             return res.status(404).json({error: 'Unknown method'});

@@ -44,6 +44,7 @@ function baseRuntime(): ServiceRuntime {
         rejectedDigests: [],
         lastCheckAt: null,
         lastError: null,
+        pollEnabled: true,
     };
 
 }
@@ -90,9 +91,6 @@ function createContext(state: StateManager, runtime: ServiceRuntime): Deployment
         state,
         withComposeLock: async (run) => run(),
         findComposeContainer: async () => healthyContainer(),
-        isRollbackRequested: () => false,
-        checkRollbackRequested: () => undefined,
-        clearRollbackRequest: () => undefined,
         recordEvent: () => undefined,
         syncRejectedDigests: (): void => {
 

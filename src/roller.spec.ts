@@ -72,44 +72,37 @@ async function waitForPull(pullStarted: {value: boolean}): Promise<void> {
 
 }
 
-test('rollback waits for in-flight deploy and completes rollback', async (assert) => {
+function workerContainer(): ContainerInfo {
 
-    const dir = await mkdtemp(path.join(os.tmpdir(), 'castellan-roller-'));
-    const state = new StateManager(path.join(dir, 'state.json'));
-
-    state.appendDeployment('api', {digest: 'sha256:known-good', outcome: 'success'});
-    await state.save();
-
-    const pullStarted = {value: false};
-    const registry: Registry = {
-        getManifest: async () => ({digest: 'sha256:new', pushedAt: null}),
-        invalidate: () => undefined,
-    };
-    const roller = new Roller(config, registry, createDocker(pullStarted), state);
-
-    try {
-
-        const deploy = roller.forceCheck();
-
-        await waitForPull(pullStarted);
-        const rollbackOk = await roller.rollback('api');
-
-        await deploy;
-
-        assert.equal(rollbackOk, true);
-        assert.equal(roller.getStatus().services[0]?.currentDigest, 'sha256:known-good');
-        assert.equal(roller.getStatus().services[0]?.state, 'stable');
-
-} finally {
-
-        roller.stop();
-        await rm(dir, {recursive: true, force: true});
+    return {
+        Id: '2',
+        Created: 1,
+        Image: 'ghcr.io/myorg/worker:prime',
+        State: 'running',
+        Status: 'Up 1 minute (healthy)',
+        Labels: {
+            'com.docker.compose.service': 'worker-1',
+            'com.docker.compose.project': 'logfox',
+            'ai.logfox.castellan.autoupdate': 'true',
+        },
+    } as unknown as ContainerInfo;
 
 }
 
-});
+function createDiscoverDocker(): DockerClient {
 
-test('reject cancels in-flight deploy of the same digest', async (assert) => {
+    return {
+        listContainers: async () => [healthyContainer(), workerContainer()],
+        getLocalDigest: async () => 'sha256:known-good',
+        composePull: async () => undefined,
+        composeUp: async () => undefined,
+        pullImage: async () => undefined,
+        tagImage: async () => undefined,
+    } as unknown as DockerClient;
+
+}
+
+test('reject waits for in-flight deploy then rejects and rolls back', async (assert) => {
 
     const dir = await mkdtemp(path.join(os.tmpdir(), 'castellan-roller-'));
     const state = new StateManager(path.join(dir, 'state.json'));
@@ -137,6 +130,101 @@ test('reject cancels in-flight deploy of the same digest', async (assert) => {
         assert.equal(state.isDigestRejected('api', 'sha256:new'), true);
         assert.equal(roller.getStatus().services[0]?.currentDigest, 'sha256:known-good');
         assert.equal(roller.getStatus().services[0]?.state, 'stable');
+
+} finally {
+
+        roller.stop();
+        await rm(dir, {recursive: true, force: true});
+
+}
+
+});
+
+test('manual deploy disables polling for the service', async (assert) => {
+
+    const dir = await mkdtemp(path.join(os.tmpdir(), 'castellan-roller-'));
+    const state = new StateManager(path.join(dir, 'state.json'));
+    const registry: Registry = {
+        getManifest: async () => ({digest: 'sha256:new', pushedAt: null}),
+        invalidate: () => undefined,
+    };
+    const roller = new Roller(config, registry, createDocker({value: false}), state);
+
+    try {
+
+        assert.equal(roller.getStatus().services[0]?.pollEnabled, true);
+
+        await roller.deploy('api', 'sha256:known-good');
+
+        assert.equal(roller.getStatus().services[0]?.pollEnabled, false);
+        assert.equal(state.getServicePollEnabled('api', true), false);
+
+} finally {
+
+        roller.stop();
+        await rm(dir, {recursive: true, force: true});
+
+}
+
+});
+
+test('forceCheck skips services with polling disabled', async (assert) => {
+
+    const dir = await mkdtemp(path.join(os.tmpdir(), 'castellan-roller-'));
+    const state = new StateManager(path.join(dir, 'state.json'));
+    let manifestCalls = 0;
+    const registry: Registry = {
+        getManifest: async () => {
+
+            manifestCalls += 1;
+
+            return {digest: 'sha256:new', pushedAt: null};
+
+},
+        invalidate: () => undefined,
+    };
+    const roller = new Roller(config, registry, createDocker({value: false}), state);
+
+    try {
+
+        await roller.setPollEnabled('api', false);
+        await roller.forceCheck();
+
+        assert.equal(manifestCalls, 0);
+
+} finally {
+
+        roller.stop();
+        await rm(dir, {recursive: true, force: true});
+
+}
+
+});
+
+test('setPollEnabled can add a discovered service', async (assert) => {
+
+    const dir = await mkdtemp(path.join(os.tmpdir(), 'castellan-roller-'));
+    const state = new StateManager(path.join(dir, 'state.json'));
+    const registry: Registry = {
+        getManifest: async () => ({digest: 'sha256:worker', pushedAt: null}),
+        invalidate: () => undefined,
+    };
+    const roller = new Roller(config, registry, createDiscoverDocker(), state);
+
+    try {
+
+        const discovered = await roller.discoverServices();
+
+        assert.equal(discovered.length, 1);
+        assert.equal(discovered[0]?.name, 'worker-1');
+
+        await roller.setPollEnabled('worker-1', true);
+
+        assert.equal(roller.getStatus().services.some((entry) => entry.name === 'worker-1'), true);
+        assert.equal(
+            roller.getStatus().services.find((entry) => entry.name === 'worker-1')?.pollEnabled,
+            true,
+        );
 
 } finally {
 

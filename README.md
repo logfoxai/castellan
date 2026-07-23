@@ -399,9 +399,10 @@ When `api.enabled` is `true` (the default), Castellan exposes an internal HTTP A
   - `status` — service states and current digests.
   - `forceCheck` — check registries immediately.
   - `pause` / `resume` — pause/resume polling.
-  - `rollback` — roll back to the previous successful deployment (`{"service":"api"}`).
-  - `deploy` — deploy a specific digest (`{"service":"api","digest":"sha256:…"}`).
-  - `reject` — mark a digest rejected; rolls back if it is running (`{"service":"api","digest":"sha256:…"}`).
+  - `deploy` — deploy a specific digest (`{"service":"api","digest":"sha256:…"}`). Disables polling for that service until re-enabled.
+  - `reject` — mark a digest rejected and roll back if it is running (`{"service":"api","digest":"sha256:…"}`).
+  - `setPollEnabled` — enable or disable registry polling for one service (`{"service":"api","enabled":true}`).
+  - `discoverServices` — list autoupdate-labelled compose services not yet managed (`{}`).
   - `history` — recent events (all services).
   - `deployments` — per-service deployment history (`{"service":"api"}`).
   - `dockerContainers`, `dockerImages`, `dockerNetworks`, `dockerVolumes` — Docker inspection.
@@ -414,7 +415,7 @@ See [Access & API auth](#access--api-auth). For headless or API-only deployments
 Served at `/` when `api.enabled` and `api.dashboard` are both `true` (the default).
 
 - Live service status with watched **tag** and `repository:tag`; digests and **past deployments** in expandable details.
-- **Roll back**, **Deploy**, and **Reject** actions per deployment digest.
+- **Deploy** and **Reject** actions per deployment digest; per-service **polling on/off** toggles.
 - **Check now** and **Pause/Resume polling** controls.
 - Docker container table with live CPU, memory, disk usage, state, and one-click log viewing.
 - Deployment / rollback / failure history timeline.

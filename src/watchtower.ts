@@ -30,10 +30,7 @@ export function hasDiscoveryLabel(labels: Record<string, string> | undefined): b
 
 }
 
-export async function discoverConfig(
-    docker: DockerClient,
-    compose: ComposeConfig = {file: '/app/docker-compose.yml'},
-): Promise<Config> {
+export async function discoverManagedServices(docker: DockerClient): Promise<ManagedService[]> {
 
     const containers = await docker.listContainers();
     const discovered: ManagedService[] = [];
@@ -58,8 +55,17 @@ export async function discoverConfig(
 
 }
 
+    return mergeManagedServicesByImage(discovered);
+
+}
+
+export async function discoverConfig(
+    docker: DockerClient,
+    compose: ComposeConfig = {file: '/app/docker-compose.yml'},
+): Promise<Config> {
+
     return {
-        managedServices: mergeManagedServicesByImage(discovered),
+        managedServices: await discoverManagedServices(docker),
         compose,
         poll: {enabled: true, intervalMs: 60000, jitterMs: 5000},
         rollback: {healthTimeoutMs: 120000, maxAttempts: 1},

@@ -125,3 +125,23 @@ test('StateManager tracks rejected digests from deployment records', (assert) =>
     assert.equal(manager.getRejectedDigests('api').length, 2);
 
 });
+
+test('StateManager persists per-service poll enabled flags', async (assert) => {
+
+    const dir = await mkdtemp(path.join(os.tmpdir(), 'castellan-state-'));
+    const file = path.join(dir, 'state.json');
+    const manager = new StateManager(file);
+
+    manager.setServicePollEnabled('api', false);
+    await manager.save();
+
+    const restored = new StateManager(file);
+
+    await restored.load();
+
+    assert.equal(restored.getServicePollEnabled('api', true), false);
+    assert.equal(restored.getServicePollEnabled('worker', false), false);
+
+    await rm(dir, {recursive: true, force: true});
+
+});

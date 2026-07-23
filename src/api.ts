@@ -155,9 +155,10 @@ const ROLLER_METHODS: Partial<Record<ApiMethod, (roller: RollerPort, body: unkno
         return {paused: roller.getStatus().paused};
 
 },
-    rollback: async (roller, body) => rollback(roller, body),
     deploy: async (roller, body) => deploy(roller, body),
     reject: async (roller, body) => reject(roller, body),
+    setPollEnabled: async (roller, body) => setPollEnabled(roller, body),
+    discoverServices: async (roller) => discoverServices(roller),
     history: async (roller) => history(roller),
     deployments: async (roller, body) => deployments(roller, body),
 };
@@ -191,16 +192,6 @@ function status(roller: RollerPort): {services: unknown[]; paused: boolean} {
             lastCheckAt: service.lastCheckAt?.toISOString() ?? null,
         })),
     };
-
-}
-
-async function rollback(roller: RollerPort, body: unknown): Promise<{ok: boolean}> {
-
-    const service = readService(body);
-
-    const ok = await roller.rollback(service);
-
-    return {ok};
 
 }
 
@@ -247,6 +238,37 @@ async function reject(roller: RollerPort, body: unknown): Promise<{ok: boolean}>
     const ok = await roller.reject(service, digest);
 
     return {ok};
+
+}
+
+async function setPollEnabled(roller: RollerPort, body: unknown): Promise<{ok: boolean}> {
+
+    if (!body || typeof body !== 'object' || !('service' in body) || !('enabled' in body)) {
+
+        throw new Error('Expected body with string service and boolean enabled properties');
+
+}
+
+    const service = readService(body);
+    const enabled = (body as {enabled: unknown}).enabled;
+
+    if (typeof enabled !== 'boolean') {
+
+        throw new Error('Expected body with string service and boolean enabled properties');
+
+}
+
+    const ok = await roller.setPollEnabled(service, enabled);
+
+    return {ok};
+
+}
+
+async function discoverServices(roller: RollerPort): Promise<{services: unknown[]}> {
+
+    const services = await roller.discoverServices();
+
+    return {services};
 
 }
 

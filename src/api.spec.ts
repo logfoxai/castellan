@@ -25,9 +25,10 @@ function createRoller(): RollerPort {
  paused = false;
 
 },
-        rollback: async (): Promise<boolean> => true,
         deploy: async (): Promise<boolean> => true,
         reject: async (): Promise<boolean> => true,
+        setPollEnabled: async (): Promise<boolean> => true,
+        discoverServices: async () => [],
         getEvents: (): DeploymentEvent[] => [],
         getDeployments: () => [],
         start: (): void => undefined,
