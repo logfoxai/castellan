@@ -12,7 +12,7 @@ export const CASTELLAN_GROUP_LABEL = 'ai.logfox.castellan.group';
 
 const HEALTH_POLL_INTERVAL_MS = 5000;
 
-export function hasDiscoveryLabel(labels: Record<string, string> | undefined): boolean {
+function hasDiscoveryLabel(labels: Record<string, string> | undefined): boolean {
 
     if (!labels) {
 

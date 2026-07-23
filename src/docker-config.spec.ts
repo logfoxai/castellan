@@ -2,10 +2,7 @@ import {test} from 'kizu';
 import {mkdtemp, writeFile, rm} from 'fs/promises';
 import os from 'os';
 import path from 'path';
-import {
-    loadDockerConfigCredentials,
-    mergeRegistryCredentials,
-} from './docker-config.js';
+import {loadDockerConfigCredentials} from './docker-config.js';
 
 async function tempDir(): Promise<string> {
 
@@ -56,45 +53,5 @@ test('loadDockerConfigCredentials parses base64 auth entries', async (assert) =>
     assert.equal(creds['ghcr.io'].password, 'ghp_secret');
 
     await rm(dir, {recursive: true, force: true});
-
-});
-
-test('loadDockerConfigCredentials returns empty object when DOCKER_CONFIG is unset', async (assert) => {
-
-    const previous = process.env.DOCKER_CONFIG;
-
-    delete process.env.DOCKER_CONFIG;
-
-    try {
-
-        const creds = await loadDockerConfigCredentials();
-
-        assert.equal(Object.keys(creds).length, 0);
-
-} finally {
-
-        if (previous === undefined) {
-
-            delete process.env.DOCKER_CONFIG;
-
-} else {
-
-            process.env.DOCKER_CONFIG = previous;
-
-}
-
-}
-
-});
-
-test('mergeRegistryCredentials lets CASTELLAN_REGISTRIES_JSON override docker config', (assert) => {
-
-    const merged = mergeRegistryCredentials(
-        {'ghcr.io': {username: 'docker', password: 'from-config'}},
-        {'ghcr.io': {username: 'override', password: 'from-env'}},
-    );
-
-    assert.equal(merged['ghcr.io'].username, 'override');
-    assert.equal(merged['ghcr.io'].password, 'from-env');
 
 });

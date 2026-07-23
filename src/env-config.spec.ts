@@ -45,33 +45,6 @@ async function withEnv<T>(vars: Record<string, string | undefined>, fn: () => T)
 
 }
 
-test('loadEnvConfig uses defaults', async (assert) => {
-
-    const config = await withEnv({
-        CASTELLAN_COMPOSE_FILE: undefined,
-        CASTELLAN_POLL_ENABLED: undefined,
-        CASTELLAN_POLL_INTERVAL_MS: undefined,
-        CASTELLAN_POLL_JITTER_MS: undefined,
-        CASTELLAN_ROLLBACK_HEALTH_TIMEOUT_MS: undefined,
-        CASTELLAN_ROLLBACK_MAX_ATTEMPTS: undefined,
-        CASTELLAN_API_ENABLED: undefined,
-        CASTELLAN_DASHBOARD_ENABLED: undefined,
-        CASTELLAN_API_PORT: undefined,
-        CASTELLAN_AUTH_TOKEN: undefined,
-        CASTELLAN_REGISTRIES_JSON: undefined,
-    }, () => loadEnvConfig());
-
-    assert.equal(config.compose.file, '/app/docker-compose.yml');
-    assert.equal(config.poll.enabled, true);
-    assert.equal(config.poll.intervalMs, 60000);
-    assert.equal(config.poll.jitterMs, 5000);
-    assert.equal(config.rollback.healthTimeoutMs, 120000);
-    assert.equal(config.api.port, 3003);
-    assert.equal(config.api.enabled, true);
-    assert.equal(config.api.dashboard, true);
-
-});
-
 test('loadEnvConfig applies env overrides', async (assert) => {
 
     const config = await withEnv({

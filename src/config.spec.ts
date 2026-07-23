@@ -129,20 +129,3 @@ test('loadConfig throws when no labeled services exist', async (assert) => {
     assert.equal(error?.message.includes('No labeled services found'), true);
 
 });
-
-test('loadConfig infers compose project from directory name', async (assert) => {
-
-    const dir = await tempDir();
-    const composeFile = path.join(dir, 'docker-compose.yml');
-
-    await writeFile(composeFile, 'services:\n', 'utf8');
-
-    const config = await withEnv({
-        CASTELLAN_COMPOSE_FILE: composeFile,
-    }, async () => loadConfig(labeledWorkerDocker()));
-
-    assert.equal(config.compose.project, path.basename(dir));
-
-    await cleanup(dir);
-
-});

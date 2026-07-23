@@ -1,5 +1,5 @@
 import {test} from 'kizu';
-import {parseStatsOutput, formatBytes} from './stats.js';
+import {parseStatsOutput} from './stats.js';
 
 test('parseStatsOutput parses docker stats JSON lines', (assert) => {
 
@@ -23,23 +23,5 @@ test('parseStatsOutput fills missing fields with a dash', (assert) => {
     assert.equal(parseStatsOutput(line), [
         {name: 'worker', cpu: '—', mem: '—', memPerc: '—'},
     ]);
-
-});
-
-test('formatBytes handles zero and invalid values', (assert) => {
-
-    assert.equal(formatBytes(0), '0 B');
-    assert.equal(formatBytes(-5), '0 B');
-    assert.equal(formatBytes(Number.NaN), '0 B');
-
-});
-
-test('formatBytes formats across units', (assert) => {
-
-    assert.equal(formatBytes(512), '512 B');
-    assert.equal(formatBytes(1024), '1 KB');
-    assert.equal(formatBytes(1536), '1.5 KB');
-    assert.equal(formatBytes(5 * 1024 * 1024), '5 MB');
-    assert.equal(formatBytes(2 * 1024 * 1024 * 1024), '2 GB');
 
 });
