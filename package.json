@@ -43,8 +43,8 @@
   },
   "dependencies": {
     "@aws-sdk/client-ecr": "3.996.0",
-    "dockerode": "4.0.2",
-    "express": "4.18.2",
+    "dockerode": "4.0.12",
+    "express": "4.22.2",
     "js-yaml": "5.2.1"
   },
   "devDependencies": {
