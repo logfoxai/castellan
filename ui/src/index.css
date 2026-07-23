@@ -297,7 +297,7 @@ main.container {
 
 button {
   background: var(--surface-2);
-  border: 1px solid var(--border);
+  border: none;
   color: var(--text);
   border-radius: var(--radius-sm);
   padding: 8px 14px;
@@ -309,7 +309,6 @@ button {
 
 button:hover {
   background: var(--accent);
-  border-color: var(--accent);
   color: #0c0d10;
 }
 
@@ -419,7 +418,14 @@ button:hover {
 
 .status-card-actions button {
   font-size: 0.76rem;
-  background: var(--surface);
+  background: transparent;
+  border: 1px solid var(--border);
+}
+
+.status-card-actions button:hover {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #0c0d10;
 }
 
 .status-card.auto-disabled {
@@ -681,7 +687,14 @@ button:hover {
 
 .deployment-actions button {
   font-size: 0.72rem;
-  background: var(--surface);
+  background: transparent;
+  border: 1px solid var(--border);
+}
+
+.deployment-actions button:hover {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #0c0d10;
 }
 
 /* ---------- History list ---------- */
