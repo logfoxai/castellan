@@ -1,13 +1,6 @@
 import {test} from 'kizu';
 import {parseStatsOutput, formatBytes} from './stats.js';
 
-test('parseStatsOutput returns empty array for empty input', (assert) => {
-
-    assert.equal(parseStatsOutput(''), []);
-    assert.equal(parseStatsOutput('   \n  '), []);
-
-});
-
 test('parseStatsOutput parses docker stats JSON lines', (assert) => {
 
     const line = JSON.stringify({

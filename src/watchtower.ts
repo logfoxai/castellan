@@ -10,11 +10,6 @@ export const CASTELLAN_AUTUPDATE_LABEL = 'ai.logfox.castellan.autoupdate';
 /** Legacy Watchtower opt-in label (`watchtower --label-enable`). */
 export const WATCHTOWER_ENABLE_LABEL = 'com.centurylinklabs.watchtower.enable';
 
-export const DISCOVERY_LABELS = [
-    CASTELLAN_AUTUPDATE_LABEL,
-    WATCHTOWER_ENABLE_LABEL,
-] as const;
-
 export function hasDiscoveryLabel(labels: Record<string, string> | undefined): boolean {
 
     if (!labels) {

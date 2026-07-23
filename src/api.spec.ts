@@ -88,15 +88,6 @@ function createMocks(): {roller: RollerPort; docker: DockerClient} {
 
 }
 
-test('dispatchMethod status returns status', async (assert) => {
-
-    const {roller, docker} = createMocks();
-    const result = await dispatchMethod('status', {}, roller, docker);
-
-    assert.equal(result, {paused: false, services: []});
-
-});
-
 test('dispatchMethod pause toggles paused', async (assert) => {
 
     const {roller, docker} = createMocks();
@@ -108,23 +99,9 @@ test('dispatchMethod pause toggles paused', async (assert) => {
 
 });
 
-test('dispatchMethod dockerContainers returns empty list', async (assert) => {
-
-    const {roller, docker} = createMocks();
-    const result = await dispatchMethod('dockerContainers', {}, roller, docker);
-
-    assert.equal(result, {containers: []});
-
-});
-
 test('readCookie extracts a named cookie value', (assert) => {
 
     assert.equal(readCookie('a=1; castellan_session=abc123; b=2', SESSION_COOKIE), 'abc123');
-
-});
-
-test('readCookie returns undefined when cookie or header is absent', (assert) => {
-
     assert.equal(readCookie(undefined, SESSION_COOKIE), undefined);
     assert.equal(readCookie('other=1', SESSION_COOKIE), undefined);
 

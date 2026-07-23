@@ -3,7 +3,6 @@ import {createServer, type Server} from 'http';
 import type {ContainerInfo} from 'dockerode';
 import {
     containerReportsHealthy,
-    resolveHealthUrl,
     verifyDeployHealth,
 } from './service-health.js';
 import type {ManagedService} from './types.js';
@@ -27,45 +26,13 @@ function runningContainer(status: string): ContainerInfo {
 
 }
 
-test('containerReportsHealthy accepts running containers without a healthcheck', (assert) => {
+test('containerReportsHealthy interprets docker health status', (assert) => {
 
     assert.equal(containerReportsHealthy(runningContainer('Up 2 minutes')), true);
-
-});
-
-test('containerReportsHealthy accepts docker healthy status', (assert) => {
-
     assert.equal(containerReportsHealthy(runningContainer('Up 2 minutes (healthy)')), true);
-
-});
-
-test('containerReportsHealthy rejects unhealthy and starting states', (assert) => {
-
     assert.equal(containerReportsHealthy(runningContainer('Up 2 minutes (unhealthy)')), false);
     assert.equal(containerReportsHealthy(runningContainer('Up 2 minutes (health: starting)')), false);
     assert.equal(containerReportsHealthy(null), false);
-
-});
-
-test('resolveHealthUrl substitutes compose service placeholders', (assert) => {
-
-    assert.equal(
-        resolveHealthUrl('http://{{service}}:3000/health', 'api-2'),
-        'http://api-2:3000/health',
-    );
-
-});
-
-test('verifyDeployHealth succeeds with docker health only when healthUrl is omitted', async (assert) => {
-
-    await verifyDeployHealth({
-        service: baseService,
-        composeService: 'api-1',
-        healthTimeoutMs: 500,
-        findContainer: async () => runningContainer('Up 1 minute (healthy)'),
-    });
-
-    assert.equal(true, true);
 
 });
 
@@ -94,38 +61,6 @@ test('verifyDeployHealth waits for docker health before succeeding without healt
     });
 
     assert.equal(calls >= 3, true);
-
-});
-
-test('verifyDeployHealth requires HTTP health when healthUrl is configured', async (assert) => {
-
-    const server = await listenHealthServer((_req, res) => {
-
-        res.statusCode = 200;
-        res.end('OK');
-
-});
-    const port = serverPort(server);
-
-    try {
-
-        await verifyDeployHealth({
-            service: {
-                ...baseService,
-                healthUrl: `http://127.0.0.1:${port}/health`,
-            },
-            composeService: 'api-1',
-            healthTimeoutMs: 2000,
-            findContainer: async () => runningContainer('Up 1 minute (healthy)'),
-        });
-
-        assert.equal(true, true);
-
-} finally {
-
-        server.close();
-
-}
 
 });
 

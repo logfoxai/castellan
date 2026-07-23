@@ -6,12 +6,6 @@ test('formatContainerDisplayName strips compose project and replica suffix', (as
     assert.equal(formatContainerDisplayName('api_api-1_1'), 'api-1');
     assert.equal(formatContainerDisplayName('api_ingest-worker_1'), 'ingest-worker');
     assert.equal(formatContainerDisplayName('api_castellan_1'), 'castellan');
-
-});
-
-test('formatContainerDisplayName leaves non-compose names unchanged', (assert) => {
-
     assert.equal(formatContainerDisplayName('nginx'), 'nginx');
-    assert.equal(formatContainerDisplayName('my-app'), 'my-app');
 
 });

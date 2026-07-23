@@ -1,6 +1,7 @@
 import Docker, {ContainerInfo, ImageInfo, NetworkInspectInfo, VolumeInspectInfo} from 'dockerode';
 import {execFile} from 'child_process';
 import {promisify} from 'util';
+import {normalizeRegistryHost} from './image-ref.js';
 import type {ComposeConfig} from './types.js';
 import {parseStatsOutput, type ContainerStat} from './stats.js';
 
@@ -280,17 +281,5 @@ function parseImageRef(ref: string): {repo: string; tag: string} {
         repo: ref.slice(0, lastColon),
         tag: ref.slice(lastColon + 1),
     };
-
-}
-
-function normalizeRegistryHost(registry: string): string {
-
-    if (registry === 'docker.io' || registry === 'registry.hub.docker.com') {
-
-        return 'registry-1.docker.io';
-
-}
-
-    return registry;
 
 }

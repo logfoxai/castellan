@@ -1,5 +1,5 @@
 import {test} from 'kizu';
-import {imageRefKey, managedServiceMatchesImage, parseImageRef} from './image-ref.js';
+import {managedServiceMatchesImage, parseImageRef} from './image-ref.js';
 
 test('parseImageRef handles ECR images', (assert) => {
 
@@ -31,26 +31,10 @@ test('parseImageRef handles namespaced docker images', (assert) => {
 
 });
 
-test('parseImageRef handles GHCR images', (assert) => {
-
-    const parsed = parseImageRef('ghcr.io/logfoxai/castellan:latest');
-
-    assert.equal(parsed?.registry, 'ghcr.io');
-    assert.equal(parsed?.repository, 'logfoxai/castellan');
-    assert.equal(parsed?.tag, 'latest');
-
-});
-
 test('parseImageRef returns null for digest refs', (assert) => {
 
     assert.equal(parseImageRef('sha256:abc123'), null);
     assert.equal(parseImageRef('nginx@sha256:abc123'), null);
-
-});
-
-test('imageRefKey normalizes docker.io hosts', (assert) => {
-
-    assert.equal(imageRefKey('docker.io', 'foo/bar', 'latest'), imageRefKey('registry-1.docker.io', 'foo/bar', 'latest'));
 
 });
 

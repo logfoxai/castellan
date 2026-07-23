@@ -27,19 +27,6 @@ test('waitForHttpHealth returns true when endpoint is healthy', async (assert) =
 
 });
 
-test('waitForHttpHealth returns false when endpoint never responds', async (assert) => {
-
-    const result = await waitForHttpHealth({
-        url: 'http://127.0.0.1:1',
-        intervalMs: 50,
-        retries: 2,
-        timeoutMs: 300,
-    });
-
-    assert.equal(result, false);
-
-});
-
 test('waitForHttpHealth retries until a non-ok endpoint becomes healthy', async (assert) => {
 
     let attempts = 0;

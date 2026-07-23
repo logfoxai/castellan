@@ -1,3 +1,4 @@
+import {normalizeRegistryHost} from './image-ref.js';
 import {isManifestList, resolveManifestList} from './manifest.js';
 import type {Registry} from './registry.js';
 import type {RegistryCredentials, RegistryImage, RegistryManifest} from './types.js';
@@ -33,18 +34,6 @@ function buildManifestUrl(image: RegistryImage): string {
     const repository = normalizeRepository(image.registry, image.repository);
 
     return `https://${registry}/v2/${repository}/manifests/${image.tag}`;
-
-}
-
-function normalizeRegistryHost(registry: string): string {
-
-    if (registry === 'docker.io' || registry === 'registry.hub.docker.com') {
-
-        return 'registry-1.docker.io';
-
-}
-
-    return registry;
 
 }
 

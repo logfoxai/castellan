@@ -140,8 +140,6 @@ export class Roller implements RollerPort {
 
         try {
 
-            this.rollbackRequested.delete(serviceName);
-
             return await rollbackManagedService(this.deployment, service, this.getRuntime(serviceName));
 
 } finally {
