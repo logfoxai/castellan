@@ -2,7 +2,7 @@ import type {ContainerInfo} from 'dockerode';
 import type {DockerClient} from './docker.js';
 import {findNewestRunningComposeContainer, listComposeServiceNamesForImage} from './compose-containers.js';
 import {sleep} from './health.js';
-import {verifyDeployHealth} from './service-health.js';
+import {verifyDeployHealth, DeployHealthError} from './service-health.js';
 import type {StateManager} from './state.js';
 import type {Config, DeploymentEvent, ManagedService, ServiceRuntime} from './types.js';
 
@@ -242,11 +242,17 @@ export async function handleDeployFailure(
 
 }
 
-    ctx.recordEvent('failure', service.name, `Health check failed: ${message}`);
-    const failedDigest = await resolveFailedDigest(ctx, service, desiredDigest);
+    ctx.recordEvent('failure', service.name, message);
 
-    runtime.badDigests.push(failedDigest);
-    ctx.state.addBadDigest(service.name, failedDigest);
+    if (err instanceof DeployHealthError) {
+
+        const failedDigest = await resolveFailedDigest(ctx, service, desiredDigest);
+
+        runtime.badDigests.push(failedDigest);
+        ctx.state.addBadDigest(service.name, failedDigest);
+
+}
+
     await attemptRollback(ctx, service, runtime);
 
 }
