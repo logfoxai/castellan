@@ -67,15 +67,39 @@ export class Roller implements RollerPort {
 
         const discovered = await discoverManagedServices(this.docker);
 
-        for (const service of discovered) {
+        if (this.config.labelDiscovery) {
 
-            if (this.findService(service.name)) {
+            for (const service of discovered) {
+
+                if (this.findService(service.name)) {
+
+                    continue;
+
+}
+
+                this.registerManagedService(service);
+
+}
+
+            return;
+
+}
+
+        for (const name of this.state.getPersistedServiceNames()) {
+
+            if (this.findService(name)) {
 
                 continue;
 
 }
 
-            this.registerManagedService(service);
+            const match = discovered.find((service) => service.name === name);
+
+            if (match) {
+
+                this.registerManagedService(match);
+
+}
 
 }
 

@@ -70,6 +70,7 @@ export async function discoverConfig(
         poll: {enabled: true, intervalMs: 60000, jitterMs: 5000},
         rollback: {healthTimeoutMs: 120000, maxAttempts: 1},
         api: {enabled: true, dashboard: true, port: 3003},
+        labelDiscovery: true,
     };
 
 }

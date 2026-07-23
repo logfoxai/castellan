@@ -26,6 +26,13 @@ const config: Config = {
     poll: {enabled: false, intervalMs: 0, jitterMs: 0},
     rollback: {healthTimeoutMs: 50, maxAttempts: 1},
     api: {enabled: false, dashboard: false, port: 3003},
+    labelDiscovery: false,
+};
+
+const labelDiscoveryConfig: Config = {
+    ...config,
+    managedServices: [],
+    labelDiscovery: true,
 };
 
 function healthyContainer(): ContainerInfo {
@@ -285,7 +292,36 @@ test('syncDiscoveredServices respects persisted manual mode', async (assert) => 
 
 });
 
-test('syncDiscoveredServices auto-registers labeled services', async (assert) => {
+test('syncDiscoveredServices auto-registers labeled services in label discovery mode', async (assert) => {
+
+    const dir = await mkdtemp(path.join(os.tmpdir(), 'castellan-roller-'));
+    const state = new StateManager(path.join(dir, 'state.json'));
+    const registry: Registry = {
+        getManifest: async () => ({digest: 'sha256:worker', pushedAt: null}),
+        invalidate: () => undefined,
+    };
+    const roller = new Roller(labelDiscoveryConfig, registry, createDiscoverDocker(), state);
+
+    try {
+
+        await roller.syncDiscoveredServices();
+
+        assert.equal(roller.getStatus().services.some((entry) => entry.name === 'worker-1'), true);
+        assert.equal(
+            roller.getStatus().services.find((entry) => entry.name === 'worker-1')?.pollEnabled,
+            true,
+        );
+
+} finally {
+
+        roller.stop();
+        await rm(dir, {recursive: true, force: true});
+
+}
+
+});
+
+test('syncDiscoveredServices skips unlisted labeled services in config mode', async (assert) => {
 
     const dir = await mkdtemp(path.join(os.tmpdir(), 'castellan-roller-'));
     const state = new StateManager(path.join(dir, 'state.json'));
@@ -299,11 +335,7 @@ test('syncDiscoveredServices auto-registers labeled services', async (assert) =>
 
         await roller.syncDiscoveredServices();
 
-        assert.equal(roller.getStatus().services.some((entry) => entry.name === 'worker-1'), true);
-        assert.equal(
-            roller.getStatus().services.find((entry) => entry.name === 'worker-1')?.pollEnabled,
-            true,
-        );
+        assert.equal(roller.getStatus().services.some((entry) => entry.name === 'worker-1'), false);
 
 } finally {
 

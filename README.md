@@ -173,7 +173,7 @@ For each labeled container Castellan builds a managed service from:
 - **Compose service name** — `com.docker.compose.service` label
 - **Registry / repository / tag** — parsed from the container’s current `Image` ref
 
-Discovery runs **at startup and on every registry check**. New labeled containers are picked up automatically with auto updates enabled. One labeled container → one compose service restarted at a time. Docker healthchecks apply; there is no `healthUrl` or `registries` block without a config file.
+Discovery runs **at startup and on every registry check** in label-discovery mode. New labeled containers are picked up automatically with auto updates enabled. In config-file mode, only `managedServices` from config are managed unless previously persisted via `setPollEnabled`.
 
 Remove Watchtower, add Castellan, keep legacy labels or switch to `ai.logfox.castellan.autoupdate` — one line per service.
 

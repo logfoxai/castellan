@@ -29,6 +29,7 @@ const testConfig: Config = {
     poll: {enabled: false, intervalMs: 0, jitterMs: 0},
     rollback: {healthTimeoutMs: 1000, maxAttempts: 1},
     api: {enabled: false, dashboard: false, port: 3003},
+    labelDiscovery: false,
 };
 
 function baseRuntime(): ServiceRuntime {
