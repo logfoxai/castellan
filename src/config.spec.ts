@@ -108,24 +108,14 @@ test('loadConfig merges env settings with discovered services', async (assert) =
 
 });
 
-test('loadConfig throws when no labeled services exist', async (assert) => {
+test('loadConfig returns empty managedServices when none are labeled yet', async (assert) => {
 
     const docker = {
         listContainers: async () => [],
     } as unknown as DockerClient;
 
-    let error: Error | undefined;
+    const config = await loadConfig(docker);
 
-    try {
-
-        await loadConfig(docker);
-
-} catch (err) {
-
-        error = err as Error;
-
-}
-
-    assert.equal(error?.message.includes('No labeled services found'), true);
+    assert.equal(config.managedServices.length, 0);
 
 });

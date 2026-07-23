@@ -12,9 +12,9 @@ export async function loadConfig(docker: DockerClient): Promise<Config> {
 
     if (managedServices.length === 0) {
 
-        throw new Error(
-            'No labeled services found. Add ai.logfox.castellan.autoupdate to compose services '
-            + 'you want Castellan to manage.',
+        console.warn(
+            'No labeled services found yet. Add ai.logfox.castellan.autoupdate to compose services '
+            + 'you want Castellan to manage. Will keep checking on each poll.',
         );
 
 }
@@ -47,8 +47,15 @@ async function inferComposeProject(file: string): Promise<string | undefined> {
 }
 
         const dir = path.dirname(file);
+        const inferred = path.basename(dir);
 
-        return path.basename(dir);
+        if (inferred === 'app' || inferred === 'compose' || inferred === '.') {
+
+            return undefined;
+
+}
+
+        return inferred;
 
 } catch {
 

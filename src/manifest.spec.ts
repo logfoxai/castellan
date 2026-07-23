@@ -43,3 +43,16 @@ test('parseManifestInspectStdout picks platform digest from verbose output', (as
     assert.equal(parseManifestInspectStdout(stdout, 'linux/amd64'), 'sha256:amd64');
 
 });
+
+test('parseManifestInspectStdout reads single verbose object digest', (assert) => {
+
+    const stdout = JSON.stringify({
+        Descriptor: {
+            digest: 'sha256:single',
+            platform: {architecture: 'amd64', os: 'linux'},
+        },
+    });
+
+    assert.equal(parseManifestInspectStdout(stdout, 'linux/amd64'), 'sha256:single');
+
+});

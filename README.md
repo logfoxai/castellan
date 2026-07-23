@@ -80,10 +80,12 @@ services:
     restart: unless-stopped
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
+      - /root/.docker:/root/.docker:ro
       - ./docker-compose.yml:/app/docker-compose.yml:ro
       - ./castellan-state:/app/state
     environment:
       CASTELLAN_COMPOSE_FILE: /app/docker-compose.yml
+      CASTELLAN_COMPOSE_PROJECT: mystack
     networks: [backend]
 
   my-service:
@@ -259,7 +261,16 @@ Castellan polls registries through the **host Docker daemon** (`docker manifest 
 
 ### Private registry credentials
 
-Run **`docker login`** on the host (or your platform’s ECR login script). Castellan only needs the Docker socket mount — no separate credential env vars or config mounts inside the container.
+Run **`docker login`** on the host (or your platform’s ECR login script). Castellan needs the Docker socket plus a **read-only mount of the host Docker config directory** so `docker manifest inspect` uses the same credentials as `docker compose pull`:
+
+```yaml
+castellan:
+  volumes:
+    - /var/run/docker.sock:/var/run/docker.sock
+    - /root/.docker:/root/.docker:ro
+```
+
+On non-root hosts, mount `${HOME}/.docker` instead of `/root/.docker`.
 
 For **ECR**, tokens expire. Schedule periodic login on the host, for example:
 

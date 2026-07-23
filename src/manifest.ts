@@ -53,6 +53,7 @@ type VerboseManifestEntry = {
         digest?: string;
         platform?: ManifestPlatform;
     };
+    Digest?: string;
 };
 
 export function parseManifestInspectStdout(stdout: string, platform: string = getDefaultPlatform()): string {
@@ -65,9 +66,23 @@ export function parseManifestInspectStdout(stdout: string, platform: string = ge
 
 }
 
-    if (typeof parsed === 'object' && parsed !== null && Array.isArray((parsed as ManifestList).manifests)) {
+    if (typeof parsed === 'object' && parsed !== null) {
 
-        return resolveManifestList(stdout, platform);
+        const object = parsed as VerboseManifestEntry & ManifestList;
+
+        if (Array.isArray(object.manifests)) {
+
+            return resolveManifestList(stdout, platform);
+
+}
+
+        const singleDigest = object.Descriptor?.digest ?? object.Digest;
+
+        if (singleDigest) {
+
+            return singleDigest;
+
+}
 
 }
 
