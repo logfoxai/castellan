@@ -5,17 +5,8 @@ import path from 'path';
 import {
     AUTH_TOKEN_ENV,
     AUTH_TOKEN_FILENAME,
-    generateAuthToken,
     resolveAuthToken,
 } from './auth-token.js';
-
-test('generateAuthToken returns a non-empty string', (assert) => {
-
-    const token = generateAuthToken();
-
-    assert.equal(token.length >= 32, true);
-
-});
 
 test('resolveAuthToken prefers config over env and file', async (assert) => {
 

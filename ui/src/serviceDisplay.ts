@@ -43,9 +43,3 @@ export function serviceVersionNote(service: ServiceStatus): string {
     return 'update available';
 
 }
-
-export function serviceVersionSummary(service: ServiceStatus): string {
-
-    return `${formatServiceImageRef(service)} · ${serviceVersionNote(service)}`;
-
-}

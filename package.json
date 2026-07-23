@@ -36,15 +36,15 @@
     "test": "c8 kizu -f 'src/**/*.spec.ts' && c8 report -r text -r html",
     "lint": "eslint . --fix",
     "lint:check": "eslint .",
+    "deadcode:check": "knip",
     "screenshots": "npm run build:ui && node scripts/capture-screenshots.mjs",
     "readme-lockup": "npm run build:ui && node scripts/capture-readme-lockup.mjs",
-    "validate": "npm run build && npm run lint && npm test"
+    "validate": "npm run build && npm run lint && npm run deadcode:check && npm test"
   },
   "dependencies": {
     "@aws-sdk/client-ecr": "3.996.0",
-    "date-fns": "3.6.0",
-    "dockerode": "4.0.2",
-    "express": "4.18.2",
+    "dockerode": "4.0.12",
+    "express": "4.22.2",
     "js-yaml": "5.2.1"
   },
   "devDependencies": {
@@ -55,6 +55,7 @@
     "c8": "11.0.0",
     "eslint": "10.0.2",
     "kizu": "5.1.0",
+    "knip": "6.29.0",
     "playwright": "1.61.1",
     "tsx": "4.20.5",
     "typescript": "5.8.3",

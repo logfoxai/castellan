@@ -1,11 +1,7 @@
 import {Router, type Request, type Response, type NextFunction} from 'express';
 import type {DockerClient} from './docker.js';
-import {dispatchDockerMethod} from './api-docker.js';
-import {isApiMethod, isDockerMethod} from './api-methods.js';
+import {dispatchDockerMethod, isApiMethod, isDockerMethod, type ApiMethod} from './api-docker.js';
 import type {RollerPort} from './roller-port.js';
-
-export {isApiMethod} from './api-methods.js';
-export type {ApiMethod} from './api-methods.js';
 
 export function createRouter(roller: RollerPort, docker: DockerClient, authToken?: string): Router {
 
@@ -120,7 +116,7 @@ function requireAuth(authToken: string | undefined) {
 }
 
 export async function dispatchMethod(
-    method: import('./api-methods.js').ApiMethod,
+    method: ApiMethod,
     body: unknown,
     roller: RollerPort,
     docker: DockerClient,
@@ -137,7 +133,7 @@ export async function dispatchMethod(
 }
 
 async function dispatchRollerMethod(
-    method: import('./api-methods.js').ApiMethod,
+    method: ApiMethod,
     body: unknown,
     roller: RollerPort,
 ): Promise<unknown> {

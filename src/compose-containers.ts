@@ -2,7 +2,7 @@ import type {ContainerInfo} from 'dockerode';
 import type {ComposeConfig, ManagedService} from './types.js';
 import {managedServiceMatchesImage, parseImageRef} from './image-ref.js';
 
-export function getComposeServiceName(container: ContainerInfo): string | undefined {
+function getComposeServiceName(container: ContainerInfo): string | undefined {
 
     return container.Labels?.['com.docker.compose.service'];
 

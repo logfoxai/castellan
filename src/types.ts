@@ -16,7 +16,7 @@ export type PollConfig = {
     jitterMs: number;
 };
 
-export type RollbackConfig = {
+type RollbackConfig = {
     healthTimeoutMs: number;
     maxAttempts: number;
 };
@@ -61,7 +61,7 @@ export type RegistryManifest = {
     mediaType?: string;
 };
 
-export type ServiceState =
+type ServiceState =
     | 'idle'
     | 'checking'
     | 'updating'

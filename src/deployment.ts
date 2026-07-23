@@ -1,7 +1,6 @@
 import type {ContainerInfo} from 'dockerode';
 import type {DockerClient} from './docker.js';
-import {findNewestRunningComposeContainer} from './compose-containers.js';
-import {resolveComposeServicesFromContainers} from './compose-targets.js';
+import {findNewestRunningComposeContainer, listComposeServiceNamesForImage} from './compose-containers.js';
 import {sleep} from './health.js';
 import {verifyDeployHealth} from './service-health.js';
 import type {StateManager} from './state.js';
@@ -19,7 +18,7 @@ export type DeploymentContext = {
     recordEvent: (type: DeploymentEvent['type'], service: string, message: string) => void;
 };
 
-export async function resolveComposeServices(
+async function resolveComposeServices(
     ctx: DeploymentContext,
     service: ManagedService,
 ): Promise<string[]> {
@@ -30,7 +29,8 @@ export async function resolveComposeServices(
 
 }
 
-    const resolved = await resolveComposeServicesFromContainers(ctx.docker, service, ctx.config.compose);
+    const containers = await ctx.docker.listContainers();
+    const resolved = listComposeServiceNamesForImage(containers, service, ctx.config.compose);
 
     if (resolved.length === 0) {
 

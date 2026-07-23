@@ -1,23 +1,7 @@
-import type {DockerClient} from './docker.js';
-import {listComposeServiceNamesForImage} from './compose-containers.js';
 import {imageRefKey} from './image-ref.js';
-import type {ComposeConfig, ManagedService} from './types.js';
+import type {ManagedService} from './types.js';
 
-export {imageRefKey, managedServiceMatchesImage, normalizeRegistryHost} from './image-ref.js';
-
-export async function resolveComposeServicesFromContainers(
-    docker: DockerClient,
-    service: Pick<ManagedService, 'registry' | 'repository' | 'tag'>,
-    compose: ComposeConfig,
-): Promise<string[]> {
-
-    const containers = await docker.listContainers();
-
-    return listComposeServiceNamesForImage(containers, service, compose);
-
-}
-
-export function pickManagedServiceName(composeServices: string[], repository: string): string {
+function pickManagedServiceName(composeServices: string[], repository: string): string {
 
     if (composeServices.length === 1) {
 
@@ -94,15 +78,10 @@ export function mergeManagedServicesByImage(services: ManagedService[]): Managed
 
 }
 
-        const composeServices = mergeComposeServiceNames(existing, service);
-
         groups.set(key, {
             ...existing,
-            name: pickManagedServiceName(composeServices, existing.repository),
-            composeServices,
+            composeServices: mergeComposeServiceNames(existing, service),
             healthUrl: existing.healthUrl ?? service.healthUrl,
-            healthIntervalMs: existing.healthIntervalMs,
-            healthRetries: existing.healthRetries,
         });
 
 }

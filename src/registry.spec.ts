@@ -19,28 +19,17 @@ class FakeRegistry implements Registry {
 
 }
 
-test('CachingRegistry returns delegate result', async (assert) => {
-
-    const delegate = new FakeRegistry();
-    const cache = new CachingRegistry(delegate, 1000);
-    const image = {registry: 'r', repository: 'repo', tag: 't'};
-
-    const result = await cache.getManifest(image);
-
-    assert.equal(result.digest, 'sha256:repo-t');
-    assert.equal(delegate.calls, 1);
-
-});
-
 test('CachingRegistry caches within ttl', async (assert) => {
 
     const delegate = new FakeRegistry();
     const cache = new CachingRegistry(delegate, 1000);
     const image = {registry: 'r', repository: 'repo', tag: 't'};
 
-    await cache.getManifest(image);
+    const first = await cache.getManifest(image);
+
     await cache.getManifest(image);
 
+    assert.equal(first.digest, 'sha256:repo-t');
     assert.equal(delegate.calls, 1);
 
 });

@@ -1,5 +1,5 @@
 # Keep `name: CI` — release.yml triggers on it via workflow_run.
-# Local: npm run validate (lint --fix). CI: lint:check, never validate.
+# Local: npm run validate (lint --fix, deadcode:check). CI: lint:check, never validate.
 name: CI
 
 on:
@@ -37,6 +37,9 @@ jobs:
       - name: Type check
         run: npm run build:compile
 
+      - name: Dead code
+        run: npm run deadcode:check
+
       - name: Build
         run: npm run build
 
@@ -52,3 +55,66 @@ jobs:
           context: .
           push: false
           platforms: linux/amd64
+
+  security:
+    name: security scans
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 24
+          cache: npm
+
+      - name: Install deps
+        run: npm ci
+
+      - name: Install trivy (sha256-pinned)
+        run: |
+          set -euo pipefail
+          TRIVY_VERSION=0.71.0
+          TRIVY_SHA256=30a3d22b23f88c233f1658f562fb477cae3b3e8b4761109d515b7698daf85814
+          curl -fsSL -o /tmp/trivy.tgz \
+            "https://github.com/aquasecurity/trivy/releases/download/v${TRIVY_VERSION}/trivy_${TRIVY_VERSION}_Linux-64bit.tar.gz"
+          echo "${TRIVY_SHA256}  /tmp/trivy.tgz" | sha256sum -c -
+          sudo tar -xzf /tmp/trivy.tgz -C /usr/local/bin trivy
+          rm -f /tmp/trivy.tgz
+          trivy --version
+
+      # Non-blocking (--exit-code 0), same as infra IaC scan.
+      - name: trivy Dockerfile config scan
+        run: trivy config Dockerfile --severity HIGH,CRITICAL --exit-code 0 --skip-check-update
+
+      - name: trivy dependency vuln scan
+        run: trivy fs --scanners vuln --severity HIGH,CRITICAL --exit-code 1 --skip-check-update .
+
+      - name: Install gitleaks (sha256-pinned)
+        run: |
+          set -euo pipefail
+          GITLEAKS_VERSION=8.18.4
+          GITLEAKS_SHA256=ba6dbb656933921c775ee5a2d1c13a91046e7952e9d919f9bac4cec61d628e7d
+          curl -fsSL -o /tmp/gitleaks.tgz \
+            "https://github.com/gitleaks/gitleaks/releases/download/v${GITLEAKS_VERSION}/gitleaks_${GITLEAKS_VERSION}_linux_x64.tar.gz"
+          echo "${GITLEAKS_SHA256}  /tmp/gitleaks.tgz" | sha256sum -c -
+          sudo tar -xzf /tmp/gitleaks.tgz -C /usr/local/bin gitleaks
+          rm -f /tmp/gitleaks.tgz
+          gitleaks version
+
+      - name: gitleaks detect (PR diff)
+        if: github.event_name == 'pull_request'
+        env:
+          BASE_REF: ${{ github.base_ref }}
+        run: |
+          set -euo pipefail
+          git fetch origin "$BASE_REF" --depth=200 || git fetch origin "$BASE_REF"
+          gitleaks detect \
+            --source . \
+            --log-opts="origin/$BASE_REF..HEAD" \
+            --redact --verbose --no-banner
+
+      - name: gitleaks detect (full history)
+        if: github.event_name != 'pull_request'
+        run: gitleaks detect --source . --redact --verbose --no-banner

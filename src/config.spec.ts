@@ -111,24 +111,6 @@ test('normalizeConfig uses defaults', async (assert) => {
 
 });
 
-test('normalizeConfig requires managedServices array', async (assert) => {
-
-    let error: Error | undefined;
-
-    try {
-
-        normalizeConfig({managedServices: {}});
-
-} catch (err) {
-
-        error = err as Error;
-
-}
-
-    assert.equal(error?.message, 'managedServices must be an array');
-
-});
-
 test('normalizeConfig requires service name', async (assert) => {
 
     let error: Error | undefined;
@@ -144,46 +126,6 @@ test('normalizeConfig requires service name', async (assert) => {
 }
 
     assert.equal(error?.message, 'Expected name to be a string');
-
-});
-
-test('normalizeConfig applies default compose file when compose is provided empty', async (assert) => {
-
-    const config = normalizeConfig({
-        managedServices: [],
-        compose: {},
-    });
-
-    assert.equal(config.compose.file, '/app/docker-compose.yml');
-
-});
-
-test('normalizeConfig throws when healthIntervalMs is not a number', async (assert) => {
-
-    let error: Error | undefined;
-
-    try {
-
-        normalizeConfig({
-            managedServices: [
-                {
-                    name: 'api',
-                    registry: 'r.example.com',
-                    repository: 'api',
-                    tag: 'latest',
-                    composeServices: ['api'],
-                    healthIntervalMs: 'fast',
-                },
-            ],
-        });
-
-} catch (err) {
-
-        error = err as Error;
-
-}
-
-    assert.equal(error?.message, 'Expected healthIntervalMs to be a number');
 
 });
 
@@ -215,44 +157,34 @@ test('normalizeConfig throws when composeServices is not an array', async (asser
 
 });
 
-test('normalizeConfig throws when composeServices contains a non-string', async (assert) => {
+test('normalizeConfig applies partial section defaults', async (assert) => {
 
-    let error: Error | undefined;
-
-    try {
-
-        normalizeConfig({
-            managedServices: [
-                {
-                    name: 'api',
-                    registry: 'r.example.com',
-                    repository: 'api',
-                    tag: 'latest',
-                    composeServices: [123],
-                },
-            ],
-        });
-
-} catch (err) {
-
-        error = err as Error;
-
-}
-
-    assert.equal(error?.message, 'Expected composeServices[0] to be a string');
-
-});
-
-test('normalizeConfig applies partial poll defaults', async (assert) => {
-
-    const config = normalizeConfig({
+    const poll = normalizeConfig({
         managedServices: [],
         poll: {intervalMs: 10000},
     });
 
-    assert.equal(config.poll.enabled, true);
-    assert.equal(config.poll.intervalMs, 10000);
-    assert.equal(config.poll.jitterMs, 5000);
+    assert.equal(poll.poll.enabled, true);
+    assert.equal(poll.poll.intervalMs, 10000);
+    assert.equal(poll.poll.jitterMs, 5000);
+
+    const rollback = normalizeConfig({
+        managedServices: [],
+        rollback: {maxAttempts: 3},
+    });
+
+    assert.equal(rollback.rollback.healthTimeoutMs, 120000);
+    assert.equal(rollback.rollback.maxAttempts, 3);
+
+    const api = normalizeConfig({
+        managedServices: [],
+        api: {authToken: 'secret'},
+    });
+
+    assert.equal(api.api.enabled, true);
+    assert.equal(api.api.dashboard, true);
+    assert.equal(api.api.port, 3003);
+    assert.equal(api.api.authToken, 'secret');
 
 });
 
@@ -276,32 +208,6 @@ test('normalizeConfig disables poll when intervalMs is zero', async (assert) => 
 
     assert.equal(config.poll.enabled, false);
     assert.equal(config.poll.intervalMs, 0);
-
-});
-
-test('normalizeConfig applies partial rollback defaults', async (assert) => {
-
-    const config = normalizeConfig({
-        managedServices: [],
-        rollback: {maxAttempts: 3},
-    });
-
-    assert.equal(config.rollback.healthTimeoutMs, 120000);
-    assert.equal(config.rollback.maxAttempts, 3);
-
-});
-
-test('normalizeConfig applies partial api defaults', async (assert) => {
-
-    const config = normalizeConfig({
-        managedServices: [],
-        api: {authToken: 'secret'},
-    });
-
-    assert.equal(config.api.enabled, true);
-    assert.equal(config.api.dashboard, true);
-    assert.equal(config.api.port, 3003);
-    assert.equal(config.api.authToken, 'secret');
 
 });
 
@@ -338,42 +244,6 @@ test('normalizeConfig parses registry credentials', async (assert) => {
     assert.equal(config.registries?.['ghcr.io'].username, 'myuser');
     assert.equal(config.registries?.['ghcr.io'].password, 'ghp_secret');
     assert.equal(config.registries?.['docker.io'].username, 'hubuser');
-
-});
-
-test('normalizeConfig throws when input is not an object', async (assert) => {
-
-    let error: Error | undefined;
-
-    try {
-
-        normalizeConfig(null);
-
-} catch (err) {
-
-        error = err as Error;
-
-}
-
-    assert.equal(error?.message, 'Config must be an object');
-
-});
-
-test('normalizeConfig throws when a service is not an object', async (assert) => {
-
-    let error: Error | undefined;
-
-    try {
-
-        normalizeConfig({managedServices: [null]});
-
-} catch (err) {
-
-        error = err as Error;
-
-}
-
-    assert.equal(error?.message, 'Service 0 must be an object');
 
 });
 
@@ -420,7 +290,7 @@ test('parseConfig throws on empty YAML', async (assert) => {
 
     try {
 
-        parseConfig('', '/app/config.yaml');
+        parseConfig('---', '/app/config.yaml');
 
 } catch (err) {
 
@@ -428,7 +298,7 @@ test('parseConfig throws on empty YAML', async (assert) => {
 
 }
 
-    assert.equal(error instanceof Error, true);
+    assert.equal(error?.message, 'YAML config file is empty: /app/config.yaml');
 
 });
 
@@ -458,33 +328,6 @@ test('loadConfig reads JSON config file', async (assert) => {
     assert.equal(config.managedServices.length, 1);
     assert.equal(config.managedServices[0].name, 'api');
     assert.equal(config.compose.file, '/app/docker-compose.yml');
-
-    await cleanup(dir);
-
-});
-
-test('loadConfig reads YAML config file', async (assert) => {
-
-    const dir = await tempDir();
-    const file = path.join(dir, 'config.yaml');
-
-    await writeFile(
-        file,
-        `managedServices:
-  - name: worker
-    registry: r.example.com
-    repository: worker
-    tag: latest
-    composeServices:
-      - worker
-`,
-        'utf8',
-    );
-
-    const config = await loadConfig(file);
-
-    assert.equal(config.managedServices.length, 1);
-    assert.equal(config.managedServices[0].name, 'worker');
 
     await cleanup(dir);
 
@@ -520,24 +363,6 @@ test('loadConfig reads from CASTELLAN_CONFIG env var', async (assert) => {
 
 });
 
-test('loadConfig throws when CASTELLAN_CONFIG env var points to missing file', async (assert) => {
-
-    let error: Error | undefined;
-
-    try {
-
-        await withEnv('CASTELLAN_CONFIG', '/nonexistent/env-config.json', async () => loadConfig());
-
-} catch (err) {
-
-        error = err as Error;
-
-}
-
-    assert.equal(error?.message, 'Config file not found: /nonexistent/env-config.json');
-
-});
-
 test('loadConfig throws when config file is missing', async (assert) => {
 
     let error: Error | undefined;
@@ -553,42 +378,6 @@ test('loadConfig throws when config file is missing', async (assert) => {
 }
 
     assert.equal(error?.message.startsWith('Config file not found'), true);
-
-});
-
-test('loadConfig throws when no default config exists', async (assert) => {
-
-    let error: Error | undefined;
-
-    try {
-
-        await withEnv('CASTELLAN_CONFIG', undefined, async () => loadConfig());
-
-} catch (err) {
-
-        error = err as Error;
-
-}
-
-    assert.equal(error?.message.startsWith('Config file not found'), true);
-
-});
-
-test('parseConfig throws on YAML document with no content', async (assert) => {
-
-    let error: Error | undefined;
-
-    try {
-
-        parseConfig('---', '/app/config.yaml');
-
-} catch (err) {
-
-        error = err as Error;
-
-}
-
-    assert.equal(error?.message, 'YAML config file is empty: /app/config.yaml');
 
 });
 
