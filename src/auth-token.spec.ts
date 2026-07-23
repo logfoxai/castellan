@@ -7,50 +7,7 @@ import {
     AUTH_TOKEN_FILENAME,
     resolveAuthToken,
 } from './auth-token.js';
-
-async function withEnv<T>(vars: Record<string, string | undefined>, fn: () => Promise<T>): Promise<T> {
-
-    const previous: Record<string, string | undefined> = {};
-
-    for (const [name, value] of Object.entries(vars)) {
-
-        previous[name] = process.env[name];
-
-        if (value === undefined) {
-
-            delete process.env[name];
-
-} else {
-
-            process.env[name] = value;
-
-}
-
-}
-
-    try {
-
-        return await fn();
-
-} finally {
-
-        for (const [name, value] of Object.entries(previous)) {
-
-            if (value === undefined) {
-
-                delete process.env[name];
-
-} else {
-
-                process.env[name] = value;
-
-}
-
-}
-
-}
-
-}
+import {withEnv} from './test-env.js';
 
 test('resolveAuthToken prefers config over env and file', async (assert) => {
 

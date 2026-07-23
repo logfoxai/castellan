@@ -5,6 +5,7 @@ import path from 'path';
 import {loadConfig} from './config.js';
 import type {DockerClient} from './docker.js';
 import {CASTELLAN_AUTUPDATE_LABEL} from './label-discovery.js';
+import {withEnv} from './test-env.js';
 
 async function tempDir(): Promise<string> {
 
@@ -15,50 +16,6 @@ async function tempDir(): Promise<string> {
 async function cleanup(dir: string): Promise<void> {
 
     await rm(dir, {recursive: true, force: true});
-
-}
-
-async function withEnv<T>(vars: Record<string, string | undefined>, fn: () => Promise<T>): Promise<T> {
-
-    const previous: Record<string, string | undefined> = {};
-
-    for (const [name, value] of Object.entries(vars)) {
-
-        previous[name] = process.env[name];
-
-        if (value === undefined) {
-
-            delete process.env[name];
-
-} else {
-
-            process.env[name] = value;
-
-}
-
-}
-
-    try {
-
-        return await fn();
-
-} finally {
-
-        for (const [name, value] of Object.entries(previous)) {
-
-            if (value === undefined) {
-
-                delete process.env[name];
-
-} else {
-
-                process.env[name] = value;
-
-}
-
-}
-
-}
 
 }
 

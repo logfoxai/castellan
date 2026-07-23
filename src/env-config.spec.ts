@@ -1,49 +1,6 @@
 import {test} from 'kizu';
 import {loadEnvConfig} from './env-config.js';
-
-async function withEnv<T>(vars: Record<string, string | undefined>, fn: () => T): Promise<T> {
-
-    const previous: Record<string, string | undefined> = {};
-
-    for (const [name, value] of Object.entries(vars)) {
-
-        previous[name] = process.env[name];
-
-        if (value === undefined) {
-
-            delete process.env[name];
-
-} else {
-
-            process.env[name] = value;
-
-}
-
-}
-
-    try {
-
-        return fn();
-
-} finally {
-
-        for (const [name, value] of Object.entries(previous)) {
-
-            if (value === undefined) {
-
-                delete process.env[name];
-
-} else {
-
-                process.env[name] = value;
-
-}
-
-}
-
-}
-
-}
+import {withEnv} from './test-env.js';
 
 test('loadEnvConfig applies env overrides', async (assert) => {
 
