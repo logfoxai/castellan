@@ -481,7 +481,7 @@ Castellan is part of a family of MIT-licensed tools from [Logfox](https://logfox
 |---|---|
 | **[open-prs](https://github.com/logfoxai/open-prs)** | Live TUI + CLI dashboard for every open PR in a GitHub org — CI status, deploy tracking, clickable links. |
 | **[ecswatch](https://github.com/logfoxai/ecswatch)** | ECS service watcher with CI streaming, interactive TUI, and one-shot `inspect` snapshots. |
-| **[composewatch](https://github.com/logfoxai/composewatch)** | Docker Compose stacks over Tailscale SSH — watch rollouts, health, and digests. |
+| **[castellan-cli](https://github.com/logfoxai/castellan-cli)** | Official Castellan CLI — trigger `forceCheck` and watch rollouts settle in CI. |
 | **[runtyp](https://github.com/logfoxai/runtyp)** | Zero-dependency runtime type validation for TypeScript and JavaScript. |
 
 Most ship to npm; Castellan ships as a container image. All are released with [AutoRel](https://github.com/mhweiner/autorel).
