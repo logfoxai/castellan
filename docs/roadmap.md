@@ -118,8 +118,7 @@ Observability expands through RPC, dashboard, and MCP. Prefer **on-demand regist
 | Item | Detail |
 |------|--------|
 | RPC | `registryImages` — `{ service, limit? }` |
-| ECR | `DescribeImages` (Logfox primary registry) |
-| HTTP registries | Tags/list API where available (GHCR, Docker Hub — phased) |
+| Source | Host Docker daemon — same path as poll (`docker manifest inspect` / registry APIs the daemon uses) |
 | Cache | In-memory TTL (e.g. 5–15 min); not persisted |
 | UI | Lazy “Registry” section on service detail; **Deploy** wires to W1 |
 
