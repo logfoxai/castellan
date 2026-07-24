@@ -26,7 +26,7 @@
 
 > **Beta.** APIs and setup may change before v1.0. Test in staging before trusting it in production.
 
-# Crash course
+# Overview
 
 Castellan is a **single-container sidecar** for docker-compose — a practical **Watchtower replacement** with health verification, rollback, and an optional dashboard. [Watchtower is archived](https://github.com/containrrr/watchtower); Castellan is compose-native and safety-first.
 
