@@ -28,7 +28,7 @@
 
 # Overview
 
-Castellan is a **single-container sidecar** for docker-compose — a practical **Watchtower replacement** with health verification, rollback, and an optional dashboard. [Watchtower is archived](https://github.com/containrrr/watchtower); Castellan is compose-native and safety-first.
+Castellan is a **single-container sidecar** for docker-compose — a practical **Watchtower replacement** with health verification, rollback, and an optional dashboard. [Watchtower is archived and no longer in development](https://github.com/containrrr/watchtower); Castellan is compose-native and safety-first.
 
 Setup uses **compose labels + `CASTELLAN_*` env vars** — no Castellan config file. Run with Docker Compose, `docker run`, or `npm run dev` (export env vars in your shell). See [Configuration reference](#configuration-reference).
 
@@ -143,7 +143,7 @@ This matches Watchtower’s **`--label-enable`** model — only labeled services
 
 # Migrating from Watchtower
 
-[Watchtower](https://github.com/containrrr/watchtower) is **archived** upstream. Community forks exist, but Castellan targets compose hosts that want a safety net (health wait, rollback, deployment history) in one lightweight sidecar.
+[Watchtower](https://github.com/containrrr/watchtower) is **archived and no longer in development** upstream. Community forks exist, but Castellan targets compose hosts that want a safety net (health wait, rollback, deployment history) in one lightweight sidecar.
 
 ## Compose swap
 
