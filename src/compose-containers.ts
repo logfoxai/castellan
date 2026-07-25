@@ -8,13 +8,7 @@ function getComposeServiceName(container: ContainerInfo): string | undefined {
 
 }
 
-export function matchesComposeProject(container: ContainerInfo, project?: string): boolean {
-
-    if (!project) {
-
-        return false;
-
-    }
+export function matchesComposeProject(container: ContainerInfo, project: string): boolean {
 
     return container.Labels?.['com.docker.compose.project'] === project;
 
