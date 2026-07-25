@@ -1,7 +1,14 @@
-import type {ApiConfig, ComposeConfig, PollConfig} from './types.js';
+import type {ApiConfig, PollConfig} from './types.js';
+
+/** Compose settings from env — project may be filled later if exactly one exists on Docker. */
+type EnvComposeConfig = {
+    file: string;
+    project?: string;
+    envFile?: string;
+};
 
 export type EnvConfig = {
-    compose: ComposeConfig;
+    compose: EnvComposeConfig;
     poll: PollConfig;
     rollback: {healthTimeoutMs: number; maxAttempts: number};
     api: ApiConfig;
@@ -20,7 +27,7 @@ export function loadEnvConfig(): EnvConfig {
 
 }
 
-function loadComposeConfig(): ComposeConfig {
+function loadComposeConfig(): EnvComposeConfig {
 
     return {
         file: process.env.CASTELLAN_COMPOSE_FILE ?? '/app/docker-compose.yml',

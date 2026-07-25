@@ -1,6 +1,5 @@
-import {readFile} from 'fs/promises';
-import path from 'path';
 import type {DockerClient} from './docker.js';
+import {listComposeProjects} from './compose-containers.js';
 import {loadEnvConfig} from './env-config.js';
 import type {Config} from './types.js';
 import {discoverManagedServices} from './label-discovery.js';
@@ -8,7 +7,8 @@ import {discoverManagedServices} from './label-discovery.js';
 export async function loadConfig(docker: DockerClient): Promise<Config> {
 
     const env = loadEnvConfig();
-    const managedServices = await discoverManagedServices(docker);
+    const project = await resolveComposeProject(docker, env.compose.project);
+    const managedServices = await discoverManagedServices(docker, project);
 
     if (managedServices.length === 0) {
 
@@ -17,15 +17,15 @@ export async function loadConfig(docker: DockerClient): Promise<Config> {
             + 'you want Castellan to manage. Will keep checking on each poll.',
         );
 
-}
-
-    const compose = {...env.compose};
-
-    compose.project = compose.project ?? await inferComposeProject(compose.file);
+    }
 
     return {
         managedServices,
-        compose,
+        compose: {
+            file: env.compose.file,
+            project,
+            envFile: env.compose.envFile,
+        },
         poll: env.poll,
         rollback: env.rollback,
         api: env.api,
@@ -33,34 +33,43 @@ export async function loadConfig(docker: DockerClient): Promise<Config> {
 
 }
 
-async function inferComposeProject(file: string): Promise<string | undefined> {
+async function resolveComposeProject(
+    docker: DockerClient,
+    fromEnv: string | undefined,
+): Promise<string> {
 
-    try {
+    if (fromEnv) {
 
-        const content = await readFile(file, 'utf8');
-        const nameMatch = /^name:\s*(\S+)/m.exec(content);
+        return fromEnv;
 
-        if (nameMatch) {
+    }
 
-            return nameMatch[1];
+    const projects = listComposeProjects(await docker.listContainers());
 
-}
+    if (projects.length === 1) {
 
-        const dir = path.dirname(file);
-        const inferred = path.basename(dir);
+        console.info(
+            `CASTELLAN_COMPOSE_PROJECT unset; using the only compose project on this host: ${projects[0]}`,
+        );
 
-        if (inferred === 'app' || inferred === 'compose' || inferred === '.') {
+        return projects[0];
 
-            return undefined;
+    }
 
-}
+    if (projects.length === 0) {
 
-        return inferred;
+        throw new Error(
+            'Could not resolve compose project. Set CASTELLAN_COMPOSE_PROJECT to your stack name '
+            + '(see `docker compose ls` or a container label com.docker.compose.project). '
+            + 'Castellan does not read compose `name:` from the file.',
+        );
 
-} catch {
+    }
 
-        return undefined;
-
-}
+    throw new Error(
+        `Could not resolve compose project: found multiple on this host (${projects.join(', ')}). `
+        + 'Set CASTELLAN_COMPOSE_PROJECT to the one Castellan should manage '
+        + '(see `docker compose ls`).',
+    );
 
 }
