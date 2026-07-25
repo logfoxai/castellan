@@ -14,9 +14,30 @@ export function matchesComposeProject(container: ContainerInfo, project?: string
 
         return false;
 
-}
+    }
 
     return container.Labels?.['com.docker.compose.project'] === project;
+
+}
+
+/** Distinct compose project names seen on the Docker host (from container labels). */
+export function listComposeProjects(containers: ContainerInfo[]): string[] {
+
+    const projects = new Set<string>();
+
+    for (const container of containers) {
+
+        const project = container.Labels?.['com.docker.compose.project']?.trim();
+
+        if (project) {
+
+            projects.add(project);
+
+        }
+
+    }
+
+    return [...projects].sort();
 
 }
 

@@ -2,6 +2,7 @@ import {test} from 'kizu';
 import type {ContainerInfo} from 'dockerode';
 import {
     findNewestRunningComposeContainer,
+    listComposeProjects,
     listComposeServiceNamesForImage,
     matchesComposeProject,
 } from './compose-containers.js';
@@ -34,6 +35,22 @@ test('matchesComposeProject requires an configured project', (assert) => {
     assert.equal(matchesComposeProject(row, 'logfox'), true);
     assert.equal(matchesComposeProject(row, 'other'), false);
     assert.equal(matchesComposeProject(row), false);
+
+});
+
+test('listComposeProjects returns sorted unique project labels', (assert) => {
+
+    const rows = [
+        container('1', 'api', 'ghcr.io/myorg/api:prime', 'beta'),
+        container('2', 'db', 'postgres:16', 'alpha'),
+        container('3', 'worker', 'ghcr.io/myorg/worker:prime', 'beta'),
+        {
+            ...container('4', 'plain', 'busybox', 'ignored'),
+            Labels: {},
+        } as ContainerInfo,
+    ];
+
+    assert.equal(listComposeProjects(rows), ['alpha', 'beta']);
 
 });
 
