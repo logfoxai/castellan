@@ -5,8 +5,8 @@ Most tools marketed as "Watchtower replacements" solve a different problem or re
 | Tool | Migration | Auto-update | Rollback | Zero-downtime | Dashboard | Notes |
 |---|---|---|---|---|---|---|
 | **Castellan** | Opt-in labels + env | ✅ | ✅ known-good | ✅ compose rolling | ✅ built-in (optional) | Lightweight single sidecar, MIT, compose-first; headless / API-only modes |
-| [Watchtower](https://github.com/containrrr/watchtower) (archived) | — | ✅ | ❌ | ❌ | ❌ | Simple restarter; no safety net |
-| [nickfedor/watchtower](https://github.com/nicholas-fedor/watchtower) | ✅ swap image | ✅ | ❌ | ❌ | ❌ | Community fork of archived Watchtower |
+| [Watchtower](https://github.com/containrrr/watchtower) (archived, no longer in development) | — | ✅ | ❌ | ❌ | ❌ | Simple restarter; no safety net |
+| [nickfedor/watchtower](https://github.com/nicholas-fedor/watchtower) | ✅ swap image | ✅ | ❌ | ❌ | ❌ | Community fork of archived Watchtower (no longer in development) |
 | [Lighthouse](https://github.com/grioghar/lighthouse) | ✅ `WATCHTOWER_*` + labels | ✅ | ❌ | ❌ | ❌ | Lightweight Watchtower fork |
 | [WatchWarden](https://github.com/watchwarden-labs/watchwarden) | ✅ `WATCHTOWER_*` env vars | ✅ | ✅ any version | ⚠️ per-container blue-green | ✅ managed mode | Feature-rich; BSL license; dashboard needs controller + Postgres |
 | [DockWarden](https://github.com/emon5122/dockwarden) | ⚠️ env remap | ✅ | ❌ | ❌ | optional | Watchtower-like with optional UI |
