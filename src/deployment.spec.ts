@@ -62,25 +62,20 @@ function healthyContainer(): ContainerInfo {
 
 }
 
-function mockDockerForDeploy(track: {pullImage?: string; composePullCalls: number}): DockerClient {
+function mockDockerForDeploy(track: {pullImage?: string}): DockerClient {
 
     let pulled = false;
 
     return {
         getLocalDigest: async () => (pulled ? 'sha256:new' : 'sha256:old'),
         listContainers: async () => [healthyContainer()],
-        composePull: async () => {
-
-            track.composePullCalls += 1;
-
-},
         composeUp: async () => undefined,
         pullImage: async (image: string) => {
 
             track.pullImage = image;
             pulled = true;
 
-},
+        },
         tagImage: async () => undefined,
     } as unknown as DockerClient;
 
@@ -89,7 +84,7 @@ function mockDockerForDeploy(track: {pullImage?: string; composePullCalls: numbe
 function createContext(
     state: StateManager,
     runtime: ServiceRuntime,
-    track: {pullImage?: string; composePullCalls: number},
+    track: {pullImage?: string},
 ): DeploymentContext {
 
     return {
@@ -113,14 +108,14 @@ async function withEmptyState(
         ctx: DeploymentContext,
         state: StateManager,
         runtime: ServiceRuntime,
-        track: {pullImage?: string; composePullCalls: number},
+        track: {pullImage?: string},
     ) => Promise<void>,
 ): Promise<void> {
 
     const dir = await mkdtemp(path.join(os.tmpdir(), 'castellan-deploy-'));
     const state = new StateManager(path.join(dir, 'state.json'));
     const runtime = baseRuntime();
-    const track = {composePullCalls: 0};
+    const track: {pullImage?: string} = {};
 
     try {
 
@@ -139,14 +134,14 @@ async function withContext(
         ctx: DeploymentContext,
         state: StateManager,
         runtime: ServiceRuntime,
-        track: {pullImage?: string; composePullCalls: number},
+        track: {pullImage?: string},
     ) => Promise<void>,
 ): Promise<void> {
 
     const dir = await mkdtemp(path.join(os.tmpdir(), 'castellan-deploy-'));
     const state = new StateManager(path.join(dir, 'state.json'));
     const runtime = baseRuntime();
-    const track = {composePullCalls: 0};
+    const track: {pullImage?: string} = {};
 
     state.appendDeployment('api', {digest: 'sha256:old', outcome: 'success'});
     await state.save();
@@ -172,7 +167,7 @@ test('handleDeployFailure does not reject digest for infrastructure errors', asy
             baseService,
             'sha256:new',
             runtime,
-            new Error('compose pull failed: network timeout'),
+            new Error('image pull failed: network timeout'),
         );
 
         assert.equal(state.getRejectedDigests('api').length, 0);
@@ -189,7 +184,6 @@ test('deployManagedService pulls the requested digest', async (assert) => {
         await deployManagedService(ctx, baseService, 'sha256:new', runtime);
 
         assert.equal(track.pullImage, 'ghcr.io/myorg/api@sha256:new');
-        assert.equal(track.composePullCalls, 0);
 
 });
 
@@ -234,7 +228,7 @@ test('deployManagedService skips baseline when current containers are unhealthy'
 
         const unhealthyCtx: DeploymentContext = {
             ...ctx,
-            docker: mockDockerForDeploy({...track, composePullCalls: track.composePullCalls}),
+            docker: mockDockerForDeploy({...track}),
             findComposeContainer: async () => {
 
                 healthChecks += 1;

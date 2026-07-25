@@ -227,15 +227,6 @@ export class DockerClient {
 }
 
 
-    async composePull(
-        service: string,
-        compose: ComposeConfig,
-    ): Promise<void> {
-
-        await this.runCompose(compose, 'pull', service);
-
-}
-
     async composeUp(
         service: string,
         compose: ComposeConfig,

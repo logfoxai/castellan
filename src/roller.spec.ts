@@ -54,12 +54,6 @@ function createDocker(pullStarted: {value: boolean}): DockerClient {
     return {
         listContainers: async () => [healthyContainer()],
         getLocalDigest: async () => 'sha256:known-good',
-        composePull: async () => {
-
-            pullStarted.value = true;
-            await sleep(250);
-
-},
         composeUp: async () => undefined,
         pullImage: async () => {
 
@@ -104,7 +98,6 @@ function createDiscoverDocker(): DockerClient {
     return {
         listContainers: async () => [healthyContainer(), workerContainer()],
         getLocalDigest: async () => 'sha256:known-good',
-        composePull: async () => undefined,
         composeUp: async () => undefined,
         pullImage: async () => undefined,
         tagImage: async () => undefined,
@@ -183,7 +176,6 @@ function createFailingPullDocker(): DockerClient {
     return {
         listContainers: async () => [healthyContainer()],
         getLocalDigest: async () => 'sha256:known-good',
-        composePull: async () => undefined,
         composeUp: async () => undefined,
         pullImage: async () => {
 
@@ -336,7 +328,6 @@ function createToggleDiscoverDocker(includeWorker: {value: boolean}): DockerClie
 
 },
         getLocalDigest: async () => 'sha256:known-good',
-        composePull: async () => undefined,
         composeUp: async () => undefined,
         pullImage: async () => undefined,
         tagImage: async () => undefined,
@@ -436,7 +427,6 @@ function createImageToggleDocker(image: {value: string}): DockerClient {
             },
         } as unknown as ContainerInfo],
         getLocalDigest: async () => 'sha256:known-good',
-        composePull: async () => undefined,
         composeUp: async () => undefined,
         pullImage: async () => undefined,
         tagImage: async () => undefined,
