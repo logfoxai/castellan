@@ -332,7 +332,7 @@ services:
 
 ### `CASTELLAN_COMPOSE_ENV_FILE` is not Castellan config
 
-`CASTELLAN_COMPOSE_ENV_FILE` points at an env file passed to **`docker compose --env-file`** when Castellan runs `pull` / `up`. Use it when your compose YAML uses variable substitution (e.g. `image: ${API_IMAGE}`) and those values live in a separate file.
+`CASTELLAN_COMPOSE_ENV_FILE` points at an env file passed to **`docker compose --env-file`** when Castellan runs `compose up`. Use it when your compose YAML uses variable substitution (e.g. `image: ${API_IMAGE}`) and those values live in a separate file.
 
 That file configures **Compose rendering**, not Castellan’s own settings. Castellan’s settings are always `CASTELLAN_*` env vars (or defaults in code).
 
@@ -358,9 +358,9 @@ Using `name: mystack` in your compose file is still a good idea so Compose itsel
 
 | Env var | Default | Purpose |
 |---|---|---|
-| `CASTELLAN_COMPOSE_FILE` | `/app/docker-compose.yml` | Compose file for pull/up |
+| `CASTELLAN_COMPOSE_FILE` | `/app/docker-compose.yml` | Compose file for `compose up` |
 | `CASTELLAN_COMPOSE_PROJECT` | *(see below)* | Compose project (`-p`) + container filter |
-| `CASTELLAN_COMPOSE_ENV_FILE` | — | Optional `--env-file` for `docker compose` pull/up |
+| `CASTELLAN_COMPOSE_ENV_FILE` | — | Optional `--env-file` for `docker compose up` |
 | `CASTELLAN_POLL_ENABLED` | `true` | Periodic polling |
 | `CASTELLAN_POLL_INTERVAL_MS` | `60000` | Poll interval |
 | `CASTELLAN_POLL_JITTER_MS` | `5000` | Jitter |
