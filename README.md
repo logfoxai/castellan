@@ -38,7 +38,7 @@ Day-to-day ops: use the **dashboard**. Automation / CI: use the **[Castellan CLI
 
 1. **Polls** a registry **tag** on an interval (or on demand via API / CLI).
 2. Compares the tag’s current **digest** (`sha256:…`) to what is running.
-3. **Deploys** when the digest changed — usually CI pushed a new build to the same tag — via `docker compose pull` / rolling restarts.
+3. **Deploys** when the digest changed — usually CI pushed a new build to the same tag — pull by digest, retag the rolling tag, then rolling `compose up`.
 4. **Verifies** health via Docker compose healthchecks.
 5. **Rolls back** to the last known-good digest if a deploy fails.
 6. **Observes** everything from an optional dashboard, the [Castellan CLI](https://github.com/logfoxai/castellan-cli), and RPC API — or run **headless** with no HTTP at all.
@@ -193,7 +193,7 @@ Legacy Watchtower labels are **not** supported.
 
 - **Opt-in labels only** — same idea as `watchtower --label-enable`; not default watch-all / `enable=false` opt-out mode.
 - **Safety net** — health wait before proceeding, automatic rollback, per-digest reject, deployments history.
-- **Private registry creds** — `docker login` on the host (same creds used for `compose pull` and registry polling). For ECR, refresh login periodically (e.g. cron with `aws ecr get-login-password`).
+- **Private registry creds** — `docker login` on the host (same creds used for image pull and `docker manifest inspect`). For ECR, refresh login periodically (e.g. cron with `aws ecr get-login-password`).
 - **Optional `ai.logfox.castellan.group`** — keep a short logical name when rolling replicas share one image.
 
 Feature matrix vs WatchWarden and others: [docs/comparisons.md](docs/comparisons.md).
@@ -265,7 +265,7 @@ More context under [Headless & API-only setup](#headless--api-only-setup) in Sec
 
 # Supported registries
 
-Castellan polls registries through the **host Docker daemon** (`docker manifest inspect`) and deploys with **`docker compose pull`**. Both paths use the same host credentials.
+Castellan polls registries with **`docker manifest inspect`** and deploys by **pulling `@digest`**, retagging the rolling tag, then **`docker compose up`**. Registry auth comes from the host Docker config (see below).
 
 | Registry | Host in image ref | Authentication on the host |
 |---|---|---|
@@ -276,7 +276,7 @@ Castellan polls registries through the **host Docker daemon** (`docker manifest 
 
 ### Private registry credentials
 
-Run **`docker login`** on the host (or your platform’s ECR login script). Castellan needs the Docker socket plus a **read-only mount of the host Docker config directory** so `docker manifest inspect` uses the same credentials as `docker compose pull`:
+Run **`docker login`** on the host (or your platform’s ECR login script). Castellan needs the Docker socket plus a **read-only mount of the host Docker config directory** so `docker manifest inspect` (and pulls) use the same credentials:
 
 ```yaml
 castellan:
@@ -332,7 +332,7 @@ services:
 
 ### `CASTELLAN_COMPOSE_ENV_FILE` is not Castellan config
 
-`CASTELLAN_COMPOSE_ENV_FILE` points at an env file passed to **`docker compose --env-file`** when Castellan runs `pull` / `up`. Use it when your compose YAML uses variable substitution (e.g. `image: ${API_IMAGE}`) and those values live in a separate file.
+`CASTELLAN_COMPOSE_ENV_FILE` points at an env file passed to **`docker compose --env-file`** when Castellan runs `compose up`. Use it when your compose YAML uses variable substitution (e.g. `image: ${API_IMAGE}`) and those values live in a separate file.
 
 That file configures **Compose rendering**, not Castellan’s own settings. Castellan’s settings are always `CASTELLAN_*` env vars (or defaults in code).
 
@@ -358,9 +358,9 @@ Using `name: mystack` in your compose file is still a good idea so Compose itsel
 
 | Env var | Default | Purpose |
 |---|---|---|
-| `CASTELLAN_COMPOSE_FILE` | `/app/docker-compose.yml` | Compose file for pull/up |
+| `CASTELLAN_COMPOSE_FILE` | `/app/docker-compose.yml` | Compose file for `compose up` |
 | `CASTELLAN_COMPOSE_PROJECT` | *(see below)* | Compose project (`-p`) + container filter |
-| `CASTELLAN_COMPOSE_ENV_FILE` | — | Optional `--env-file` for `docker compose` pull/up |
+| `CASTELLAN_COMPOSE_ENV_FILE` | — | Optional `--env-file` for `docker compose up` |
 | `CASTELLAN_POLL_ENABLED` | `true` | Periodic polling |
 | `CASTELLAN_POLL_INTERVAL_MS` | `60000` | Poll interval |
 | `CASTELLAN_POLL_JITTER_MS` | `5000` | Jitter |
@@ -443,7 +443,7 @@ Served at `/` when `CASTELLAN_API_ENABLED` and `CASTELLAN_DASHBOARD_ENABLED` are
 
 1. Castellan loads **env settings** and discovers **opt-in autoupdate labels** (see [Label discovery](#label-discovery)).
 2. On every poll interval it fetches the manifest for each managed image, with per-image TTL and global jitter.
-3. When a digest changes, it pulls the image and performs a rolling restart of the associated compose services.
+3. When a digest changes, it pulls that digest, retags the rolling tag, and rolling-restarts the associated compose services (`compose up`).
 4. It waits for Docker healthchecks to pass.
 5. If health checks fail, it rolls back to the previous successful deployment and marks the failing digest as **rejected** (blocked from auto-deploy).
 6. State is persisted atomically to disk (`deployments` history + event log) so restarts are safe.
@@ -524,7 +524,7 @@ http://castellan.internal.example:8443 {
 
 ## Other hardening
 
-- Mount the Docker socket read-only if your runtime supports it.
+- Castellan needs a **read-write** Docker socket (pull, tag, compose up). Never expose that socket or Castellan’s port on the public internet.
 - Run Castellan on an isolated Docker network.
 - Rotate the API secret if leaked — update `CASTELLAN_AUTH_TOKEN` or delete `<state-dir>/auth-token` and restart.
 

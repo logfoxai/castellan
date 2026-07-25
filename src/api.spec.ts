@@ -50,7 +50,6 @@ function createDocker(): MockDocker {
         pullImage: async () => undefined,
         tagImage: async () => undefined,
         getLocalDigest: async () => null,
-        composePull: async () => undefined,
         composeUp: async () => undefined,
     } as unknown as MockDocker;
 
