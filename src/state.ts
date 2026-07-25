@@ -89,54 +89,6 @@ export class StateManager {
 
 }
 
-    renameService(from: string, to: string): void {
-
-        if (from === to) {
-
-            return;
-
-}
-
-        let changed = false;
-        const deployments = this.state.deployments[from];
-
-        if (deployments) {
-
-            const existing = this.state.deployments[to] ?? [];
-
-            this.state.deployments[to] = [...deployments, ...existing].slice(0, MAX_DEPLOYMENTS_PER_SERVICE);
-            delete this.state.deployments[from];
-            changed = true;
-
-}
-
-        if (Object.prototype.hasOwnProperty.call(this.state.pollEnabled, from)) {
-
-            this.state.pollEnabled[to] = this.state.pollEnabled[from];
-            delete this.state.pollEnabled[from];
-            changed = true;
-
-}
-
-        for (const event of this.state.events) {
-
-            if (event.service === from) {
-
-                event.service = to;
-                changed = true;
-
-}
-
-}
-
-        if (changed) {
-
-            this.dirty = true;
-
-}
-
-}
-
     save(): Promise<void> {
 
         const queued = this.saveQueue.then(() => this.write());

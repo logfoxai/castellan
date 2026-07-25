@@ -145,31 +145,3 @@ test('StateManager persists per-service poll enabled flags', async (assert) => {
     await rm(dir, {recursive: true, force: true});
 
 });
-
-test('StateManager renameService migrates deployments, poll flags, and events', async (assert) => {
-
-    const dir = await mkdtemp(path.join(os.tmpdir(), 'castellan-state-'));
-    const file = path.join(dir, 'state.json');
-    const manager = new StateManager(file);
-
-    manager.appendDeployment('api-1', {digest: 'sha256:good', outcome: 'success'});
-    manager.setDigestRejected('api-1', 'sha256:bad', true);
-    manager.setServicePollEnabled('api-1', false);
-    manager.appendEvent({
-        at: new Date('2026-07-24T12:00:00.000Z'),
-        type: 'deploy',
-        service: 'api-1',
-        message: 'rolled out',
-    });
-
-    manager.renameService('api-1', 'api');
-
-    assert.equal(manager.getDeployments('api').length, 2);
-    assert.equal(manager.getDeployments('api-1').length, 0);
-    assert.equal(manager.getServicePollEnabled('api', true), false);
-    assert.equal(manager.getEvents().some((event) => event.service === 'api'), true);
-    assert.equal(manager.getEvents().some((event) => event.service === 'api-1'), false);
-
-    await rm(dir, {recursive: true, force: true});
-
-});

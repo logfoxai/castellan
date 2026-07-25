@@ -65,56 +65,41 @@ export class Roller implements RollerPort {
 
     async syncDiscoveredServices(): Promise<void> {
 
-        this.adoptPersistedAliasesForManaged();
-        await this.state.save();
-
         const discovered = await discoverManagedServices(this.docker);
         const discoveredNames = new Set(discovered.map((service) => service.name));
-        const orphans = this.managedServices.filter((service) => !discoveredNames.has(service.name));
-        const claimedOrphans = new Set<string>();
 
         for (const service of discovered) {
 
-            this.upsertDiscoveredService(service, orphans, claimedOrphans);
+            const existing = this.findService(service.name);
+
+            if (!existing) {
+
+                this.registerManagedService(service, true);
+                continue;
 
 }
 
-        this.pruneUndiscoveredServices(discoveredNames, claimedOrphans);
-        await this.state.save();
+            this.applyDiscoveredMetadata(existing, service);
 
 }
 
-    private upsertDiscoveredService(
-        service: ManagedService,
-        orphans: ManagedService[],
-        claimedOrphans: Set<string>,
-    ): void {
+        this.managedServices = this.managedServices.filter((service) => {
 
-        const existing = this.findService(service.name);
+            if (discoveredNames.has(service.name)) {
 
-        if (!existing) {
-
-            const renameFrom = findUniqueImageMatch(
-                orphans.filter((orphan) => !claimedOrphans.has(orphan.name)),
-                service,
-            );
-
-            if (renameFrom) {
-
-                const oldName = renameFrom.name;
-
-                this.migrateManagedService(renameFrom, service);
-                claimedOrphans.add(oldName);
-                return;
+                return true;
 
 }
 
-            this.registerManagedService(service, true);
-            return;
+            // Logical name is identity — a rename (e.g. adding/changing group)
+            // drops the old unit's runtime. Persisted history under the old name
+            // is left unused rather than migrated.
+            this.runtimes.delete(service.name);
+            this.locks.delete(service.name);
 
-}
+            return false;
 
-        this.applyDiscoveredMetadata(existing, service);
+});
 
 }
 
@@ -136,28 +121,6 @@ export class Roller implements RollerPort {
         runtime.registry = service.registry;
         runtime.repository = service.repository;
         runtime.tag = service.tag;
-
-}
-
-    private pruneUndiscoveredServices(
-        discoveredNames: Set<string>,
-        claimedOrphans: Set<string>,
-    ): void {
-
-        this.managedServices = this.managedServices.filter((service) => {
-
-            if (discoveredNames.has(service.name) || claimedOrphans.has(service.name)) {
-
-                return true;
-
-}
-
-            this.runtimes.delete(service.name);
-            this.locks.delete(service.name);
-
-            return false;
-
-});
 
 }
 
@@ -702,78 +665,6 @@ export class Roller implements RollerPort {
 
 }
 
-    private migrateManagedService(from: ManagedService, to: ManagedService): void {
-
-        const oldName = from.name;
-        const runtime = this.runtimes.get(oldName);
-
-        from.name = to.name;
-        from.registry = to.registry;
-        from.repository = to.repository;
-        from.tag = to.tag;
-        from.composeServices = to.composeServices;
-
-        if (runtime) {
-
-            this.runtimes.delete(oldName);
-            runtime.name = to.name;
-            runtime.registry = to.registry;
-            runtime.repository = to.repository;
-            runtime.tag = to.tag;
-            this.runtimes.set(to.name, runtime);
-
-}
-
-        if (this.locks.has(oldName)) {
-
-            const locked = this.locks.get(oldName) === true;
-
-            this.locks.delete(oldName);
-            this.locks.set(to.name, locked);
-
-}
-
-        this.state.renameService(oldName, to.name);
-        this.recordEvent('check', to.name, `Migrated managed service from ${oldName}`);
-
-}
-
-    private adoptPersistedAliasesForManaged(): void {
-
-        for (const service of this.managedServices) {
-
-            this.adoptPersistedAliases(service);
-            const runtime = this.runtimes.get(service.name);
-
-            if (!runtime) {
-
-                continue;
-
-}
-
-            runtime.pollEnabled = this.state.getServicePollEnabled(service.name, runtime.pollEnabled);
-            this.syncRejectedDigests(runtime);
-
-}
-
-}
-
-    private adoptPersistedAliases(service: ManagedService): void {
-
-        for (const alias of service.composeServices ?? []) {
-
-            if (alias === service.name) {
-
-                continue;
-
-}
-
-            this.state.renameService(alias, service.name);
-
-}
-
-}
-
     private registerManagedService(service: ManagedService, defaultPollEnabled: boolean): void {
 
         if (this.findService(service.name)) {
@@ -782,7 +673,6 @@ export class Roller implements RollerPort {
 
 }
 
-        this.adoptPersistedAliases(service);
         this.managedServices.push(service);
 
         const runtime = createRuntime(
@@ -832,20 +722,5 @@ function createRuntime(service: ManagedService, pollEnabled: boolean): ServiceRu
         lastError: null,
         pollEnabled,
     };
-
-}
-
-function findUniqueImageMatch(
-    candidates: ManagedService[],
-    target: ManagedService,
-): ManagedService | null {
-
-    const matches = candidates.filter((candidate) => (
-        candidate.registry === target.registry
-        && candidate.repository === target.repository
-        && candidate.tag === target.tag
-    ));
-
-    return matches.length === 1 ? matches[0]! : null;
 
 }

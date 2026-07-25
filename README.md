@@ -137,6 +137,8 @@ Discovery runs **at startup and on every registry check**. New labeled container
 
 When multiple compose services share the same image ref, Castellan restarts them one at a time. By default the logical service name is the **repository** (e.g. `api-1` + `api-2` → `myorg/api-service`). Set the same **`ai.logfox.castellan.group`** on each replica to override (e.g. `group: api`).
 
+The logical name is identity. Changing or adding `group` registers a new managed unit (deployment history and poll settings under the old name are not migrated). Prefer setting `group` before the first deploy.
+
 This matches Watchtower’s **`--label-enable`** model — only labeled services are updated. Castellan does **not** mirror Watchtower’s default watch-all mode.
 
 # Migrating from Watchtower
