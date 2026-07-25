@@ -4,6 +4,7 @@ services:
     restart: unless-stopped
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
+      # Host docker login creds — needed for private registries (harmless if unused)
       - /root/.docker:/root/.docker:ro
       - ./docker-compose.yml:/app/docker-compose.yml:ro
       - ./castellan-state:/app/state
