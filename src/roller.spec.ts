@@ -205,8 +205,10 @@ test('failed manual deploy does not disable polling', async (assert) => {
 
         const ok = await roller.deploy('api', 'sha256:bad');
 
-        assert.equal(ok, true);
+        // ok means the requested digest is running — not merely that rollback left us stable
+        assert.equal(ok, false);
         assert.equal(roller.getStatus().services[0]?.pollEnabled, true);
+        assert.equal(roller.getStatus().services[0]?.currentDigest, 'sha256:known-good');
 
 } finally {
 
