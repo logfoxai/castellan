@@ -248,7 +248,6 @@ Items from the earlier README roadmap — still valid, lower priority than obser
 
 - Notifications (Slack/webhook on deploy, rollback, failure)
 - Prometheus metrics (poll latency, deploy outcomes)
-- CLI companion (`castellan status`, `check`, `reject`)
 - Minimum update age before deploy
 - Crash-loop detection
 - Image diff preview (env/port changes)
