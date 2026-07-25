@@ -214,6 +214,12 @@ To deploy immediately after CI pushes, call **`forceCheck`** instead of waiting 
       -d '{}'
 ```
 
+The raw `curl` only *triggers* a check and returns immediately. To also **wait for the rollout to settle** (and fail the job on rollback), use the official **[Castellan CLI](https://github.com/logfoxai/castellan-cli)** — it runs `forceCheck` and streams status until every watched service is healthy:
+
+```yaml
+- run: castellan watch api-service
+```
+
 Set `CASTELLAN_POLL_ENABLED=false` if you only want CI-triggered deploys.
 
 ### Choosing tags
@@ -231,7 +237,7 @@ Castellan always runs registry polling and compose rollouts. HTTP is optional:
 | Mode | Env | HTTP | Use when |
 |---|---|---|---|
 | **Full** (default) | `CASTELLAN_API_ENABLED=true`, `CASTELLAN_DASHBOARD_ENABLED=true` | Dashboard at `/` + RPC on `/v1` | Day-to-day ops with browser UI and automation |
-| **API-only** | `CASTELLAN_API_ENABLED=true`, `CASTELLAN_DASHBOARD_ENABLED=false` | RPC on `/v1` only | Scripts, curl, or [castellan-cli](https://github.com/logfoxai/castellan-cli) — no browser UI |
+| **API-only** | `CASTELLAN_API_ENABLED=true`, `CASTELLAN_DASHBOARD_ENABLED=false` | RPC on `/v1` only | Scripts, curl, or the [Castellan CLI](https://github.com/logfoxai/castellan-cli) — no browser UI |
 | **Headless** | `CASTELLAN_API_ENABLED=false` | None | Zero HTTP surface; polling and rollouts only |
 
 `CASTELLAN_DASHBOARD_ENABLED` is ignored when `CASTELLAN_API_ENABLED=false`. In headless mode no port is bound, no auth token is generated, and state is still persisted to disk.
@@ -392,7 +398,7 @@ Served at `/` when `CASTELLAN_API_ENABLED` and `CASTELLAN_DASHBOARD_ENABLED` are
 
 Active plan: **[docs/roadmap.md](docs/roadmap.md)** — observability + MCP (read track) and minimal deploy mutations (write track): digest history, pin deploy, registry catalog, managed logs, stdio MCP.
 
-Backlog (not scheduled): notifications, Prometheus metrics, CLI companion, minimum update age, crash-loop detection, image diff preview, multi-host.
+Backlog (not scheduled): notifications, Prometheus metrics, minimum update age, crash-loop detection, image diff preview, multi-host.
 
 Have an idea? Open an issue or discussion.
 
@@ -415,9 +421,9 @@ Castellan controls the Docker socket and can restart any container it manages. *
 2. Castellan serves the page and sets an **httpOnly session cookie** with the API secret.
 3. The dashboard’s fetch calls send that cookie automatically.
 
-### curl, scripts, and castellan-cli
+### curl, scripts, and the CLI
 
-For CI settle gates, use **[castellan-cli](https://github.com/logfoxai/castellan-cli)** (`watch` / `status` / `check`). Raw HTTP:
+For CI settle gates, use the **[Castellan CLI](https://github.com/logfoxai/castellan-cli)** (`watch` / `status` / `check`) — same `CASTELLAN_URL` / `CASTELLAN_AUTH_TOKEN`. Raw HTTP:
 
 ```bash
 curl -sS -X POST http://127.0.0.1:3003/v1/status \
