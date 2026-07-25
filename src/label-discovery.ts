@@ -1,4 +1,5 @@
 import type {ContainerInfo} from 'dockerode';
+import {matchesComposeProject} from './compose-containers.js';
 import type {DockerClient} from './docker.js';
 import {mergeManagedServicesByImage} from './compose-targets.js';
 import {parseImageRef} from './image-ref.js';
@@ -26,7 +27,10 @@ function hasDiscoveryLabel(labels: Record<string, string> | undefined): boolean 
 
 }
 
-export async function discoverManagedServices(docker: DockerClient): Promise<ManagedService[]> {
+export async function discoverManagedServices(
+    docker: DockerClient,
+    composeProject: string,
+): Promise<ManagedService[]> {
 
     const containers = await docker.listContainers();
     const discovered: ManagedService[] = [];
@@ -37,7 +41,13 @@ export async function discoverManagedServices(docker: DockerClient): Promise<Man
 
             continue;
 
-}
+        }
+
+        if (!matchesComposeProject(container, composeProject)) {
+
+            continue;
+
+        }
 
         const service = buildService(container);
 
@@ -45,11 +55,11 @@ export async function discoverManagedServices(docker: DockerClient): Promise<Man
 
             continue;
 
-}
+        }
 
         discovered.push(service);
 
-}
+    }
 
     return mergeManagedServicesByImage(discovered);
 

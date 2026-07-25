@@ -47,9 +47,35 @@ test('discoverManagedServices ignores disagreeing group labels', async (assert) 
         ],
     } as unknown as DockerClient;
 
-    const services = await discoverManagedServices(docker);
+    const services = await discoverManagedServices(docker, 'logfox');
 
     assert.equal(services.length, 1);
     assert.equal(services[0].name, 'myorg/api-service');
+
+});
+
+test('discoverManagedServices ignores labeled containers from other compose projects', async (assert) => {
+
+    const stagingImage = 'ghcr.io/myorg/api-service:staging';
+    const otherImage = 'ghcr.io/myorg/other-service:staging';
+
+    const docker = {
+        listContainers: async () => [
+            labeledRunningContainer('1', 'api', stagingImage),
+            {
+                ...labeledRunningContainer('2', 'worker', otherImage),
+                Labels: {
+                    'com.docker.compose.service': 'worker',
+                    'com.docker.compose.project': 'other',
+                    [CASTELLAN_AUTUPDATE_LABEL]: 'true',
+                },
+            },
+        ],
+    } as unknown as DockerClient;
+
+    const services = await discoverManagedServices(docker, 'logfox');
+
+    assert.equal(services.length, 1);
+    assert.equal(services[0].name, 'api');
 
 });

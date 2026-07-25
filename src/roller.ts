@@ -65,7 +65,7 @@ export class Roller implements RollerPort {
 
     async syncDiscoveredServices(): Promise<void> {
 
-        const discovered = await discoverManagedServices(this.docker);
+        const discovered = await discoverManagedServices(this.docker, this.config.compose.project);
         const discoveredNames = new Set(discovered.map((service) => service.name));
 
         for (const service of discovered) {
@@ -77,7 +77,7 @@ export class Roller implements RollerPort {
                 this.registerManagedService(service, true);
                 continue;
 
-}
+            }
 
             this.applyDiscoveredMetadata(existing, service);
 
@@ -650,7 +650,7 @@ export class Roller implements RollerPort {
 
 }
 
-        const discovered = await discoverManagedServices(this.docker);
+        const discovered = await discoverManagedServices(this.docker, this.config.compose.project);
         const match = discovered.find((service) => service.name === serviceName);
 
         if (!match) {

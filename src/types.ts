@@ -29,7 +29,8 @@ export type ApiConfig = {
 
 export type ComposeConfig = {
     file: string;
-    project?: string;
+    /** Required after loadConfig — compose project for -p and container label filtering. */
+    project: string;
     envFile?: string;
 };
 

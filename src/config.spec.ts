@@ -67,12 +67,100 @@ test('loadConfig merges env settings with discovered services', async (assert) =
 
 test('loadConfig returns empty managedServices when none are labeled yet', async (assert) => {
 
+    const dir = await tempDir();
+    const composeFile = path.join(dir, 'docker-compose.yml');
+
+    await writeFile(composeFile, 'name: empty\nservices:\n', 'utf8');
+
     const docker = {
         listContainers: async () => [],
     } as unknown as DockerClient;
 
-    const config = await loadConfig(docker);
+    const config = await withEnv({CASTELLAN_COMPOSE_FILE: composeFile}, async () => loadConfig(docker));
 
     assert.equal(config.managedServices.length, 0);
+    assert.equal(config.compose.project, 'empty');
+
+    await cleanup(dir);
+
+});
+
+test('loadConfig throws when compose project cannot be resolved', async (assert) => {
+
+    const dir = await tempDir();
+    // Directory basename "app" is intentionally not used as a project name.
+    const appDir = path.join(dir, 'app');
+    const {mkdir} = await import('fs/promises');
+
+    await mkdir(appDir);
+    const composeFile = path.join(appDir, 'docker-compose.yml');
+
+    await writeFile(composeFile, 'services:\n  api:\n    image: x\n', 'utf8');
+
+    const docker = {
+        listContainers: async () => [],
+    } as unknown as DockerClient;
+
+    await assert.throws(
+        () => withEnv({CASTELLAN_COMPOSE_FILE: composeFile}, async () => loadConfig(docker)),
+        /CASTELLAN_COMPOSE_PROJECT/,
+    );
+
+    await cleanup(dir);
+
+});
+
+function labeledContainer(
+    id: string,
+    project: string,
+    service: string,
+    image: string,
+): {
+    Id: string;
+    Names: string[];
+    Image: string;
+    ImageID: string;
+    Labels: Record<string, string>;
+    State: string;
+    Status: string;
+} {
+
+    return {
+        Id: id,
+        Names: [`/${project}_${service}_1`],
+        Image: image,
+        ImageID: `sha256:${id}`,
+        Labels: {
+            'com.docker.compose.service': service,
+            'com.docker.compose.project': project,
+            [CASTELLAN_AUTUPDATE_LABEL]: 'true',
+        },
+        State: 'running',
+        Status: 'Up',
+    };
+
+}
+
+test('loadConfig discovers only containers in the resolved compose project', async (assert) => {
+
+    const dir = await tempDir();
+    const composeFile = path.join(dir, 'docker-compose.yml');
+
+    await writeFile(composeFile, 'name: myapp\nservices:\n', 'utf8');
+
+    const docker = {
+        listContainers: async () => [
+            labeledContainer('mine', 'myapp', 'worker', 'example.com/worker:prime'),
+            labeledContainer('other', 'otherstack', 'api', 'example.com/api:prime'),
+        ],
+    } as unknown as DockerClient;
+
+    const config = await withEnv({CASTELLAN_COMPOSE_FILE: composeFile}, async () => loadConfig(docker));
+
+    assert.equal(config.managedServices.length, 1);
+    assert.equal(config.managedServices[0].name, 'worker');
+    assert.equal(config.compose.project, 'myapp');
+
+    await cleanup(dir);
 
 });

@@ -8,7 +8,21 @@ import {discoverManagedServices} from './label-discovery.js';
 export async function loadConfig(docker: DockerClient): Promise<Config> {
 
     const env = loadEnvConfig();
-    const managedServices = await discoverManagedServices(docker);
+    const compose = {...env.compose};
+
+    compose.project = compose.project ?? await inferComposeProject(compose.file);
+
+    if (!compose.project) {
+
+        throw new Error(
+            'Could not resolve compose project. Set CASTELLAN_COMPOSE_PROJECT (or add a top-level '
+            + '`name:` to the compose file). Without it Castellan cannot target the correct stack '
+            + 'for health checks and deploys.',
+        );
+
+    }
+
+    const managedServices = await discoverManagedServices(docker, compose.project);
 
     if (managedServices.length === 0) {
 
@@ -17,15 +31,15 @@ export async function loadConfig(docker: DockerClient): Promise<Config> {
             + 'you want Castellan to manage. Will keep checking on each poll.',
         );
 
-}
-
-    const compose = {...env.compose};
-
-    compose.project = compose.project ?? await inferComposeProject(compose.file);
+    }
 
     return {
         managedServices,
-        compose,
+        compose: {
+            file: compose.file,
+            project: compose.project,
+            envFile: compose.envFile,
+        },
         poll: env.poll,
         rollback: env.rollback,
         api: env.api,
@@ -44,7 +58,7 @@ async function inferComposeProject(file: string): Promise<string | undefined> {
 
             return nameMatch[1];
 
-}
+        }
 
         const dir = path.dirname(file);
         const inferred = path.basename(dir);
@@ -53,14 +67,14 @@ async function inferComposeProject(file: string): Promise<string | undefined> {
 
             return undefined;
 
-}
+        }
 
         return inferred;
 
-} catch {
+    } catch {
 
         return undefined;
 
-}
+    }
 
 }

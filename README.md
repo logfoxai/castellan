@@ -76,6 +76,8 @@ Amazon **ECR**, **Docker Hub**, **GHCR**, and other **OCI Distribution v2** host
 Replacing Watchtower? See [Migrating from Watchtower](#migrating-from-watchtower).
 
 ```yaml
+name: mystack
+
 services:
   castellan:
     image: ghcr.io/logfoxai/castellan:latest
@@ -88,6 +90,7 @@ services:
       - ./castellan-state:/app/state
     environment:
       CASTELLAN_COMPOSE_FILE: /app/docker-compose.yml
+      # Required — must match compose `name:` / `docker compose -p`
       CASTELLAN_COMPOSE_PROJECT: mystack
     networks: [backend]
 
@@ -154,6 +157,8 @@ This matches Watchtower’s **`--label-enable`** model — only labeled services
 Remove the `watchtower` service and add `castellan`:
 
 ```yaml
+name: mystack
+
 services:
   castellan:
     image: ghcr.io/logfoxai/castellan:latest
@@ -165,6 +170,7 @@ services:
       - ./castellan-state:/app/state
     environment:
       CASTELLAN_COMPOSE_FILE: /app/docker-compose.yml
+      CASTELLAN_COMPOSE_PROJECT: mystack
 ```
 
 ## Label change (required)
@@ -335,7 +341,7 @@ That file configures **Compose rendering**, not Castellan’s own settings. Cast
 | Env var | Default | Purpose |
 |---|---|---|
 | `CASTELLAN_COMPOSE_FILE` | `/app/docker-compose.yml` | Compose file for pull/up |
-| `CASTELLAN_COMPOSE_PROJECT` | infer from compose `name:` | Project label filter |
+| `CASTELLAN_COMPOSE_PROJECT` | compose `name:` (required) | Compose project (`-p`) + container filter; startup fails if unresolved |
 | `CASTELLAN_COMPOSE_ENV_FILE` | — | Optional `--env-file` for `docker compose` pull/up |
 | `CASTELLAN_POLL_ENABLED` | `true` | Periodic polling |
 | `CASTELLAN_POLL_INTERVAL_MS` | `60000` | Poll interval |
