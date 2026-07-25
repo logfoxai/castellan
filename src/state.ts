@@ -97,6 +97,7 @@ export class StateManager {
 
 }
 
+        let changed = false;
         const deployments = this.state.deployments[from];
 
         if (deployments) {
@@ -105,6 +106,7 @@ export class StateManager {
 
             this.state.deployments[to] = [...deployments, ...existing].slice(0, MAX_DEPLOYMENTS_PER_SERVICE);
             delete this.state.deployments[from];
+            changed = true;
 
 }
 
@@ -112,6 +114,7 @@ export class StateManager {
 
             this.state.pollEnabled[to] = this.state.pollEnabled[from];
             delete this.state.pollEnabled[from];
+            changed = true;
 
 }
 
@@ -120,12 +123,17 @@ export class StateManager {
             if (event.service === from) {
 
                 event.service = to;
+                changed = true;
 
 }
 
 }
 
-        this.dirty = true;
+        if (changed) {
+
+            this.dirty = true;
+
+}
 
 }
 

@@ -407,6 +407,49 @@ test('syncDiscoveredServices migrates runtime and history when group label is ad
 
 });
 
+test('syncDiscoveredServices adopts persisted compose-name state on register', async (assert) => {
+
+    const dir = await mkdtemp(path.join(os.tmpdir(), 'castellan-roller-'));
+    const state = new StateManager(path.join(dir, 'state.json'));
+
+    state.appendDeployment('api-1', {digest: 'sha256:known-good', outcome: 'success'});
+    state.setServicePollEnabled('api-1', false);
+    await state.save();
+
+    const useGroup = {value: true};
+    const roller = new Roller(
+        discoveryConfig,
+        noopRegistry(),
+        createRenameDiscoverDocker(useGroup),
+        state,
+    );
+
+    try {
+
+        await roller.syncDiscoveredServices();
+
+        const status = roller.getStatus().services.find((entry) => entry.name === 'api');
+
+        assert.equal(Boolean(status), true);
+        assert.equal(status?.pollEnabled, false);
+        assert.equal(state.getDeployments('api').length, 1);
+        assert.equal(state.getDeployments('api-1').length, 0);
+
+        const restored = new StateManager(path.join(dir, 'state.json'));
+
+        await restored.load();
+        assert.equal(restored.getDeployments('api').length, 1);
+        assert.equal(restored.getServicePollEnabled('api', true), false);
+
+} finally {
+
+        roller.stop();
+        await rm(dir, {recursive: true, force: true});
+
+}
+
+});
+
 test('syncDiscoveredServices refreshes runtime image metadata', async (assert) => {
 
     const dir = await mkdtemp(path.join(os.tmpdir(), 'castellan-roller-'));

@@ -65,6 +65,9 @@ export class Roller implements RollerPort {
 
     async syncDiscoveredServices(): Promise<void> {
 
+        this.adoptPersistedAliasesForManaged();
+        await this.state.save();
+
         const discovered = await discoverManagedServices(this.docker);
         const discoveredNames = new Set(discovered.map((service) => service.name));
         const orphans = this.managedServices.filter((service) => !discoveredNames.has(service.name));
@@ -77,6 +80,7 @@ export class Roller implements RollerPort {
 }
 
         this.pruneUndiscoveredServices(discoveredNames, claimedOrphans);
+        await this.state.save();
 
 }
 
@@ -734,6 +738,42 @@ export class Roller implements RollerPort {
 
 }
 
+    private adoptPersistedAliasesForManaged(): void {
+
+        for (const service of this.managedServices) {
+
+            this.adoptPersistedAliases(service);
+            const runtime = this.runtimes.get(service.name);
+
+            if (!runtime) {
+
+                continue;
+
+}
+
+            runtime.pollEnabled = this.state.getServicePollEnabled(service.name, runtime.pollEnabled);
+            this.syncRejectedDigests(runtime);
+
+}
+
+}
+
+    private adoptPersistedAliases(service: ManagedService): void {
+
+        for (const alias of service.composeServices ?? []) {
+
+            if (alias === service.name) {
+
+                continue;
+
+}
+
+            this.state.renameService(alias, service.name);
+
+}
+
+}
+
     private registerManagedService(service: ManagedService, defaultPollEnabled: boolean): void {
 
         if (this.findService(service.name)) {
@@ -742,6 +782,7 @@ export class Roller implements RollerPort {
 
 }
 
+        this.adoptPersistedAliases(service);
         this.managedServices.push(service);
 
         const runtime = createRuntime(
