@@ -16,7 +16,7 @@
   </p>
 
   <p>
-    Polls your registry, rolls out updates safely, verifies health, rolls back on failure — with an optional built-in dashboard, API, or fully headless operation.
+    Polls your registry, rolls out updates safely, verifies health, rolls back on failure — with an optional dashboard, HTTP API, and a CLI for CI settle gates.
   </p>
 
   <p>
@@ -32,14 +32,16 @@ Castellan is a **single-container sidecar** for docker-compose — a practical *
 
 Setup uses **compose labels + `CASTELLAN_*` env vars** — no Castellan config file. Run with Docker Compose, `docker run`, or `npm run dev` (export env vars in your shell). See [Configuration reference](#configuration-reference).
 
+Day-to-day ops: use the **dashboard**. Automation / CI: use the **[Castellan CLI](https://github.com/logfoxai/castellan-cli)** (`castellan watch`) so jobs wait until rollouts settle (or fail on rollback). The HTTP API is there when you need custom tooling.
+
 ## What it does
 
-1. **Polls** a registry **tag** on an interval (or on demand via API).
+1. **Polls** a registry **tag** on an interval (or on demand via API / CLI).
 2. Compares the tag’s current **digest** (`sha256:…`) to what is running.
 3. **Deploys** when the digest changed — usually CI pushed a new build to the same tag — via `docker compose pull` / rolling restarts.
 4. **Verifies** health via Docker compose healthchecks.
 5. **Rolls back** to the last known-good digest if a deploy fails.
-6. **Observes** everything from an optional dashboard and RPC API — or run **headless** with no HTTP at all.
+6. **Observes** everything from an optional dashboard, the [Castellan CLI](https://github.com/logfoxai/castellan-cli), and RPC API — or run **headless** with no HTTP at all.
 
 See [How it works](#how-it-works) for the runtime loop and [Tags and versions](#tags-and-versions) for the tag/digest model.
 
@@ -49,7 +51,7 @@ Castellan watches **one tag per managed service** and redeploys when the **diges
 
 The tag is whatever is on each labeled container’s running image (`myorg/api:staging` → watches `staging`).
 
-Typical CI flow: push `myorg/api-service:staging` on every merge; Castellan sees a new digest at `staging` and rolls out. Details: [Tags and versions](#tags-and-versions).
+Typical CI flow: push `myorg/api-service:staging` on every merge, then `castellan watch api-service` so the job waits until Castellan rolls out that digest (or fails). Details: [Tags and versions](#tags-and-versions) and [Castellan CLI](#castellan-cli).
 
 ## HTTP surface
 
@@ -80,7 +82,7 @@ services:
     restart: unless-stopped
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
-      # Host docker login creds — needed for private registries (harmless if unused)
+      # Host docker login creds — needed for private registries
       - /root/.docker:/root/.docker:ro
       - ./docker-compose.yml:/app/docker-compose.yml:ro
       - ./castellan-state:/app/state
@@ -106,7 +108,8 @@ Full example: [examples/docker-compose.yml](examples/docker-compose.yml)
 | Label discovery | [Label discovery](#label-discovery) |
 | Env vars & `env_file:` | [Configuration reference](#configuration-reference) |
 | Migrating from Watchtower | [Migrating from Watchtower](#migrating-from-watchtower) |
-| Tags, digests, CI `forceCheck` | [Tags and versions](#tags-and-versions) |
+| Tags, digests, CI | [Tags and versions](#tags-and-versions) |
+| Castellan CLI (CI / automation) | [Castellan CLI](#castellan-cli) |
 | Headless / API-only | [Operating modes](#operating-modes) |
 | RPC methods | [API](#api) |
 | Dashboard UI | [Dashboard](#dashboard) |
@@ -156,7 +159,7 @@ services:
     image: ghcr.io/logfoxai/castellan:latest
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
-      # Host docker login creds — needed for private registries (harmless if unused)
+      # Host docker login creds — needed for private registries
       - /root/.docker:/root/.docker:ro
       - ./docker-compose.yml:/app/docker-compose.yml:ro
       - ./castellan-state:/app/state
@@ -207,23 +210,18 @@ The dashboard shows **`repository:tag`** at a glance (e.g. `api-service:staging`
 
 Many teams publish environment tags from CI — push `myorg/api-service:staging` on every merge to main. Castellan watches that tag and redeploys when the digest changes.
 
-To deploy immediately after CI pushes, call **`forceCheck`** instead of waiting for the next poll:
+After CI pushes the image, use the **[Castellan CLI](https://github.com/logfoxai/castellan-cli)** so the job asks Castellan to check now **and** waits until the rollout settles (fails the job on rollback):
 
 ```yaml
 - run: |
-    curl -sf -X POST "$CASTELLAN_URL/v1/forceCheck" \
-      -H "Authorization: Bearer $CASTELLAN_AUTH_TOKEN" \
-      -H "Content-Type: application/json" \
-      -d '{}'
+    npm install -g castellan-cli
+    castellan watch api-service
+  env:
+    CASTELLAN_URL: http://castellan.example:8443
+    CASTELLAN_AUTH_TOKEN: ${{ secrets.CASTELLAN_AUTH_TOKEN }}
 ```
 
-The raw `curl` only *triggers* a check and returns immediately. To also **wait for the rollout to settle** (and fail the job on rollback), use the official **[Castellan CLI](https://github.com/logfoxai/castellan-cli)** — it runs `forceCheck` and streams status until every watched service is healthy:
-
-```yaml
-- run: castellan watch api-service
-```
-
-Set `CASTELLAN_POLL_ENABLED=false` if you only want CI-triggered deploys.
+Set `CASTELLAN_POLL_ENABLED=false` if you only want CI-triggered deploys (no periodic polling). Full CLI docs: [Castellan CLI](#castellan-cli).
 
 ### Choosing tags
 
@@ -240,7 +238,7 @@ Castellan always runs registry polling and compose rollouts. HTTP is optional:
 | Mode | Env | HTTP | Use when |
 |---|---|---|---|
 | **Full** (default) | `CASTELLAN_API_ENABLED=true`, `CASTELLAN_DASHBOARD_ENABLED=true` | Dashboard at `/` + RPC on `/v1` | Day-to-day ops with browser UI and automation |
-| **API-only** | `CASTELLAN_API_ENABLED=true`, `CASTELLAN_DASHBOARD_ENABLED=false` | RPC on `/v1` only | Scripts, curl, or the [Castellan CLI](https://github.com/logfoxai/castellan-cli) — no browser UI |
+| **API-only** | `CASTELLAN_API_ENABLED=true`, `CASTELLAN_DASHBOARD_ENABLED=false` | RPC on `/v1` only | [Castellan CLI](https://github.com/logfoxai/castellan-cli) / custom scripts — no browser UI |
 | **Headless** | `CASTELLAN_API_ENABLED=false` | None | Zero HTTP surface; polling and rollouts only |
 
 `CASTELLAN_DASHBOARD_ENABLED` is ignored when `CASTELLAN_API_ENABLED=false`. In headless mode no port is bound, no auth token is generated, and state is still persisted to disk.
@@ -278,7 +276,7 @@ Run **`docker login`** on the host (or your platform’s ECR login script). Cast
 castellan:
   volumes:
     - /var/run/docker.sock:/var/run/docker.sock
-    # Host docker login creds — needed for private registries (harmless if unused)
+    # Host docker login creds — needed for private registries
     - /root/.docker:/root/.docker:ro
 ```
 
@@ -295,9 +293,9 @@ Public images on Docker Hub or GHCR work without login.
 
 # Configuration reference
 
-Castellan has **no application config file** and **no CLI flags**. Global settings are read from **`process.env`** at startup (`CASTELLAN_*` variables). Managed services are discovered from **compose labels** on running containers.
+Castellan has **no application config file** and the sidecar itself takes **no process flags**. Global settings are read from **`process.env`** at startup (`CASTELLAN_*` variables). Managed services are discovered from **compose labels** on running containers.
 
-Mount a **state volume** (`./castellan-state:/app/state`). On first start, if you omit `CASTELLAN_AUTH_TOKEN`, Castellan writes a random API secret to `auth-token` in that directory — use it for curl/scripts; the dashboard sets a session cookie automatically (no login form).
+Mount a **state volume** (`./castellan-state:/app/state`). On first start, if you omit `CASTELLAN_AUTH_TOKEN`, Castellan writes a random API secret to `auth-token` in that directory — use it with the [Castellan CLI](https://github.com/logfoxai/castellan-cli) or API clients; the dashboard sets a session cookie automatically (no login form).
 
 Open the dashboard at `http://castellan:3003/` (or map a host port).
 
@@ -358,14 +356,33 @@ That file configures **Compose rendering**, not Castellan’s own settings. Cast
 | `ai.logfox.castellan.autoupdate` | Opt in to automatic updates (any value except `false`) |
 | `ai.logfox.castellan.group` | Optional logical name when merging rolling replicas |
 
+# Castellan CLI
+
+For automation, prefer the official **[Castellan CLI](https://github.com/logfoxai/castellan-cli)** over raw HTTP. Day-to-day ops stay in the [dashboard](#dashboard); use the CLI when a script or CI job needs a hard gate.
+
+```bash
+npm install -g castellan-cli
+
+export CASTELLAN_URL=http://castellan.example:8443
+export CASTELLAN_AUTH_TOKEN=…
+
+castellan watch api-service          # check registry + wait until settle (CI gate)
+castellan status                     # one-shot snapshot
+castellan check                      # kick a registry check; do not wait
+```
+
+`watch` asks Castellan to check now (unless `--no-force-check`), streams progress, and exits **0** only when watched services land on a new digest healthy — **1** on failure, rollback, or timeout.
+
+Full reference: [logfoxai/castellan-cli](https://github.com/logfoxai/castellan-cli).
+
 # API
 
-When `CASTELLAN_API_ENABLED=true` (the default), Castellan exposes an internal HTTP API on port `3003`:
+When `CASTELLAN_API_ENABLED=true` (the default), Castellan exposes an internal HTTP API on port `3003`. Prefer the [Castellan CLI](#castellan-cli) for CI and common ops; use the API when building custom tooling.
 
 - `GET /v1/health` — liveness (no auth).
 - `POST /v1/<method>` — typed RPC (requires API auth when enabled). Request body is the method input (use `{}` when there are no parameters):
   - `status` — service states and current digests.
-  - `forceCheck` — check registries immediately.
+  - `forceCheck` — check registries immediately (what `castellan check` / the start of `castellan watch` call).
   - `pause` / `resume` — pause/resume polling.
   - `deploy` — deploy a specific digest (`{"service":"api","digest":"sha256:…"}`). Disables polling for that service until re-enabled.
   - `reject` — mark a digest rejected and roll back if it is running (`{"service":"api","digest":"sha256:…"}`).
@@ -375,11 +392,20 @@ When `CASTELLAN_API_ENABLED=true` (the default), Castellan exposes an internal H
   - `dockerContainers`, `dockerImages`, `dockerNetworks`, `dockerVolumes` — Docker inspection.
   - `dockerLogs` (`{"containerId":"…","tail":100}`), `dockerStats` (`{"containerId":"…"}`), `dockerInfo`, `dockerEvents` (`{"since":300}`) — logs and stats.
 
+Example (custom tooling) — same auth the CLI uses:
+
+```bash
+curl -sS -X POST "$CASTELLAN_URL/v1/status" \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer $CASTELLAN_AUTH_TOKEN" \
+  -d '{}'
+```
+
 See [Access & API auth](#access--api-auth). For headless or API-only deployments, see [Operating modes](#operating-modes).
 
 # Dashboard
 
-Served at `/` when `CASTELLAN_API_ENABLED` and `CASTELLAN_DASHBOARD_ENABLED` are both `true` (the default).
+Served at `/` when `CASTELLAN_API_ENABLED` and `CASTELLAN_DASHBOARD_ENABLED` are both `true` (the default). Use this for day-to-day ops; use the [Castellan CLI](#castellan-cli) when CI or scripts need a settle gate.
 
 - Live service status with watched **tag** and `repository:tag`; digests and **past deployments** in expandable details.
 - **Deploy** and **Reject** actions per deployment digest (in the service manage dialog); per-service **Auto / Manual** badges.
@@ -425,16 +451,11 @@ Castellan controls the Docker socket and can restart any container it manages. *
 2. Castellan serves the page and sets an **httpOnly session cookie** with the API secret.
 3. The dashboard’s fetch calls send that cookie automatically.
 
-### curl, scripts, and the CLI
+### CLI and API clients
 
-For CI settle gates, use the **[Castellan CLI](https://github.com/logfoxai/castellan-cli)** (`watch` / `status` / `check`) — same `CASTELLAN_URL` / `CASTELLAN_AUTH_TOKEN`. Raw HTTP:
+The **[Castellan CLI](https://github.com/logfoxai/castellan-cli)** is the default client for automation — it reads `CASTELLAN_URL` and `CASTELLAN_AUTH_TOKEN` (or `--url` / `--token`). Same secret the dashboard’s session cookie carries.
 
-```bash
-curl -sS -X POST http://127.0.0.1:3003/v1/status \
-  -H 'Content-Type: application/json' \
-  -H 'Authorization: Bearer YOUR_API_SECRET' \
-  -d '{}'
-```
+Custom scripts can call the API with a Bearer token (see [API](#api) for an example).
 
 ### Where the API secret comes from
 
@@ -495,7 +516,7 @@ Castellan is part of a family of MIT-licensed tools from [Logfox](https://logfox
 |---|---|
 | **[open-prs](https://github.com/logfoxai/open-prs)** | Live TUI + CLI dashboard for every open PR in a GitHub org — CI status, deploy tracking, clickable links. |
 | **[ecswatch](https://github.com/logfoxai/ecswatch)** | ECS service watcher with CI streaming, interactive TUI, and one-shot `inspect` snapshots. |
-| **[castellan-cli](https://github.com/logfoxai/castellan-cli)** | Official Castellan CLI — trigger `forceCheck` and watch rollouts settle in CI. |
+| **[castellan-cli](https://github.com/logfoxai/castellan-cli)** | Official Castellan CLI — default way to gate CI on rollouts (`watch` / `status` / `check`). |
 | **[runtyp](https://github.com/logfoxai/runtyp)** | Zero-dependency runtime type validation for TypeScript and JavaScript. |
 
 Most ship to npm; Castellan ships as a container image. All are released with [AutoRel](https://github.com/mhweiner/autorel).
