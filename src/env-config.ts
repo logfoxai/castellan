@@ -1,6 +1,6 @@
 import type {ApiConfig, PollConfig} from './types.js';
 
-/** Compose settings from env — project may be filled later if exactly one exists on Docker. */
+/** Compose settings from env — project required if the host has more than one compose project. */
 type EnvComposeConfig = {
     file: string;
     project?: string;
