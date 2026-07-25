@@ -137,6 +137,8 @@ Discovery runs **at startup and on every registry check**. New labeled container
 
 When multiple compose services share the same image ref, Castellan restarts them one at a time. By default the logical service name is the **repository** (e.g. `api-1` + `api-2` → `myorg/api-service`). Set the same **`ai.logfox.castellan.group`** on each replica to override (e.g. `group: api`).
 
+The logical name is identity. Changing or adding `group` registers a new managed unit (deployment history and poll settings under the old name are not migrated). Prefer setting `group` before the first deploy.
+
 This matches Watchtower’s **`--label-enable`** model — only labeled services are updated. Castellan does **not** mirror Watchtower’s default watch-all mode.
 
 # Migrating from Watchtower
@@ -229,7 +231,7 @@ Castellan always runs registry polling and compose rollouts. HTTP is optional:
 | Mode | Env | HTTP | Use when |
 |---|---|---|---|
 | **Full** (default) | `CASTELLAN_API_ENABLED=true`, `CASTELLAN_DASHBOARD_ENABLED=true` | Dashboard at `/` + RPC on `/v1` | Day-to-day ops with browser UI and automation |
-| **API-only** | `CASTELLAN_API_ENABLED=true`, `CASTELLAN_DASHBOARD_ENABLED=false` | RPC on `/v1` only | Scripts, curl, or a future CLI — no browser UI |
+| **API-only** | `CASTELLAN_API_ENABLED=true`, `CASTELLAN_DASHBOARD_ENABLED=false` | RPC on `/v1` only | Scripts, curl, or [castellan-cli](https://github.com/logfoxai/castellan-cli) — no browser UI |
 | **Headless** | `CASTELLAN_API_ENABLED=false` | None | Zero HTTP surface; polling and rollouts only |
 
 `CASTELLAN_DASHBOARD_ENABLED` is ignored when `CASTELLAN_API_ENABLED=false`. In headless mode no port is bound, no auth token is generated, and state is still persisted to disk.
@@ -413,7 +415,9 @@ Castellan controls the Docker socket and can restart any container it manages. *
 2. Castellan serves the page and sets an **httpOnly session cookie** with the API secret.
 3. The dashboard’s fetch calls send that cookie automatically.
 
-### curl, scripts, and future CLI
+### curl, scripts, and castellan-cli
+
+For CI settle gates, use **[castellan-cli](https://github.com/logfoxai/castellan-cli)** (`watch` / `status` / `check`). Raw HTTP:
 
 ```bash
 curl -sS -X POST http://127.0.0.1:3003/v1/status \

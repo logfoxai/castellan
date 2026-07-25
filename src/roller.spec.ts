@@ -377,3 +377,69 @@ test('syncDiscoveredServices removes services when labels disappear', async (ass
 }
 
 });
+
+test('syncDiscoveredServices refreshes runtime image metadata', async (assert) => {
+
+    const dir = await mkdtemp(path.join(os.tmpdir(), 'castellan-roller-'));
+    const state = new StateManager(path.join(dir, 'state.json'));
+    const image = {value: 'ghcr.io/myorg/api:prime'};
+    const roller = new Roller(
+        discoveryConfig,
+        noopRegistry(),
+        createImageToggleDocker(image),
+        state,
+    );
+
+    try {
+
+        await roller.syncDiscoveredServices();
+        assert.equal(roller.getStatus().services.find((entry) => entry.name === 'api')?.tag, 'prime');
+        image.value = 'ghcr.io/myorg/api-v2:dev';
+        await roller.syncDiscoveredServices();
+        const after = roller.getStatus().services.find((entry) => entry.name === 'api');
+
+        assert.equal(after?.repository, 'myorg/api-v2');
+        assert.equal(after?.tag, 'dev');
+
+} finally {
+
+        roller.stop();
+        await rm(dir, {recursive: true, force: true});
+
+}
+
+});
+
+function noopRegistry(): Registry {
+
+    return {
+        getManifest: async () => ({digest: 'sha256:api', pushedAt: null}),
+        invalidate: () => undefined,
+    };
+
+}
+
+function createImageToggleDocker(image: {value: string}): DockerClient {
+
+    return {
+        listContainers: async () => [{
+            Id: '1',
+            Created: 1,
+            Image: image.value,
+            State: 'running',
+            Status: 'Up 1 minute (healthy)',
+            Labels: {
+                'com.docker.compose.service': 'api-1',
+                'com.docker.compose.project': 'logfox',
+                'ai.logfox.castellan.autoupdate': 'true',
+                'ai.logfox.castellan.group': 'api',
+            },
+        } as unknown as ContainerInfo],
+        getLocalDigest: async () => 'sha256:known-good',
+        composePull: async () => undefined,
+        composeUp: async () => undefined,
+        pullImage: async () => undefined,
+        tagImage: async () => undefined,
+    } as unknown as DockerClient;
+
+}

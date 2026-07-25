@@ -79,10 +79,7 @@ export class Roller implements RollerPort {
 
 }
 
-            existing.registry = service.registry;
-            existing.repository = service.repository;
-            existing.tag = service.tag;
-            existing.composeServices = service.composeServices;
+            this.applyDiscoveredMetadata(existing, service);
 
 }
 
@@ -94,11 +91,36 @@ export class Roller implements RollerPort {
 
 }
 
+            // Logical name is identity — a rename (e.g. adding/changing group)
+            // drops the old unit's runtime. Persisted history under the old name
+            // is left unused rather than migrated.
             this.runtimes.delete(service.name);
+            this.locks.delete(service.name);
 
             return false;
 
 });
+
+}
+
+    private applyDiscoveredMetadata(existing: ManagedService, service: ManagedService): void {
+
+        existing.registry = service.registry;
+        existing.repository = service.repository;
+        existing.tag = service.tag;
+        existing.composeServices = service.composeServices;
+
+        const runtime = this.runtimes.get(service.name);
+
+        if (!runtime) {
+
+            return;
+
+}
+
+        runtime.registry = service.registry;
+        runtime.repository = service.repository;
+        runtime.tag = service.tag;
 
 }
 
