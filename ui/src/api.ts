@@ -54,13 +54,7 @@ export type API = {
     deployments(input: { service: string }): { deployments: DeploymentRecord[] };
     dockerContainers(): { containers: ContainerRow[] };
     dockerStatsAll(): { stats: ContainerStat[] };
-    dockerImages(): { images: unknown[] };
-    dockerNetworks(): { networks: unknown[] };
-    dockerVolumes(): { volumes: unknown[] };
     dockerLogs(input: { containerId: string; tail?: number }): { logs: string };
-    dockerStats(input: { containerId: string }): { stats: unknown };
-    dockerInfo(): { info: unknown };
-    dockerEvents(input: { since?: number }): { events: unknown[] };
 };
 
 export async function rpc<T extends keyof API>(

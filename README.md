@@ -413,8 +413,9 @@ When `CASTELLAN_API_ENABLED=true` (the default), Castellan exposes an internal H
   - `setPollEnabled` — enable or disable automatic updates for one service (`{"service":"api","enabled":true}`).
   - `history` — recent events (all services).
   - `deployments` — per-service deployment history (`{"service":"api"}`).
-  - `dockerContainers`, `dockerImages`, `dockerNetworks`, `dockerVolumes` — Docker inspection.
-  - `dockerLogs` (`{"containerId":"…","tail":100}`), `dockerStats` (`{"containerId":"…"}`), `dockerInfo`, `dockerEvents` (`{"since":300}`) — logs and stats.
+  - `dockerContainers` — container list for the dashboard.
+  - `dockerStatsAll` — live CPU/memory stats for all containers.
+  - `dockerLogs` (`{"containerId":"…","tail":100}`) — container logs.
 
 Example (custom tooling) — same auth the CLI uses:
 

@@ -145,17 +145,8 @@ app.post('/v1/:method', (req, res) => {
             return res.json({containers});
         case 'dockerStatsAll':
             return res.json({stats});
-        case 'dockerImages':
-            return res.json({images: []});
-        case 'dockerNetworks':
-            return res.json({networks: []});
-        case 'dockerVolumes':
-            return res.json({volumes: []});
         case 'dockerLogs':
             return res.json({logs: logsByContainer[req.body?.containerId] ?? ''});
-        case 'dockerStats':
-        case 'dockerInfo':
-        case 'dockerEvents':
         case 'forceCheck':
         case 'pause':
         case 'resume':

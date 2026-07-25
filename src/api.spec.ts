@@ -40,13 +40,8 @@ function createDocker(): MockDocker {
 
     return {
         listContainers: async () => [],
-        listImages: async () => [],
-        listNetworks: async () => [],
-        listVolumes: async () => [],
-        getInfo: async () => ({}),
-        getContainerStats: async () => ({}),
+        getAllStats: async () => [],
         getContainerLogs: async () => '',
-        getEvents: async () => [],
         pullImage: async () => undefined,
         tagImage: async () => undefined,
         getLocalDigest: async () => null,

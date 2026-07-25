@@ -1,4 +1,4 @@
-import Docker, {ContainerInfo, ImageInfo, NetworkInspectInfo, VolumeInspectInfo} from 'dockerode';
+import Docker, {ContainerInfo} from 'dockerode';
 import {execFile} from 'child_process';
 import {promisify} from 'util';
 import {formatImageRef, normalizeRegistryHost} from './image-ref.js';
@@ -54,41 +54,6 @@ export class DockerClient {
 
 }
 
-    async listImages(): Promise<ImageInfo[]> {
-
-        return this.docker.listImages();
-
-}
-
-    async listNetworks(): Promise<NetworkInspectInfo[]> {
-
-        return this.docker.listNetworks();
-
-}
-
-    async listVolumes(): Promise<VolumeInspectInfo[]> {
-
-        const result = await this.docker.listVolumes();
-
-        return result.Volumes ?? [];
-
-}
-
-    async getInfo(): Promise<unknown> {
-
-        return this.docker.info();
-
-}
-
-    async getContainerStats(containerId: string): Promise<unknown> {
-
-        const container = this.docker.getContainer(containerId);
-        const stats = await container.stats({stream: false});
-
-        return stats;
-
-}
-
     async getContainerLogs(containerId: string, tail: number): Promise<string> {
 
         const container = this.docker.getContainer(containerId);
@@ -100,31 +65,6 @@ export class DockerClient {
         });
 
         return stream.toString();
-
-}
-
-    async getEvents(sinceSeconds: number): Promise<unknown[]> {
-
-        const since = Math.floor(Date.now() / 1000) - sinceSeconds;
-        const until = Math.floor(Date.now() / 1000);
-        const {stdout} = await execFileAsync('docker', [
-            'events',
-            '--since', String(since),
-            '--until', String(until),
-            '--format', '{{json .}}',
-        ]);
-
-        if (!stdout.trim()) {
-
-            return [];
-
-}
-
-        return stdout
-            .trim()
-            .split('\n')
-            .filter((line: string) => line.trim())
-            .map((line: string) => JSON.parse(line) as unknown);
 
 }
 

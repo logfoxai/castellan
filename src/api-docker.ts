@@ -13,14 +13,8 @@ export type ApiMethod =
     | 'history'
     | 'deployments'
     | 'dockerContainers'
-    | 'dockerImages'
-    | 'dockerNetworks'
-    | 'dockerVolumes'
     | 'dockerLogs'
-    | 'dockerStats'
-    | 'dockerStatsAll'
-    | 'dockerInfo'
-    | 'dockerEvents';
+    | 'dockerStatsAll';
 
 const API_METHODS = new Set<ApiMethod>([
     'status',
@@ -33,14 +27,8 @@ const API_METHODS = new Set<ApiMethod>([
     'history',
     'deployments',
     'dockerContainers',
-    'dockerImages',
-    'dockerNetworks',
-    'dockerVolumes',
     'dockerLogs',
-    'dockerStats',
     'dockerStatsAll',
-    'dockerInfo',
-    'dockerEvents',
 ]);
 
 export function isApiMethod(value: string): value is ApiMethod {
@@ -77,20 +65,8 @@ export async function dispatchDockerMethod(
             return {containers: (await docker.listContainers()).map(toContainerRow)};
         case 'dockerStatsAll':
             return {stats: await docker.getAllStats()};
-        case 'dockerImages':
-            return {images: await docker.listImages()};
-        case 'dockerNetworks':
-            return {networks: await docker.listNetworks()};
-        case 'dockerVolumes':
-            return {volumes: await docker.listVolumes()};
         case 'dockerLogs':
             return dockerLogs(docker, body);
-        case 'dockerStats':
-            return dockerStats(docker, body);
-        case 'dockerInfo':
-            return {info: await docker.getInfo()};
-        case 'dockerEvents':
-            return dockerEvents(docker, body);
         default:
             throw new Error(`Unknown method: ${method}`);
 
@@ -119,21 +95,5 @@ async function dockerLogs(docker: DockerClient, body: unknown): Promise<{logs: s
     const input = body as {containerId: string; tail?: number};
 
     return {logs: await docker.getContainerLogs(input.containerId, input.tail ?? 100)};
-
-}
-
-async function dockerStats(docker: DockerClient, body: unknown): Promise<{stats: unknown}> {
-
-    const input = body as {containerId: string};
-
-    return {stats: await docker.getContainerStats(input.containerId)};
-
-}
-
-async function dockerEvents(docker: DockerClient, body: unknown): Promise<{events: unknown[]}> {
-
-    const input = (body ?? {}) as {since?: number};
-
-    return {events: await docker.getEvents(input.since ?? 300)};
 
 }
