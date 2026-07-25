@@ -338,9 +338,7 @@ That file configures **Compose rendering**, not Castellan’s own settings. Cast
 
 ### Compose project (`CASTELLAN_COMPOSE_PROJECT`)
 
-Castellan manages **one** compose project on the Docker host. `CASTELLAN_COMPOSE_PROJECT` is required if this host has more than one compose project. Set it to the project’s name (same string Compose uses for `-p` / container label `com.docker.compose.project`).
-
-Castellan does **not** read top-level compose `name:` from the YAML.
+Castellan manages **one** compose project on the Docker host. `CASTELLAN_COMPOSE_PROJECT` is required if this host has more than one compose project. Set it to the project’s name — the same string as compose `name:`, `docker compose -p`, and the container label `com.docker.compose.project`.
 
 If the env var is unset and the host has a single compose project (from container labels), Castellan uses that project. If there are multiple projects — or none yet — startup fails until you set `CASTELLAN_COMPOSE_PROJECT`.
 
@@ -351,8 +349,6 @@ docker compose ls
 # or
 docker inspect <container> --format '{{index .Config.Labels "com.docker.compose.project"}}'
 ```
-
-Using `name: mystack` in your compose file is still a good idea so Compose itself uses a stable project name — and set `CASTELLAN_COMPOSE_PROJECT: mystack` on the sidecar when the host has more than one project (recommended even for one).
 
 ### Environment variables
 

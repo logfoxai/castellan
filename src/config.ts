@@ -60,8 +60,8 @@ async function resolveComposeProject(
 
         throw new Error(
             'Could not resolve compose project. Set CASTELLAN_COMPOSE_PROJECT to your stack name '
-            + '(see `docker compose ls` or a container label com.docker.compose.project). '
-            + 'Castellan does not read compose `name:` from the file.',
+            + '(same as compose `name:`, `docker compose -p`, or label com.docker.compose.project — '
+            + 'see `docker compose ls`).',
         );
 
     }
