@@ -3,7 +3,7 @@ export type ServiceStatus = {
     registry: string;
     repository: string;
     tag: string;
-    state: 'idle' | 'checking' | 'updating' | 'verifying' | 'stable' | 'rollback' | 'failed';
+    state: 'idle' | 'checking' | 'updating' | 'stable' | 'rollback' | 'failed';
     currentDigest: string | null;
     desiredDigest: string | null;
     lastCheckAt: string | null;

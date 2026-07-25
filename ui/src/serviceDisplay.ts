@@ -34,7 +34,7 @@ export function serviceVersionNote(service: ServiceStatus): string {
 
 }
 
-    if (service.state === 'updating' || service.state === 'verifying') {
+    if (service.state === 'updating') {
 
         return 'deploying new build';
 
