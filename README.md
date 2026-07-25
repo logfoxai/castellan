@@ -80,6 +80,7 @@ services:
     restart: unless-stopped
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
+      # Host docker login creds — needed for private registries (harmless if unused)
       - /root/.docker:/root/.docker:ro
       - ./docker-compose.yml:/app/docker-compose.yml:ro
       - ./castellan-state:/app/state
@@ -155,6 +156,8 @@ services:
     image: ghcr.io/logfoxai/castellan:latest
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
+      # Host docker login creds — needed for private registries (harmless if unused)
+      - /root/.docker:/root/.docker:ro
       - ./docker-compose.yml:/app/docker-compose.yml:ro
       - ./castellan-state:/app/state
     environment:
@@ -275,6 +278,7 @@ Run **`docker login`** on the host (or your platform’s ECR login script). Cast
 castellan:
   volumes:
     - /var/run/docker.sock:/var/run/docker.sock
+    # Host docker login creds — needed for private registries (harmless if unused)
     - /root/.docker:/root/.docker:ro
 ```
 
