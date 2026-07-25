@@ -229,7 +229,7 @@ Castellan always runs registry polling and compose rollouts. HTTP is optional:
 | Mode | Env | HTTP | Use when |
 |---|---|---|---|
 | **Full** (default) | `CASTELLAN_API_ENABLED=true`, `CASTELLAN_DASHBOARD_ENABLED=true` | Dashboard at `/` + RPC on `/v1` | Day-to-day ops with browser UI and automation |
-| **API-only** | `CASTELLAN_API_ENABLED=true`, `CASTELLAN_DASHBOARD_ENABLED=false` | RPC on `/v1` only | Scripts, curl, or a future CLI — no browser UI |
+| **API-only** | `CASTELLAN_API_ENABLED=true`, `CASTELLAN_DASHBOARD_ENABLED=false` | RPC on `/v1` only | Scripts, curl, or [castellan-cli](https://github.com/logfoxai/castellan-cli) — no browser UI |
 | **Headless** | `CASTELLAN_API_ENABLED=false` | None | Zero HTTP surface; polling and rollouts only |
 
 `CASTELLAN_DASHBOARD_ENABLED` is ignored when `CASTELLAN_API_ENABLED=false`. In headless mode no port is bound, no auth token is generated, and state is still persisted to disk.
@@ -413,7 +413,9 @@ Castellan controls the Docker socket and can restart any container it manages. *
 2. Castellan serves the page and sets an **httpOnly session cookie** with the API secret.
 3. The dashboard’s fetch calls send that cookie automatically.
 
-### curl, scripts, and future CLI
+### curl, scripts, and castellan-cli
+
+For CI settle gates, use **[castellan-cli](https://github.com/logfoxai/castellan-cli)** (`watch` / `status` / `check`). Raw HTTP:
 
 ```bash
 curl -sS -X POST http://127.0.0.1:3003/v1/status \

@@ -377,3 +377,171 @@ test('syncDiscoveredServices removes services when labels disappear', async (ass
 }
 
 });
+
+test('syncDiscoveredServices migrates runtime and history when group label is added', async (assert) => {
+
+    const dir = await mkdtemp(path.join(os.tmpdir(), 'castellan-roller-'));
+    const state = new StateManager(path.join(dir, 'state.json'));
+    const useGroup = {value: false};
+    const roller = new Roller(
+        discoveryConfig,
+        noopRegistry(),
+        createRenameDiscoverDocker(useGroup),
+        state,
+    );
+
+    try {
+
+        await roller.syncDiscoveredServices();
+        seedRuntimeForRename(roller, state);
+        useGroup.value = true;
+        await roller.syncDiscoveredServices();
+        assertRenameMigrated(assert, roller, state);
+
+} finally {
+
+        roller.stop();
+        await rm(dir, {recursive: true, force: true});
+
+}
+
+});
+
+test('syncDiscoveredServices refreshes runtime image metadata', async (assert) => {
+
+    const dir = await mkdtemp(path.join(os.tmpdir(), 'castellan-roller-'));
+    const state = new StateManager(path.join(dir, 'state.json'));
+    const image = {value: 'ghcr.io/myorg/api:prime'};
+    const roller = new Roller(
+        discoveryConfig,
+        noopRegistry(),
+        createImageToggleDocker(image),
+        state,
+    );
+
+    try {
+
+        await roller.syncDiscoveredServices();
+        assert.equal(roller.getStatus().services.find((entry) => entry.name === 'api')?.tag, 'prime');
+        image.value = 'ghcr.io/myorg/api-v2:dev';
+        await roller.syncDiscoveredServices();
+        const after = roller.getStatus().services.find((entry) => entry.name === 'api');
+
+        assert.equal(after?.repository, 'myorg/api-v2');
+        assert.equal(after?.tag, 'dev');
+
+} finally {
+
+        roller.stop();
+        await rm(dir, {recursive: true, force: true});
+
+}
+
+});
+
+function noopRegistry(): Registry {
+
+    return {
+        getManifest: async () => ({digest: 'sha256:api', pushedAt: null}),
+        invalidate: () => undefined,
+    };
+
+}
+
+function seedRuntimeForRename(roller: Roller, state: StateManager): void {
+
+    const before = roller.getStatus().services.find((entry) => entry.name === 'api-1');
+
+    if (!before) {
+
+        throw new Error('expected api-1 before rename');
+
+}
+
+    before.currentDigest = 'sha256:known-good';
+    before.state = 'stable';
+    before.pollEnabled = false;
+    state.appendDeployment('api-1', {digest: 'sha256:known-good', outcome: 'success'});
+    state.setServicePollEnabled('api-1', false);
+
+}
+
+function assertRenameMigrated(
+    assert: {equal: (actual: unknown, expected: unknown) => void},
+    roller: Roller,
+    state: StateManager,
+): void {
+
+    const status = roller.getStatus().services;
+    const migrated = status.find((entry) => entry.name === 'api');
+
+    assert.equal(status.some((entry) => entry.name === 'api-1'), false);
+    assert.equal(Boolean(migrated), true);
+    assert.equal(migrated?.currentDigest, 'sha256:known-good');
+    assert.equal(migrated?.state, 'stable');
+    assert.equal(migrated?.pollEnabled, false);
+    assert.equal(state.getDeployments('api').length, 1);
+    assert.equal(state.getDeployments('api-1').length, 0);
+
+}
+
+function createRenameDiscoverDocker(useGroup: {value: boolean}): DockerClient {
+
+    return {
+        listContainers: async () => {
+
+            const labels: Record<string, string> = {
+                'com.docker.compose.service': 'api-1',
+                'com.docker.compose.project': 'logfox',
+                'ai.logfox.castellan.autoupdate': 'true',
+            };
+
+            if (useGroup.value) {
+
+                labels['ai.logfox.castellan.group'] = 'api';
+
+}
+
+            return [{
+                Id: '1',
+                Created: 1,
+                Image: 'ghcr.io/myorg/api:prime',
+                State: 'running',
+                Status: 'Up 1 minute (healthy)',
+                Labels: labels,
+            } as unknown as ContainerInfo];
+
+},
+        getLocalDigest: async () => 'sha256:known-good',
+        composePull: async () => undefined,
+        composeUp: async () => undefined,
+        pullImage: async () => undefined,
+        tagImage: async () => undefined,
+    } as unknown as DockerClient;
+
+}
+
+function createImageToggleDocker(image: {value: string}): DockerClient {
+
+    return {
+        listContainers: async () => [{
+            Id: '1',
+            Created: 1,
+            Image: image.value,
+            State: 'running',
+            Status: 'Up 1 minute (healthy)',
+            Labels: {
+                'com.docker.compose.service': 'api-1',
+                'com.docker.compose.project': 'logfox',
+                'ai.logfox.castellan.autoupdate': 'true',
+                'ai.logfox.castellan.group': 'api',
+            },
+        } as unknown as ContainerInfo],
+        getLocalDigest: async () => 'sha256:known-good',
+        composePull: async () => undefined,
+        composeUp: async () => undefined,
+        pullImage: async () => undefined,
+        tagImage: async () => undefined,
+    } as unknown as DockerClient;
+
+}
