@@ -17,7 +17,7 @@ Most tools marketed as "Watchtower replacements" solve a different problem or re
 **Reading the table:**
 - **Migration** — what you can keep from Watchtower. Castellan uses native `ai.logfox.castellan.autoupdate` labels (replace `com.centurylinklabs.watchtower.enable=true`); not Watchtower’s default watch-all mode. WatchWarden supports `WATCHTOWER_*` env vars in solo mode.
 - **Zero-downtime** varies: Castellan does compose-service rolling; WatchWarden does per-container blue-green (falls back to stop-first when ports conflict).
-- **Dashboard** — Castellan's ships in the same container (optional — disable via `api.dashboard: false` or run fully headless with `api.enabled: false`). WatchWarden's dashboard requires the managed stack (controller + PostgreSQL + UI); solo agent mode has no UI.
+- **Dashboard** — Castellan's ships in the same container (optional — disable via `CASTELLAN_DASHBOARD_ENABLED=false` or run fully headless with `CASTELLAN_API_ENABLED=false`). WatchWarden's dashboard requires the managed stack (controller + PostgreSQL + UI); solo agent mode has no UI.
 
 # Castellan vs WatchWarden
 

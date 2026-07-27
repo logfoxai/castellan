@@ -39,7 +39,7 @@ Day-to-day ops: use the **dashboard**. Automation / CI: use the **[Castellan CLI
 1. **Polls** a registry **tag** on an interval (or on demand via API / CLI).
 2. Compares the tag’s current **digest** (`sha256:…`) to what is running.
 3. **Deploys** when the digest changed — usually CI pushed a new build to the same tag — pull by digest, retag the rolling tag, then rolling `compose up`.
-4. **Verifies** health via Docker compose healthchecks.
+4. **Verifies** health via Docker compose healthchecks (or treats a running container as healthy when no healthcheck is defined).
 5. **Rolls back** to the last known-good digest if a deploy fails.
 6. **Observes** everything from an optional dashboard, the [Castellan CLI](https://github.com/logfoxai/castellan-cli), and RPC API — or run **headless** with no HTTP at all.
 
@@ -364,7 +364,8 @@ docker inspect <container> --format '{{index .Config.Labels "com.docker.compose.
 | `CASTELLAN_ROLLBACK_MAX_ATTEMPTS` | `1` | Auto-rollback retries |
 | `CASTELLAN_API_ENABLED` | `true` | HTTP API |
 | `CASTELLAN_DASHBOARD_ENABLED` | `true` | Dashboard at `/` |
-| `CASTELLAN_API_PORT` | `3003` | Listen port |
+| `CASTELLAN_API_PORT` | `3003` | Listen port (overridden by `PORT` when set) |
+| `PORT` | — | Listen port; takes precedence over `CASTELLAN_API_PORT` (common PaaS convention) |
 | `CASTELLAN_AUTH_TOKEN` | *(auto)* | API auth secret |
 | `CASTELLAN_STATE` | `/app/state/state.json` | State file path |
 | `DOCKER_SOCKET` | `/var/run/docker.sock` | Docker socket |
@@ -443,6 +444,8 @@ Served at `/` when `CASTELLAN_API_ENABLED` and `CASTELLAN_DASHBOARD_ENABLED` are
 4. It waits for Docker healthchecks to pass.
 5. If health checks fail, it rolls back to the previous successful deployment and marks the failing digest as **rejected** (blocked from auto-deploy).
 6. State is persisted atomically to disk (`deployments` history + event log) so restarts are safe.
+
+> **No compose healthcheck?** Castellan treats a **running** container as healthy when Docker reports no health status (no `(healthy)` / `(unhealthy)` in `docker ps`). Add a `healthcheck:` block on managed services when you want deploy verification beyond “container is up”.
 
 # Roadmap
 
