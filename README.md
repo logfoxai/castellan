@@ -90,7 +90,7 @@ services:
       - ./castellan-state:/app/state
     environment:
       CASTELLAN_COMPOSE_FILE: /app/docker-compose.yml
-      # Required unless this host has exactly one compose project
+      # Required if this host has more than one compose project
       CASTELLAN_COMPOSE_PROJECT: mystack
     networks: [backend]
 
@@ -338,11 +338,9 @@ That file configures **Compose rendering**, not Castellan’s own settings. Cast
 
 ### Compose project (`CASTELLAN_COMPOSE_PROJECT`)
 
-Castellan manages **one** compose project on the Docker host. Set `CASTELLAN_COMPOSE_PROJECT` to that project’s name (same string Compose uses for `-p` / container label `com.docker.compose.project`).
+Castellan manages **one** compose project on the Docker host. `CASTELLAN_COMPOSE_PROJECT` is required if this host has more than one compose project. Set it to the project’s name — the same string as compose `name:`, `docker compose -p`, and the container label `com.docker.compose.project`.
 
-Castellan does **not** read top-level compose `name:` from the YAML. Prefer setting the env var explicitly.
-
-If the env var is unset and Docker has **exactly one** compose project (from running/stopped containers’ labels), Castellan uses that project. If there are zero or multiple projects, startup fails until you set `CASTELLAN_COMPOSE_PROJECT`.
+If the env var is unset and the host has a single compose project (from container labels), Castellan uses that project. If there are multiple projects — or none yet — startup fails until you set `CASTELLAN_COMPOSE_PROJECT`.
 
 Find the name on the host:
 
@@ -352,14 +350,12 @@ docker compose ls
 docker inspect <container> --format '{{index .Config.Labels "com.docker.compose.project"}}'
 ```
 
-Using `name: mystack` in your compose file is still a good idea so Compose itself uses a stable project name — just also set `CASTELLAN_COMPOSE_PROJECT: mystack` on the sidecar.
-
 ### Environment variables
 
 | Env var | Default | Purpose |
 |---|---|---|
 | `CASTELLAN_COMPOSE_FILE` | `/app/docker-compose.yml` | Compose file for `compose up` |
-| `CASTELLAN_COMPOSE_PROJECT` | *(see below)* | Compose project (`-p`) + container filter |
+| `CASTELLAN_COMPOSE_PROJECT` | *(see below)* | Compose project (`-p`) + container filter; required if the host has more than one project |
 | `CASTELLAN_COMPOSE_ENV_FILE` | — | Optional `--env-file` for `docker compose up` |
 | `CASTELLAN_POLL_ENABLED` | `true` | Periodic polling |
 | `CASTELLAN_POLL_INTERVAL_MS` | `60000` | Poll interval |

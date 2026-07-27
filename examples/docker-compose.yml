@@ -12,7 +12,7 @@ services:
       - ./castellan-state:/app/state
     environment:
       CASTELLAN_COMPOSE_FILE: /app/docker-compose.yml
-      # Set to your compose project (see `docker compose ls`). Required if the host has >1 project.
+      # Required if this host has more than one compose project (see `docker compose ls`)
       CASTELLAN_COMPOSE_PROJECT: mystack
       # Optional: load many CASTELLAN_* vars from a file (Compose env_file:, not Castellan-specific)
       # env_file:
