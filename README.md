@@ -449,7 +449,7 @@ Served at `/` when `CASTELLAN_API_ENABLED` and `CASTELLAN_DASHBOARD_ENABLED` are
 
 # Roadmap
 
-Active plan: **[docs/roadmap.md](docs/roadmap.md)** — observability + MCP (read track) and minimal deploy mutations (write track): digest history, pin deploy, registry catalog, managed logs, stdio MCP.
+Active plan: **[docs/roadmap.md](docs/roadmap.md)** — registry catalog, managed-service logs, stdio MCP, and API cleanup. Deploy mutations, deployment history, dashboard actions, and [castellan-cli](https://github.com/logfoxai/castellan-cli) are shipped.
 
 Backlog (not scheduled): notifications, Prometheus metrics, minimum update age, crash-loop detection, image diff preview, multi-host.
 
