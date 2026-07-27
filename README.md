@@ -404,7 +404,7 @@ When `CASTELLAN_API_ENABLED=true` (the default), Castellan exposes an internal H
   - `status` — service states and current digests.
   - `forceCheck` — check registries immediately (what `castellan check` / the start of `castellan watch` call).
   - `pause` / `resume` — pause/resume polling.
-  - `deploy` — deploy a specific digest (`{"service":"api","digest":"sha256:…"}`). Disables polling for that service until re-enabled.
+  - `deploy` — deploy a specific digest (`{"service":"api","digest":"sha256:…"}`). Returns `{ok:true}` only when that digest is running afterward (rollback after a failed deploy is `{ok:false}`). Disables polling for that service until re-enabled when `ok` is true.
   - `reject` — mark a digest rejected and roll back if it is running (`{"service":"api","digest":"sha256:…"}`).
   - `setPollEnabled` — enable or disable automatic updates for one service (`{"service":"api","enabled":true}`).
   - `history` — recent events (all services).

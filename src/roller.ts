@@ -223,7 +223,8 @@ export class Roller implements RollerPort {
 
                 await handleDeployFailure(this.deployment, service, digest, runtime, err);
 
-                return runtime.state === 'stable';
+                // Success means the requested digest is live. A stable rollback is not ok.
+                return runtime.currentDigest === digest;
 
 } finally {
 
