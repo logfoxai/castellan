@@ -2,7 +2,7 @@ import type {ContainerInfo} from 'dockerode';
 import {sleep} from './health.js';
 import type {ManagedService} from './types.js';
 
-export const HEALTH_POLL_INTERVAL_MS = 5000;
+const HEALTH_POLL_INTERVAL_MS = 5000;
 
 export class DeployHealthError extends Error {
 
