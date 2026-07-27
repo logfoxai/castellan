@@ -362,7 +362,6 @@ button:hover {
 .status-stable .status-badge { color: var(--success); }
 .status-failed .status-badge { color: var(--error); }
 .status-updating .status-badge { color: var(--warning); }
-.status-verifying .status-badge { color: var(--info); }
 .status-checking .status-badge { color: var(--warning); }
 .status-rollback .status-badge { color: var(--error); }
 .status-idle .status-badge { color: var(--muted); }
