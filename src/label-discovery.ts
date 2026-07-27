@@ -11,8 +11,6 @@ export const CASTELLAN_AUTUPDATE_LABEL = 'ai.logfox.castellan.autoupdate';
 /** Optional logical service name when multiple replicas share one image. */
 export const CASTELLAN_GROUP_LABEL = 'ai.logfox.castellan.group';
 
-const HEALTH_POLL_INTERVAL_MS = 5000;
-
 function hasDiscoveryLabel(labels: Record<string, string> | undefined): boolean {
 
     if (!labels) {
@@ -96,4 +94,3 @@ function buildService(container: ContainerInfo): ManagedService | null {
 
 }
 
-export {HEALTH_POLL_INTERVAL_MS};

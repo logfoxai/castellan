@@ -28,13 +28,12 @@ function container(
 
 }
 
-test('matchesComposeProject requires an configured project', (assert) => {
+test('matchesComposeProject compares container project label', (assert) => {
 
     const row = container('1', 'api', 'ghcr.io/myorg/api:prime', 'logfox');
 
     assert.equal(matchesComposeProject(row, 'logfox'), true);
     assert.equal(matchesComposeProject(row, 'other'), false);
-    assert.equal(matchesComposeProject(row), false);
 
 });
 

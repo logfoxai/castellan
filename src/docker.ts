@@ -241,13 +241,7 @@ export class DockerClient {
         ...args: string[]
     ): Promise<void> {
 
-        const commandArgs = ['compose', '-f', compose.file];
-
-        if (compose.project) {
-
-            commandArgs.push('-p', compose.project);
-
-}
+        const commandArgs = ['compose', '-f', compose.file, '-p', compose.project];
 
         if (compose.envFile) {
 
