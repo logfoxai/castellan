@@ -27,11 +27,6 @@ jobs:
         with:
           node-version: 24
           cache: npm
-
-
-
-      - name: Check package.json deps
-        run: node scripts/check-no-file-deps.mjs
       - name: Install deps
         run: npm ci
 
@@ -72,10 +67,6 @@ jobs:
         with:
           node-version: 24
           cache: npm
-
-
-      - name: Check package.json deps
-        run: node scripts/check-no-file-deps.mjs
       - name: Install deps
         run: npm ci
 

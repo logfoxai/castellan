@@ -39,8 +39,7 @@
     "deadcode:check": "knip",
     "screenshots": "npm run build:ui && node scripts/capture-screenshots.mjs",
     "readme-lockup": "npm run build:ui && node scripts/capture-readme-lockup.mjs",
-    "validate": "npm run check:package-json && npm run build && npm run lint && npm run deadcode:check && npm test",
-    "check:package-json": "node scripts/check-no-file-deps.mjs"
+    "validate": "npm run build && npm run lint && npm run deadcode:check && npm test"
   },
   "dependencies": {
     "dockerode": "4.0.12",
@@ -52,6 +51,7 @@
     "@types/node": "20.17.22",
     "c8": "11.0.0",
     "eslint": "10.0.2",
+    "eslint-plugin-package-json": "^1.6.1",
     "kizu": "5.1.0",
     "knip": "6.29.0",
     "playwright": "1.61.1",
