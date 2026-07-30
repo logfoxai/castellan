@@ -20,7 +20,7 @@ concurrency:
 jobs:
   ci:
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 10
     steps:
       - uses: actions/checkout@v6
 
@@ -30,7 +30,6 @@ jobs:
           cache: npm
 
       - name: Install deps
-        timeout-minutes: 3
         run: npm ci
 
       - name: Lint
@@ -61,7 +60,7 @@ jobs:
   security:
     name: security scans
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 10
     steps:
       - uses: actions/checkout@v6
         with:
@@ -73,7 +72,6 @@ jobs:
           cache: npm
 
       - name: Install deps
-        timeout-minutes: 3
         run: npm ci
 
       - name: Install trivy (sha256-pinned)
