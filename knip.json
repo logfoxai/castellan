@@ -5,7 +5,6 @@
       "ignoreBinaries": ["report"],
       "ignoreDependencies": [
         "@fontsource-variable/inter",
-        "@fontsource/caveat",
         "@pagefind/default-ui",
         "astro-expressive-code",
         "phosphor-astro",
@@ -47,7 +46,7 @@
         "src/components/searchStaleResults.ts",
         "src/components/docsSearchQuery.ts",
         "src/components/splashCtaIcons.ts",
-        "src/components/splashHeadlineTape.ts",
+        "src/components/splashHeadlineAccent.ts",
         "src/components/wrapPagefindSearch.ts",
         "src/components/isUsefulPagefindMatch.ts",
         "src/splashHeroTypes.ts",

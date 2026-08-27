@@ -3,20 +3,6 @@
  * Scoped to the splash page (no sidebar). Page blocks are .splash-* only.
  */
 
-@font-face {
-    font-family: 'Caveat';
-    font-style: normal;
-    font-display: swap;
-    font-weight: 600;
-    src:
-        local('Caveat SemiBold'),
-        local('Caveat'),
-        url('/fonts/caveat-latin-600-normal.woff2') format('woff2');
-    unicode-range:
-        U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329,
-        U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
-}
-
 html:not([data-has-sidebar]):has(.splash-page) {
     --sl-content-width: min(80rem, calc(100vw - 2rem));
     --sl-content-pad-x: clamp(1.25rem, 3.5vw, 2.75rem);
@@ -156,41 +142,31 @@ html:not([data-has-sidebar]):has(.splash-page) {
 
 /* ─── Hero ───────────────────────────────────────────────────────────────── */
 
-/* ducktape.svg (publicDir) behind “duct-taping” — always black ink on the strip. */
-.splash-hero__tape {
+.splash-hero__accent {
     position: relative;
-    z-index: 0;
-    display: inline-block;
-    vertical-align: baseline;
-    line-height: inherit;
-    letter-spacing: inherit;
-    font-family: inherit;
-    font-weight: inherit;
-    /* Decoupled from headline scale — matches prior 0.94em at the old headline size. */
-    font-size: clamp(2.49rem, 6.5vw, 4.23rem);
-    margin-inline: 0.16em;
+    display: inline;
+    color: hsl(32 92% 52%);
+    font-weight: 700;
 }
 
-.splash-hero__tape-label {
-    display: inline-block;
-    font-family: 'Caveat', cursive;
-    font-size: 1em;
-    font-weight: 600;
-    letter-spacing: 0.01em;
-    color: #10131a;
-    transform: rotate(2deg);
-    transform-origin: center center;
+html[data-theme='light']:not([data-has-sidebar]):has(.splash-page) .splash-hero__accent {
+    color: hsl(32 90% 42%);
 }
 
-.splash-hero__tape::before {
+.splash-hero__accent::after {
     content: '';
     position: absolute;
     z-index: -1;
-    left: -0.1em;
-    right: -0.12em;
-    top: -0.05em;
-    bottom: -0.12em;
-    background: url('/ducktape.svg') center / 100% 128% no-repeat;
+    left: -0.04em;
+    right: -0.06em;
+    bottom: 0.06em;
+    height: 0.28em;
+    border-radius: 2px;
+    background: linear-gradient(
+        90deg,
+        hsl(32 90% 50% / 0.45),
+        hsl(38 85% 55% / 0.35)
+    );
     pointer-events: none;
 }
 
@@ -747,7 +723,7 @@ html:not([data-has-sidebar]):has(.splash-page)[data-theme='light'] :is(.splash-d
     text-align: center;
 }
 
-/* ─── Duct-taped tech stack graphic ──────────────────────────────────────── */
+/* ─── Stack / pile imagery (unused on Castellan splash; kept for shared CSS parity) ─ */
 
 .splash-pile-img {
     display: block;

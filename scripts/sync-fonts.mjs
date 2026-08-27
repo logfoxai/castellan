@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 /**
  * Copy self-hosted Latin woff2 files into assets/fonts/.
- * - @fontsource packages for Inter + Caveat
+ * - @fontsource packages for Inter
  * - JetBrainsMono Nerd Font Mono from nerd-fonts-woff2 (pinned tag; OFL upstream)
  *
  * Committed copies are served from publicDir (/fonts/…) so docs work without
@@ -25,7 +25,6 @@ const fontsource = [
         '@fontsource-variable/inter/files/inter-latin-wght-normal.woff2',
         'inter-latin-wght-normal.woff2',
     ],
-    ['@fontsource/caveat/files/caveat-latin-600-normal.woff2', 'caveat-latin-600-normal.woff2'],
 ];
 
 const nerdFonts = [
@@ -40,6 +39,7 @@ const nerdFonts = [
 ];
 
 const retired = [
+    'caveat-latin-600-normal.woff2',
     'geist-latin-wght-normal.woff2',
     'outfit-latin-wght-normal.woff2',
     'jetbrains-mono-latin-400-normal.woff2',

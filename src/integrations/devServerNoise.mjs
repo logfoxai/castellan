@@ -117,7 +117,6 @@ const DEMO_STALE_FONTS = new Set([
     'inter-latin-wght-normal.woff2',
     'jetbrains-mono-nerd-mono-400.woff2',
     'jetbrains-mono-nerd-mono-600.woff2',
-    'caveat-latin-600-normal.woff2',
 ]);
 
 /**

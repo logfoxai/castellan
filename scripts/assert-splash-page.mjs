@@ -35,7 +35,9 @@ const required = [
 	'Keep it on your private network',
 	'Need a hand?',
 	'https://discord.gg/2wyYnBDhWQ',
-	'crossing fingers',
+	'splash-hero__accent',
+	'>Guard</span>',
+	'health checks and rollback',
 ];
 
 const missing = required.filter((needle) => !html.includes(needle));

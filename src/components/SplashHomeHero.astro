@@ -5,7 +5,7 @@
 import SplashHeroActions from './SplashHeroActions.astro';
 import SplashFeatures from './SplashFeatures.astro';
 import type {SplashHeroActionList} from '../splashHeroTypes';
-import {splitHeadlineForTape} from './splashHeadlineTape';
+import {splitHeadlineForAccent} from './splashHeadlineAccent';
 
 const PAGE_TITLE_ID = '_top';
 
@@ -18,7 +18,7 @@ interface Props {
 const {title, headline, actions = []} = Astro.props;
 
 const homePitch = 'One compose sidecar → registry polling, rolling deploys, health checks, and rollback.';
-const tapeHeadline = splitHeadlineForTape(headline);
+const accentHeadline = splitHeadlineForAccent(headline);
 
 const heroLogLines = [
 	'$ docker compose pull && docker compose up -d',
@@ -32,11 +32,10 @@ const heroLogLines = [
 
 <section class="splash-hero">
 	<h1 id={PAGE_TITLE_ID} class="sr-only" data-page-title set:html={title} />
-	{tapeHeadline ? (
+	{accentHeadline ? (
 		<h2 class="splash-hero__headline">
-			{tapeHeadline.before}
-			<span class="splash-hero__tape"><span class="splash-hero__tape-label">{tapeHeadline.phrase}</span></span>
-			{tapeHeadline.after}
+			<span class="splash-hero__accent">{accentHeadline.phrase}</span>
+			{accentHeadline.after}
 		</h2>
 	) : (
 		headline && <h2 class="splash-hero__headline">{headline}</h2>
@@ -48,8 +47,8 @@ const heroLogLines = [
 		<div class="splash-hero__band">
 			<div class="splash-hero__lead">
 				<p>
-					Most teams duct-tape deploys with Watchtower restarts, manual SSH, and hoping healthchecks
-					pass. When a bad digest lands, you find out from PagerDuty — not your deploy tool.
+					Most teams stitch together Watchtower restarts, manual SSH, and hoping healthchecks pass.
+					When a bad digest lands, you find out from PagerDuty — not your deploy tool.
 				</p>
 			</div>
 			<figure class="splash-hero__browser">
