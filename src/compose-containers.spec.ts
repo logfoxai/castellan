@@ -56,13 +56,13 @@ test('listComposeProjects returns sorted unique project labels', (assert) => {
 test('listComposeServiceNamesForImage ignores containers from other compose projects', (assert) => {
 
     const rows = [
-        container('1', 'api-1', 'ghcr.io/myorg/api-service:prime', 'other-stack'),
-        container('2', 'api-1', 'ghcr.io/myorg/api-service:prime', 'logfox'),
+        container('1', 'api-1', 'ghcr.io/myorg/server:prime', 'other-stack'),
+        container('2', 'api-1', 'ghcr.io/myorg/server:prime', 'logfox'),
     ];
 
     const names = listComposeServiceNamesForImage(
         rows,
-        {registry: 'ghcr.io', repository: 'myorg/api-service', tag: 'prime'},
+        {registry: 'ghcr.io', repository: 'myorg/server', tag: 'prime'},
         {file: '/app/docker-compose.yml', project: 'logfox'},
     );
 
@@ -87,14 +87,14 @@ test('findNewestRunningComposeContainer picks the newest running replica', (asse
 test('listComposeServiceNamesForImage returns sorted compose service names', (assert) => {
 
     const rows = [
-        container('1', 'api-2', 'ghcr.io/myorg/api-service:prime', 'logfox'),
-        container('2', 'api-1', 'ghcr.io/myorg/api-service:prime', 'logfox'),
+        container('1', 'api-2', 'ghcr.io/myorg/server:prime', 'logfox'),
+        container('2', 'api-1', 'ghcr.io/myorg/server:prime', 'logfox'),
         container('3', 'worker', 'ghcr.io/myorg/worker:prime', 'logfox'),
     ];
 
     const names = listComposeServiceNamesForImage(
         rows,
-        {registry: 'ghcr.io', repository: 'myorg/api-service', tag: 'prime'},
+        {registry: 'ghcr.io', repository: 'myorg/server', tag: 'prime'},
         {file: '/app/docker-compose.yml', project: 'logfox'},
     );
 

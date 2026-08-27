@@ -14,7 +14,7 @@ const services = [
     {
         name: 'api',
         registry,
-        repository: 'myorg/api-service',
+        repository: 'myorg/server',
         tag: 'staging',
         state: 'stable',
         currentDigest: 'sha256:7d3f8a2e1c9b4a6f5e0d2c8a3b7f1e4d9c6a2b5e8f3d7c1a4b6e9f2d5c8a1b4e7',
@@ -104,8 +104,8 @@ const events = [
 ];
 
 const containers = [
-    {id: 'a1b2c3d4e5f6', name: 'app_api-1_1', displayName: 'api-1', image: 'myorg/api-service:staging', state: 'running', status: 'Up 2 hours', disk: '18 MB'},
-    {id: 'b2c3d4e5f6a7', name: 'app_api-2_1', displayName: 'api-2', image: 'myorg/api-service:staging', state: 'running', status: 'Up 2 hours', disk: '17 MB'},
+    {id: 'a1b2c3d4e5f6', name: 'app_api-1_1', displayName: 'api-1', image: 'myorg/server:staging', state: 'running', status: 'Up 2 hours', disk: '18 MB'},
+    {id: 'b2c3d4e5f6a7', name: 'app_api-2_1', displayName: 'api-2', image: 'myorg/server:staging', state: 'running', status: 'Up 2 hours', disk: '17 MB'},
     {id: 'c3d4e5f6a7b8', name: 'app_worker_1', displayName: 'worker', image: 'myorg/worker:staging', state: 'running', status: 'Up 2 hours', disk: '9 MB'},
     {id: 'd4e5f6a7b8c9', name: 'app_scheduler_1', displayName: 'scheduler', image: 'myorg/scheduler:staging', state: 'running', status: 'Up 5 minutes', disk: '11 MB'},
     {id: 'e5f6a7b8c9d0', name: 'app_castellan_1', displayName: 'castellan', image: 'ghcr.io/logfoxai/castellan:latest', state: 'running', status: 'Up 2 hours', disk: '6 MB'},

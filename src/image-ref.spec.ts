@@ -3,10 +3,10 @@ import {managedServiceMatchesImage, parseImageRef} from './image-ref.js';
 
 test('parseImageRef handles ECR images', (assert) => {
 
-    const parsed = parseImageRef('123456789.dkr.ecr.us-east-1.amazonaws.com/api-service:prime');
+    const parsed = parseImageRef('123456789.dkr.ecr.us-east-1.amazonaws.com/server:prime');
 
     assert.equal(parsed?.registry, '123456789.dkr.ecr.us-east-1.amazonaws.com');
-    assert.equal(parsed?.repository, 'api-service');
+    assert.equal(parsed?.repository, 'server');
     assert.equal(parsed?.tag, 'prime');
 
 });

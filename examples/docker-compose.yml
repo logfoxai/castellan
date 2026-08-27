@@ -21,7 +21,7 @@ services:
       - backend
 
   api:
-    image: ghcr.io/myorg/api-service:staging
+    image: ghcr.io/myorg/server:staging
     labels:
       ai.logfox.castellan.autoupdate: "true"
     healthcheck:
@@ -34,12 +34,12 @@ services:
 
   # Rolling replicas can share one logical service name:
   # api-1:
-  #   image: ghcr.io/myorg/api-service:staging
+  #   image: ghcr.io/myorg/server:staging
   #   labels:
   #     ai.logfox.castellan.autoupdate: "true"
   #     ai.logfox.castellan.group: api
   # api-2:
-  #   image: ghcr.io/myorg/api-service:staging
+  #   image: ghcr.io/myorg/server:staging
   #   labels:
   #     ai.logfox.castellan.autoupdate: "true"
   #     ai.logfox.castellan.group: api
