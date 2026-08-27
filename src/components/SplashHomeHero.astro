@@ -1,0 +1,108 @@
+---
+/**
+ * Marketing homepage hero — headline, pitch, lead, and terminal graphic.
+ */
+import SplashHeroActions from './SplashHeroActions.astro';
+import SplashFeatures from './SplashFeatures.astro';
+import type {SplashHeroActionList} from '../splashHeroTypes';
+import {splitHeadlineForTape} from './splashHeadlineTape';
+
+const PAGE_TITLE_ID = '_top';
+
+interface Props {
+	title: string;
+	headline: string;
+	actions: SplashHeroActionList;
+}
+
+const {title, headline, actions = []} = Astro.props;
+
+const homePitch = 'One compose sidecar → registry polling, rolling deploys, health checks, and rollback.';
+const tapeHeadline = splitHeadlineForTape(headline);
+
+const heroLogLines = [
+	'$ docker compose pull && docker compose up -d',
+	'Pulling api ... done',
+	'Recreating api-1 ... done',
+	'Container api-1  Error',
+	'dependency failed to start: container api-1 is unhealthy',
+	'# no rollback — prod is down, paging on-call',
+];
+---
+
+<section class="splash-hero">
+	<h1 id={PAGE_TITLE_ID} class="sr-only" data-page-title set:html={title} />
+	{tapeHeadline ? (
+		<h2 class="splash-hero__headline">
+			{tapeHeadline.before}
+			<span class="splash-hero__tape"><span class="splash-hero__tape-label">{tapeHeadline.phrase}</span></span>
+			{tapeHeadline.after}
+		</h2>
+	) : (
+		headline && <h2 class="splash-hero__headline">{headline}</h2>
+	)}
+	<p class="splash-hero__pitch">{homePitch}</p>
+	<SplashHeroActions actions={actions} />
+	<SplashFeatures />
+	<div class="splash-hero__stage">
+		<div class="splash-hero__band">
+			<div class="splash-hero__lead">
+				<p>
+					Most teams duct-tape deploys with Watchtower restarts, manual SSH, and hoping healthchecks
+					pass. When a bad digest lands, you find out from PagerDuty — not your deploy tool.
+				</p>
+			</div>
+			<figure class="splash-hero__browser">
+				<div class="splash-hero__chrome">
+					<span class="splash-hero__dots" aria-hidden="true"></span>
+					<div class="splash-hero__url">
+						<span class="splash-hero__method">ssh</span>
+						<span class="splash-hero__path">prod-host — docker compose up</span>
+					</div>
+				</div>
+				<div class="splash-hero__viewport splash-hero__viewport--terminal">
+					<pre class="splash-hero__terminal" aria-label="Failed deploy without rollback">
+						{heroLogLines.map((line) => (
+							<code class:list={line.startsWith('#') && 'splash-hero__terminal-comment'}>{line}</code>
+						))}
+					</pre>
+				</div>
+			</figure>
+			<div class="splash-hero__follow">
+				<p>
+					Castellan watches your registry tag, rolling-restarts labeled compose services, waits for
+					healthchecks, and rolls back to the last good digest on failure. One sidecar, opt-in labels,
+					optional dashboard and API — or run fully headless.
+				</p>
+			</div>
+		</div>
+	</div>
+</section>
+
+<style>
+	.splash-hero__viewport--terminal {
+		padding: 1rem 1.25rem;
+		font-family: var(--sl-font-mono, ui-monospace, monospace);
+		font-size: 0.78rem;
+		line-height: 1.55;
+	}
+
+	.splash-hero__terminal {
+		margin: 0;
+		display: flex;
+		flex-direction: column;
+		gap: 0.15rem;
+		color: var(--cs-ink);
+	}
+
+	.splash-hero__terminal code {
+		font-family: inherit;
+		white-space: pre-wrap;
+		word-break: break-word;
+	}
+
+	.splash-hero__terminal-comment {
+		color: hsl(0 70% 62%);
+		margin-top: 0.35rem;
+	}
+</style>

@@ -1,0 +1,73 @@
+---
+/**
+ * Dashboard section — screenshot + CTAs.
+ */
+import SplashHeroActions from './SplashHeroActions.astro';
+---
+
+<section class="splash-section splash-band splash-demo" aria-labelledby="splash-demo-title">
+	<header class="splash-demo__intro">
+		<h2 id="splash-demo-title" class="splash-demo__title">Built-in dashboard</h2>
+		<p class="splash-demo__lede">
+			Live service status, deployment history, Docker container metrics, and one-click logs —
+			served from the same container. Disable it for API-only or run fully headless.
+		</p>
+		<SplashHeroActions
+			actions={[
+				{
+					text: 'Get started',
+					link: '/getting-started/',
+					variant: 'primary',
+					icon: {type: 'icon', name: 'open-book'},
+				},
+				{
+					text: 'Dashboard docs',
+					link: '/dashboard/',
+					variant: 'secondary',
+					icon: {type: 'icon', name: 'laptop'},
+				},
+			]}
+		/>
+	</header>
+
+	<figure class="splash-demo__shot">
+		<a href="/dashboard/" class="splash-demo__shot-link">
+			<picture>
+				<source srcset="/screenshot-light.png" media="(prefers-color-scheme: light)" />
+				<img
+					src="/screenshot.png"
+					alt="Castellan dashboard showing service status, deployments, and Docker containers"
+					width="1200"
+					height="675"
+					loading="lazy"
+				/>
+			</picture>
+		</a>
+	</figure>
+</section>
+
+<style>
+	.splash-demo__shot {
+		margin: 0;
+	}
+
+	.splash-demo__shot-link {
+		display: block;
+		border-radius: 0.75rem;
+		overflow: hidden;
+		border: 1px solid var(--cs-line);
+		box-shadow: 0 24px 48px hsl(228 20% 4% / 0.35);
+		transition: transform 0.2s ease, box-shadow 0.2s ease;
+	}
+
+	.splash-demo__shot-link:hover {
+		transform: translateY(-2px);
+		box-shadow: 0 28px 56px hsl(228 20% 4% / 0.42);
+	}
+
+	.splash-demo__shot img {
+		display: block;
+		width: 100%;
+		height: auto;
+	}
+</style>

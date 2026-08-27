@@ -1,0 +1,242 @@
+---
+/**
+ * Click-to-toggle theme switch — sun/moon inside the track.
+ * Default preference is system; UI is light ↔ dark only (no middle).
+ * Thumb position follows html[data-theme] so it stays in sync with ThemeProvider.
+ */
+import {Icon} from '@astrojs/starlight/components';
+---
+
+<starlight-theme-select>
+	<button
+		type="button"
+		class="theme-slider"
+		aria-label={Astro.locals.t('themeSelect.accessibleLabel')}
+		aria-pressed="false"
+		title="Theme: System"
+	>
+		<span class="theme-slider__shell">
+			<span class="theme-slider__icon theme-slider__icon--sun" aria-hidden="true">
+				<Icon name="sun" />
+			</span>
+			<span class="theme-slider__icon theme-slider__icon--moon" aria-hidden="true">
+				<Icon name="moon" />
+			</span>
+			<span class="theme-slider__thumb" aria-hidden="true"></span>
+		</span>
+	</button>
+</starlight-theme-select>
+
+<script is:inline>
+	StarlightThemeProvider.updatePickers();
+</script>
+
+<script>
+	type Theme = 'auto' | 'dark' | 'light';
+	type Resolved = 'dark' | 'light';
+
+	const storageKey = 'starlight-theme';
+
+	const parseTheme = (theme: unknown): Theme =>
+		theme === 'auto' || theme === 'dark' || theme === 'light' ? theme : 'auto';
+
+	const getPreferredColorScheme = (): Resolved =>
+		matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark';
+
+	const loadTheme = (): Theme => {
+		if (typeof localStorage === 'undefined') return 'auto';
+		const raw = localStorage.getItem(storageKey);
+		// Starlight stores auto as empty string; unset → system
+		if (raw === null || raw === '') return 'auto';
+		return parseTheme(raw);
+	};
+
+	function storeTheme(theme: Theme): void {
+		if (typeof localStorage === 'undefined') return;
+		localStorage.setItem(storageKey, theme === 'light' || theme === 'dark' ? theme : '');
+	}
+
+	function resolveTheme(theme: Theme): Resolved {
+		return theme === 'auto' ? getPreferredColorScheme() : theme;
+	}
+
+	function syncSliderButton(button: HTMLButtonElement, theme: Theme, resolved: Resolved): void {
+		button.dataset.themeValue = theme;
+		button.setAttribute('aria-pressed', resolved === 'dark' ? 'true' : 'false');
+		const label =
+			theme === 'auto' ? `System (${resolved})` : resolved === 'dark' ? 'Dark' : 'Light';
+		button.title = `Theme: ${label} — click to toggle`;
+	}
+
+	function syncAllSliders(theme: Theme, resolved: Resolved): void {
+		document.querySelectorAll('starlight-theme-select .theme-slider').forEach((el) => {
+			if (el instanceof HTMLButtonElement) syncSliderButton(el, theme, resolved);
+		});
+	}
+
+	function onThemeChange(theme: Theme): void {
+		const resolved = resolveTheme(theme);
+		const commit = () => {
+			StarlightThemeProvider.updatePickers(theme);
+			document.documentElement.dataset.theme = resolved;
+			storeTheme(theme);
+			syncAllSliders(theme, resolved);
+		};
+		// Crossfade paints — avoids muddy CSS-variable background interpolation flicker.
+		if (
+			typeof document.startViewTransition === 'function' &&
+			!matchMedia('(prefers-reduced-motion: reduce)').matches
+		) {
+			document.startViewTransition(commit);
+			return;
+		}
+		commit();
+	}
+
+	matchMedia('(prefers-color-scheme: light)').addEventListener('change', () => {
+		if (loadTheme() === 'auto') onThemeChange('auto');
+	});
+
+	class StarlightThemeSelect extends HTMLElement {
+		constructor() {
+			super();
+			const button = this.querySelector('.theme-slider');
+			if (!(button instanceof HTMLButtonElement)) return;
+
+			const theme = loadTheme();
+			syncSliderButton(button, theme, resolveTheme(theme));
+
+			button.addEventListener('click', () => {
+				const resolved = resolveTheme(loadTheme());
+				onThemeChange(resolved === 'dark' ? 'light' : 'dark');
+			});
+		}
+	}
+
+	customElements.define('starlight-theme-select', StarlightThemeSelect);
+</script>
+
+<style>
+	/*
+	 * Physical colors — Starlight’s --sl-color-white is text (dark in light mode),
+	 * so it must not be used for the knob or the sun vanishes on a black thumb.
+	 */
+	.theme-slider {
+		/* Greyscale chrome — not code-block / brand fill. */
+		--ts-track: color-mix(in srgb, #000 7%, var(--surface, var(--sl-color-bg-nav)));
+		--ts-edge: color-mix(in srgb, #000 14%, var(--surface, var(--sl-color-bg-nav)));
+		--ts-edge-hover: color-mix(in srgb, #000 40%, var(--surface, var(--sl-color-bg-nav)));
+		--ts-thumb: #ffffff;
+		--ts-ink: color-mix(in srgb, #000 42%, transparent);
+		--ts-ink-on-thumb: #1a1b20;
+		display: grid;
+		place-items: center;
+		width: auto;
+		height: 2.5rem;
+		margin: 0;
+		padding-inline: 0.15rem;
+		border: 0;
+		background: transparent;
+		cursor: pointer;
+		color: inherit;
+	}
+
+	:global(html[data-theme='dark']) .theme-slider {
+		--ts-track: color-mix(in srgb, #fff 10%, var(--surface, var(--sl-color-bg-nav)));
+		--ts-edge: color-mix(in srgb, #fff 16%, var(--surface, var(--sl-color-bg-nav)));
+		--ts-edge-hover: color-mix(in srgb, #fff 42%, var(--surface, var(--sl-color-bg-nav)));
+		--ts-thumb: #f4f4f5;
+		--ts-ink: color-mix(in srgb, #fff 45%, transparent);
+		--ts-ink-on-thumb: #18181b;
+	}
+
+	.theme-slider__shell {
+		position: relative;
+		width: 3.35rem;
+		height: 1.65rem;
+		border-radius: 999px;
+		background: var(--ts-track);
+		box-shadow: inset 0 0 0 1px var(--ts-edge);
+		transition: background-color 0.15s ease, box-shadow 0.15s ease;
+	}
+
+	.theme-slider:hover .theme-slider__shell {
+		box-shadow: inset 0 0 0 1px var(--ts-edge-hover);
+	}
+
+	.theme-slider:focus-visible {
+		outline: none;
+	}
+
+	.theme-slider:focus-visible .theme-slider__shell {
+		outline: 2px solid color-mix(in srgb, #000 28%, transparent);
+		outline-offset: 2px;
+	}
+
+	:global(html[data-theme='dark']) .theme-slider:focus-visible .theme-slider__shell {
+		outline-color: color-mix(in srgb, #fff 35%, transparent);
+	}
+
+	.theme-slider__icon {
+		position: absolute;
+		top: 50%;
+		z-index: 1;
+		display: grid;
+		place-items: center;
+		width: 1.2rem;
+		height: 1.2rem;
+		transform: translateY(-50%);
+		color: var(--ts-ink);
+		opacity: 1;
+		pointer-events: none;
+		transition: color 0.15s ease, opacity 0.15s ease;
+	}
+
+	.theme-slider__icon--sun {
+		left: 0.22rem;
+	}
+
+	.theme-slider__icon--moon {
+		right: 0.22rem;
+	}
+
+	.theme-slider__icon :global(svg) {
+		width: 0.9rem;
+		height: 0.9rem;
+		fill: currentColor;
+	}
+
+	.theme-slider__thumb {
+		position: absolute;
+		top: 50%;
+		left: 0.18rem;
+		z-index: 2;
+		width: 1.3rem;
+		height: 1.3rem;
+		border-radius: 50%;
+		background: var(--ts-thumb);
+		box-shadow: 0 1px 3px rgb(0 0 0 / 28%);
+		transform: translate(0, -50%);
+		transition: transform 0.18s ease;
+		pointer-events: none;
+	}
+
+	/* Follow ThemeProvider’s html[data-theme] — keeps header + mobile menu aligned */
+	:global(html[data-theme='dark']) .theme-slider__thumb {
+		transform: translate(1.7rem, -50%);
+	}
+
+	:global(html[data-theme='light']) .theme-slider__icon--sun,
+	:global(html[data-theme='dark']) .theme-slider__icon--moon {
+		z-index: 3;
+		color: var(--ts-ink-on-thumb);
+	}
+
+	@media (prefers-reduced-motion: reduce) {
+		.theme-slider__thumb,
+		.theme-slider__icon,
+		.theme-slider__shell {
+			transition: none;
+		}
+	}
+</style>

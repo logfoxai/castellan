@@ -1,0 +1,14 @@
+{
+  "extends": "astro/tsconfigs/strict",
+  "include": [
+    "src/env.d.ts",
+    ".astro/types.d.ts",
+    "src/content.config.ts",
+    "src/components/**/*.astro",
+    "src/components/**/*.ts",
+    "src/overrides/**/*.astro",
+    "src/pages/**/*.astro",
+    "src/splashHeroTypes.ts"
+  ],
+  "exclude": ["dist", "node_modules", "docs-site", "ui"]
+}

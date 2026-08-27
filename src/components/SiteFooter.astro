@@ -1,0 +1,33 @@
+---
+import {Icon} from '@astrojs/starlight/components';
+import CastellanLockup from './CastellanLockup.astro';
+import './site-footer.css';
+---
+
+<div class="site-footer not-content">
+	<CastellanLockup href="/">
+		<span class="sr-only">Castellan</span>
+	</CastellanLockup>
+	<nav class="site-footer__nav" aria-label="Site">
+		<a href="/getting-started/">
+			<Icon name="open-book" size="1rem" class="site-footer__icon" />
+			Docs
+		</a>
+		<a href="https://github.com/logfoxai/castellan/pkgs/container/castellan" rel="noopener noreferrer">
+			<Icon name="seti:docker" size="1rem" class="site-footer__icon" />
+			GHCR
+		</a>
+		<a href="https://github.com/logfoxai/castellan" rel="noopener noreferrer">
+			<Icon name="github" size="1rem" class="site-footer__icon" />
+			GitHub
+		</a>
+		<a href="https://discord.gg/2wyYnBDhWQ" rel="noopener noreferrer">
+			<Icon name="discord" size="1rem" class="site-footer__icon" />
+			Discord
+		</a>
+		<a href="https://github.com/logfoxai/castellan/blob/main/LICENSE" rel="noopener noreferrer">
+			<Icon name="document" size="1rem" class="site-footer__icon" />
+			MIT
+		</a>
+	</nav>
+</div>

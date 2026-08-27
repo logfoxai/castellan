@@ -2,24 +2,74 @@
   "$schema": "https://unpkg.com/knip@6/schema.json",
   "workspaces": {
     ".": {
+      "ignoreBinaries": ["report"],
+      "ignoreDependencies": [
+        "@fontsource-variable/inter",
+        "@fontsource/caveat",
+        "@pagefind/default-ui",
+        "astro-expressive-code",
+        "phosphor-astro",
+        "unist-util-visit",
+        "unified",
+        "vite"
+      ],
+      "ignoreUnresolved": ["../pagefind/pagefind.js"],
+      "ignoreIssues": {
+        "src/splashHeroTypes.ts": ["types", "exports"],
+        "src/components/**": ["exports", "types", "files"],
+        "src/components/searchKeyboardNav.ts": ["exports", "types"],
+        "src/components/searchPendingDelay.ts": ["exports", "types"],
+        "src/components/searchStaleResults.ts": ["exports", "types"],
+        "src/cs-pagefind/pagefind.ts": ["files"],
+        "src/ui/**": ["exports", "types"],
+        "src/integrations/assertAstroDevFree.mjs": ["exports", "files"],
+        "src/integrations/cleanAstroCache.mjs": ["exports", "files"],
+        "src/integrations/devPagefind.mjs": ["exports", "files"],
+        "src/integrations/devServerNoise.mjs": ["exports", "files"],
+        "src/integrations/pagefindShim.mjs": ["files"],
+        "src/integrations/rehype-wrap-tables.mjs": ["files"],
+        "src/integrations/remark-starlight-md-links.mjs": ["files"],
+        "src/api.ts": ["exports"],
+        "src/auth-token.ts": ["exports"],
+        "src/label-discovery.ts": ["exports"],
+        "src/manifest.ts": ["exports"],
+        "src/service-health.ts": ["exports"],
+        "scripts/mock-dashboard.mjs": ["files"]
+      },
       "entry": [
+        "src/components/codeBlockTitles.ts",
+        "src/components/pagefindMount.ts",
+        "src/components/searchDialog.ts",
+        "src/components/searchKeyboardNav.ts",
+        "src/components/searchClearRefocus.ts",
+        "src/components/searchIdleState.ts",
+        "src/components/searchPendingDelay.ts",
+        "src/components/searchStaleResults.ts",
+        "src/components/docsSearchQuery.ts",
+        "src/components/splashCtaIcons.ts",
+        "src/components/splashHeadlineTape.ts",
+        "src/components/wrapPagefindSearch.ts",
+        "src/components/isUsefulPagefindMatch.ts",
+        "src/splashHeroTypes.ts",
+        "src/ui/icons.ts",
+        "src/integrations/assertAstroDevFree.mjs",
+        "src/integrations/cleanAstroCache.mjs",
+        "src/integrations/devPagefind.mjs",
+        "src/integrations/devServerNoise.mjs",
+        "src/cs-pagefind/pagefind.ts",
+        "src/integrations/pagefindShim.mjs",
         "src/**/*.spec.ts",
-        "scripts/*.{mjs,js,ts}"
+        "scripts/*.{mjs,cjs,js}",
+        "astro.config.mjs"
       ],
       "project": [
-        "src/**/*.ts",
-        "scripts/**/*.{mjs,js,ts}"
-      ],
-      "ignoreDependencies": [
-      ],
-      "ignoreBinaries": [
-        "report"
+        "src/**/*.{ts,js,mjs}",
+        "scripts/**/*.{mjs,cjs,js}",
+        "astro.config.mjs"
       ]
     },
     "ui": {
-      "project": [
-        "src/**/*.{ts,tsx}"
-      ]
+      "project": ["src/**/*.{ts,tsx}"]
     }
   }
 }

@@ -1,0 +1,9 @@
+---
+import CastellanLockup from '../components/CastellanLockup.astro';
+
+const {siteTitle, siteTitleHref} = Astro.locals.starlightRoute;
+---
+
+<CastellanLockup href={siteTitleHref} class="site-title">
+	<span class="sr-only">{siteTitle}</span>
+</CastellanLockup>

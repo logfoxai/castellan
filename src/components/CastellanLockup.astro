@@ -1,0 +1,31 @@
+---
+interface Props {
+	href: string;
+	class?: string;
+}
+
+const {href, class: className} = Astro.props;
+---
+
+<a href={href} class:list={['castellan-lockup', className]}>
+	<picture>
+		<source srcset="/castellan-lockup-light.svg" media="(prefers-color-scheme: light)" />
+		<img src="/castellan-lockup-dark.svg" alt="Castellan" width="160" height="44" />
+	</picture>
+	<slot />
+</a>
+
+<style>
+	.castellan-lockup {
+		display: inline-flex;
+		align-items: center;
+		text-decoration: none;
+		line-height: 0;
+	}
+
+	.castellan-lockup img {
+		display: block;
+		height: 2.25rem;
+		width: auto;
+	}
+</style>

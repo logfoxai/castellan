@@ -1,0 +1,54 @@
+---
+import StarlightPage from '@astrojs/starlight/components/StarlightPage.astro';
+import '../components/splash.css';
+import SplashHomeHero from '../components/SplashHomeHero.astro';
+import SplashFlow from '../components/SplashFlow.astro';
+import SplashDemo from '../components/SplashDemo.astro';
+import SplashCli from '../components/SplashCli.astro';
+import SplashWatchtower from '../components/SplashWatchtower.astro';
+import SplashSecurity from '../components/SplashSecurity.astro';
+import SplashSupport from '../components/SplashSupport.astro';
+
+const actions = [
+	{
+		text: 'Get started',
+		link: '/getting-started/',
+		icon: {type: 'icon', name: 'open-book'},
+	},
+	{
+		text: 'View on GitHub',
+		link: 'https://github.com/logfoxai/castellan',
+		variant: 'secondary' as const,
+		icon: {type: 'icon', name: 'github'},
+		attrs: {
+			target: '_blank',
+			rel: 'noopener noreferrer',
+		},
+	},
+];
+---
+
+<StarlightPage
+	frontmatter={{
+		title: 'Castellan — safe docker-compose deploys with health checks and rollback',
+		description:
+			'Lightweight deployment control for docker-compose. Polls your registry, rolling restarts with health verification, automatic rollback, and an optional dashboard.',
+		template: 'splash',
+		hero: {title: 'Castellan'},
+		head: [{tag: 'title', content: 'Castellan — safe docker-compose deploys with health checks and rollback'}],
+	}}
+>
+	<div class="splash-page not-content">
+		<SplashHomeHero
+			title="Castellan"
+			headline="Stop crossing fingers on every deploy."
+			actions={actions}
+		/>
+		<SplashFlow />
+		<SplashDemo />
+		<SplashCli />
+		<SplashWatchtower />
+		<SplashSecurity />
+		<SplashSupport />
+	</div>
+</StarlightPage>

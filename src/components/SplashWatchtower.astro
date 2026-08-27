@@ -1,0 +1,62 @@
+---
+/**
+ * Watchtower migration beat.
+ */
+import SplashIcon from './SplashIcon.astro';
+import SplashHeroActions from './SplashHeroActions.astro';
+
+const cards = [
+	{
+		tone: 'amber',
+		title: 'Swap the sidecar',
+		copy: 'Remove Watchtower, add the Castellan service — same docker.sock and compose file mounts.',
+		icon: 'rpc',
+	},
+	{
+		tone: 'cyan',
+		title: 'Change the label',
+		copy: 'Replace com.centurylinklabs.watchtower.enable with ai.logfox.castellan.autoupdate on each managed service.',
+		icon: 'clipboard',
+	},
+	{
+		tone: 'green',
+		title: 'Gain a safety net',
+		copy: 'Health waits, automatic rollback, per-digest reject, and deployment history — in one lightweight container.',
+		icon: 'shield',
+	},
+] as const;
+---
+
+<section class="splash-section splash-band splash-agents" aria-labelledby="splash-watchtower-title">
+	<header class="splash-agents__intro">
+		<h2 id="splash-watchtower-title" class="splash-agents__title">Migrating from Watchtower</h2>
+		<p class="splash-agents__lede">
+			Watchtower is archived and no longer in development. Castellan is compose-native, MIT-licensed,
+			and safety-first — the drop-in sidecar for hosts that want rollback without a fleet controller.
+		</p>
+		<SplashHeroActions
+			actions={[
+				{
+					text: 'Migration guide',
+					link: '/watchtower/',
+					variant: 'secondary',
+					icon: {type: 'icon', name: 'open-book'},
+				},
+			]}
+		/>
+	</header>
+
+	<ul class="splash-agents__grid">
+		{
+			cards.map(({tone, title, copy, icon}) => (
+				<li class="splash-agents__card">
+					<span class="splash-agents__icon" data-tone={tone} aria-hidden="true">
+						<SplashIcon name={icon} />
+					</span>
+					<h3 class="splash-agents__card-title">{title}</h3>
+					<p class="splash-agents__card-copy">{copy}</p>
+				</li>
+			))
+		}
+	</ul>
+</section>

@@ -1,0 +1,105 @@
+---
+/**
+ * Homepage product flow — label, poll, deploy, verify.
+ */
+
+const labelCode = `<span class="tok-attr">labels</span>:
+  <span class="tok-str">ai.logfox.castellan.autoupdate</span>: <span class="tok-str">"true"</span>`;
+
+const composeCode = `<span class="tok-attr">castellan</span>:
+  <span class="tok-attr">image</span>: <span class="tok-str">ghcr.io/logfoxai/castellan:latest</span>
+  <span class="tok-attr">volumes</span>:
+    - <span class="tok-str">/var/run/docker.sock:/var/run/docker.sock</span>
+    - <span class="tok-str">./castellan-state:/app/state</span>`;
+
+const steps = [
+	{
+		title: 'Label',
+		body: 'tag',
+		code: labelCode,
+	},
+	{
+		title: 'Poll',
+		body: 'registry',
+		items: ['ECR', 'GHCR', 'Docker Hub', 'OCI v2'],
+	},
+	{
+		title: 'Deploy',
+		body: 'rolling',
+		code: 'compose up — one replica at a time',
+	},
+	{
+		title: 'Verify',
+		body: 'health',
+		items: ['Healthcheck wait', 'Auto rollback', 'Digest reject'],
+	},
+] as const;
+---
+
+<section class="splash-section splash-how" aria-labelledby="splash-how-title">
+	<h2 id="splash-how-title" class="splash-how__title">How it works</h2>
+	<figure class="splash-flow" aria-label="Castellan flow">
+		<ol class="splash-flow__grid">
+			<li class="splash-flow__step" style="--step: 0">
+				<header class="splash-flow__head">
+					<p class="splash-flow__title">{steps[0].title}</p>
+				</header>
+				<div class="splash-flow__body">
+					<pre class="splash-flow__code" tabindex="0"><code set:html={steps[0].code} /></pre>
+				</div>
+			</li>
+
+			<li class="splash-flow__step" style="--step: 1">
+				<header class="splash-flow__head">
+					<p class="splash-flow__title">{steps[1].title}</p>
+				</header>
+				<div class="splash-flow__body">
+					<ul class="splash-flow__surfaces">
+						{steps[1].items.map((label) => (
+							<li>
+								<span class="splash-flow__surface-label">{label}</span>
+							</li>
+						))}
+					</ul>
+				</div>
+			</li>
+
+			<li class="splash-flow__step" style="--step: 2">
+				<header class="splash-flow__head">
+					<p class="splash-flow__title">{steps[2].title}</p>
+				</header>
+				<div class="splash-flow__body splash-flow__body--stack">
+					<div class="splash-flow__cli" aria-label="Compose">
+						<span class="splash-flow__chrome" aria-hidden="true">
+							<span></span><span></span><span></span>
+						</span>
+						<pre class="splash-flow__code splash-flow__code--compact"><code set:html={composeCode} /></pre>
+					</div>
+					<div class="splash-flow__connector" aria-hidden="true">↓</div>
+					<p class="splash-flow__openapi-copy">Pull by digest, retag rolling tag, rolling <code>compose up</code></p>
+				</div>
+			</li>
+
+			<li class="splash-flow__step" style="--step: 3">
+				<header class="splash-flow__head">
+					<p class="splash-flow__title">{steps[3].title}</p>
+				</header>
+				<div class="splash-flow__body splash-flow__body--openapi">
+					<ul class="splash-flow__langs" aria-label="Safety net">
+						{steps[3].items.map((label) => (
+							<li><span>{label}</span></li>
+						))}
+					</ul>
+				</div>
+			</li>
+		</ol>
+	</figure>
+</section>
+
+<style>
+	.splash-flow__code--compact {
+		margin: 0;
+		padding: 0.75rem 1rem;
+		font-size: 0.72rem;
+	}
+</style>
