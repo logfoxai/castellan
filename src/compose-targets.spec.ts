@@ -25,7 +25,7 @@ test('mergeManagedServicesByImage uses agreed group label', (assert) => {
 
     const base: Omit<ManagedService, 'name'> = {
         registry: 'ghcr.io',
-        repository: 'myorg/server',
+        repository: 'myorg/api-service',
         tag: 'staging',
     };
 

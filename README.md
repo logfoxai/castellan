@@ -51,7 +51,7 @@ Castellan watches **one tag per managed service** and redeploys when the **diges
 
 The tag is whatever is on each labeled container’s running image (`myorg/api:staging` → watches `staging`).
 
-Typical CI flow: push `myorg/server:staging` on every merge, then `castellan watch server` so the job waits until Castellan rolls out that digest (or fails). Details: [Tags and versions](#tags-and-versions) and [Castellan CLI](#castellan-cli).
+Typical CI flow: push `myorg/api-service:staging` on every merge, then `castellan watch api-service` so the job waits until Castellan rolls out that digest (or fails). Details: [Tags and versions](#tags-and-versions) and [Castellan CLI](#castellan-cli).
 
 ## HTTP surface
 
@@ -142,7 +142,7 @@ Discovery runs **at startup and on every registry check**. New labeled container
 
 ### Rolling replicas
 
-When multiple compose services share the same image ref, Castellan restarts them one at a time. By default the logical service name is the **repository** (e.g. `api-1` + `api-2` → `myorg/server`). Set the same **`ai.logfox.castellan.group`** on each replica to override (e.g. `group: api`).
+When multiple compose services share the same image ref, Castellan restarts them one at a time. By default the logical service name is the **repository** (e.g. `api-1` + `api-2` → `myorg/api-service`). Set the same **`ai.logfox.castellan.group`** on each replica to override (e.g. `group: api`).
 
 The logical name is identity. Changing or adding `group` registers a new managed unit (deployment history and poll settings under the old name are not migrated). Prefer setting `group` before the first deploy.
 
@@ -210,18 +210,18 @@ Each managed service watches **exactly one registry tag**. Deployments fire when
 
 The tag is inferred from each labeled container’s image ref — e.g. `ghcr.io/myorg/api:staging` watches `staging` on `ghcr.io/myorg/api`.
 
-The dashboard shows **`repository:tag`** at a glance (e.g. `server:staging`); expand **Image details** for full registry path and digests.
+The dashboard shows **`repository:tag`** at a glance (e.g. `api-service:staging`); expand **Image details** for full registry path and digests.
 
 ### CI and rolling tags
 
-Many teams publish environment tags from CI — push `myorg/server:staging` on every merge to main. Castellan watches that tag and redeploys when the digest changes.
+Many teams publish environment tags from CI — push `myorg/api-service:staging` on every merge to main. Castellan watches that tag and redeploys when the digest changes.
 
 After CI pushes the image, use the **[Castellan CLI](https://github.com/logfoxai/castellan-cli)** so the job asks Castellan to check now **and** waits until the rollout settles (fails the job on rollback):
 
 ```yaml
 - run: |
     npm install -g castellan-cli
-    castellan watch server
+    castellan watch api-service
   env:
     CASTELLAN_URL: http://castellan.example:8443
     CASTELLAN_AUTH_TOKEN: ${{ secrets.CASTELLAN_AUTH_TOKEN }}
@@ -387,7 +387,7 @@ npm install -g castellan-cli
 export CASTELLAN_URL=http://castellan.example:8443
 export CASTELLAN_AUTH_TOKEN=…
 
-castellan watch server          # check registry + wait until settle (CI gate)
+castellan watch api-service          # check registry + wait until settle (CI gate)
 castellan status                     # one-shot snapshot
 castellan check                      # kick a registry check; do not wait
 ```

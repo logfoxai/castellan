@@ -38,7 +38,7 @@ function labeledRunningContainer(
 
 test('discoverManagedServices ignores disagreeing group labels', async (assert) => {
 
-    const stagingImage = 'ghcr.io/myorg/server:staging';
+    const stagingImage = 'ghcr.io/myorg/api-service:staging';
 
     const docker = {
         listContainers: async () => [
@@ -50,13 +50,13 @@ test('discoverManagedServices ignores disagreeing group labels', async (assert) 
     const services = await discoverManagedServices(docker, 'logfox');
 
     assert.equal(services.length, 1);
-    assert.equal(services[0].name, 'myorg/server');
+    assert.equal(services[0].name, 'myorg/api-service');
 
 });
 
 test('discoverManagedServices ignores labeled containers from other compose projects', async (assert) => {
 
-    const stagingImage = 'ghcr.io/myorg/server:staging';
+    const stagingImage = 'ghcr.io/myorg/api-service:staging';
     const otherImage = 'ghcr.io/myorg/other-service:staging';
 
     const docker = {
