@@ -1,38 +1,23 @@
 ---
 /**
  * Homepage product flow — label, poll, deploy, verify.
+ * Each step uses the same body chrome; deploy shows a compact terminal + rollout outcome.
  */
 
 const labelCode = `<span class="tok-attr">labels</span>:
   <span class="tok-str">ai.logfox.castellan.autoupdate</span>: <span class="tok-str">"true"</span>`;
 
-const composeCode = `<span class="tok-attr">castellan</span>:
-  <span class="tok-attr">image</span>: <span class="tok-str">ghcr.io/logfoxai/castellan:latest</span>
-  <span class="tok-attr">volumes</span>:
-    - <span class="tok-str">/var/run/docker.sock:/var/run/docker.sock</span>
-    - <span class="tok-str">./castellan-state:/app/state</span>`;
+const registryItems = [
+	{label: 'ECR', path: '*.dkr.ecr.*'},
+	{label: 'GHCR', path: 'ghcr.io/*'},
+	{label: 'Docker Hub', path: 'docker.io/*'},
+	{label: 'OCI v2', path: 'any registry'},
+] as const;
 
-const steps = [
-	{
-		title: 'Label',
-		body: 'tag',
-		code: labelCode,
-	},
-	{
-		title: 'Poll',
-		body: 'registry',
-		items: ['ECR', 'GHCR', 'Docker Hub', 'OCI v2'],
-	},
-	{
-		title: 'Deploy',
-		body: 'rolling',
-		code: 'compose up — one replica at a time',
-	},
-	{
-		title: 'Verify',
-		body: 'health',
-		items: ['Healthcheck wait', 'Auto rollback', 'Digest reject'],
-	},
+const verifyItems = [
+	{label: 'Healthcheck wait', path: 'compose health'},
+	{label: 'Auto rollback', path: 'last good digest'},
+	{label: 'Digest reject', path: 'block bad SHA'},
 ] as const;
 ---
 
@@ -42,22 +27,23 @@ const steps = [
 		<ol class="splash-flow__grid">
 			<li class="splash-flow__step" style="--step: 0">
 				<header class="splash-flow__head">
-					<p class="splash-flow__title">{steps[0].title}</p>
+					<p class="splash-flow__title">Label</p>
 				</header>
 				<div class="splash-flow__body">
-					<pre class="splash-flow__code" tabindex="0"><code set:html={steps[0].code} /></pre>
+					<pre class="splash-flow__code" tabindex="0"><code set:html={labelCode} /></pre>
 				</div>
 			</li>
 
 			<li class="splash-flow__step" style="--step: 1">
 				<header class="splash-flow__head">
-					<p class="splash-flow__title">{steps[1].title}</p>
+					<p class="splash-flow__title">Poll</p>
 				</header>
 				<div class="splash-flow__body">
-					<ul class="splash-flow__surfaces">
-						{steps[1].items.map((label) => (
+					<ul class="splash-flow__surfaces splash-flow__surfaces--plain">
+						{registryItems.map(({label, path}) => (
 							<li>
 								<span class="splash-flow__surface-label">{label}</span>
+								<code class="splash-flow__path">{path}</code>
 							</li>
 						))}
 					</ul>
@@ -66,28 +52,42 @@ const steps = [
 
 			<li class="splash-flow__step" style="--step: 2">
 				<header class="splash-flow__head">
-					<p class="splash-flow__title">{steps[2].title}</p>
+					<p class="splash-flow__title">Deploy</p>
 				</header>
 				<div class="splash-flow__body splash-flow__body--stack">
-					<div class="splash-flow__cli" aria-label="Compose">
+					<div class="splash-flow__cli" aria-label="Rolling deploy">
 						<span class="splash-flow__chrome" aria-hidden="true">
 							<span></span><span></span><span></span>
 						</span>
-						<pre class="splash-flow__code splash-flow__code--compact"><code set:html={composeCode} /></pre>
+						<div class="splash-flow__cli-line">
+							<span class="splash-flow__prompt" aria-hidden="true">$</span>
+							<code>
+								<span class="tok-muted">docker compose up</span>{' '}
+								<span class="tok-fn">api</span>
+							</code>
+						</div>
 					</div>
 					<div class="splash-flow__connector" aria-hidden="true">↓</div>
-					<p class="splash-flow__openapi-copy">Pull by digest, retag rolling tag, rolling <code>compose up</code></p>
+					<div class="splash-flow__outcome">
+						<div class="splash-flow__outcome-meta">
+							<code class="splash-flow__outcome-call">pull → retag → rolling restart</code>
+							<span class="splash-flow__outcome-hint">one replica at a time</span>
+						</div>
+					</div>
 				</div>
 			</li>
 
 			<li class="splash-flow__step" style="--step: 3">
 				<header class="splash-flow__head">
-					<p class="splash-flow__title">{steps[3].title}</p>
+					<p class="splash-flow__title">Verify</p>
 				</header>
-				<div class="splash-flow__body splash-flow__body--openapi">
-					<ul class="splash-flow__langs" aria-label="Safety net">
-						{steps[3].items.map((label) => (
-							<li><span>{label}</span></li>
+				<div class="splash-flow__body">
+					<ul class="splash-flow__surfaces splash-flow__surfaces--plain">
+						{verifyItems.map(({label, path}) => (
+							<li>
+								<span class="splash-flow__surface-label">{label}</span>
+								<code class="splash-flow__path">{path}</code>
+							</li>
 						))}
 					</ul>
 				</div>
@@ -95,11 +95,3 @@ const steps = [
 		</ol>
 	</figure>
 </section>
-
-<style>
-	.splash-flow__code--compact {
-		margin: 0;
-		padding: 0.75rem 1rem;
-		font-size: 0.72rem;
-	}
-</style>

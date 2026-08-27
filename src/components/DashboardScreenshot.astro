@@ -1,0 +1,65 @@
+---
+/**
+ * Castellan dashboard screenshot — dark capture on light theme, light capture on dark theme.
+ */
+interface Props {
+	link?: string;
+	linkAttrs?: Record<string, string | number | boolean>;
+	class?: string;
+}
+
+const {
+	link,
+	linkAttrs = {},
+	class: className = '',
+} = Astro.props;
+
+const alt =
+	'Castellan dashboard showing service status, deployments, and Docker containers';
+---
+
+<figure class:list={['demo-screenshot', className]}>
+	{
+		link ? (
+			<a href={link} class="demo-screenshot__link" {...linkAttrs}>
+				<img
+					class="demo-screenshot__img demo-screenshot__img--for-light"
+					src="/screenshot.png"
+					alt={alt}
+					width="1200"
+					height="675"
+					loading="lazy"
+				/>
+				<img
+					class="demo-screenshot__img demo-screenshot__img--for-dark"
+					src="/screenshot-light.png"
+					alt=""
+					width="1200"
+					height="675"
+					loading="lazy"
+					aria-hidden="true"
+				/>
+			</a>
+		) : (
+			<>
+				<img
+					class="demo-screenshot__img demo-screenshot__img--for-light"
+					src="/screenshot.png"
+					alt={alt}
+					width="1200"
+					height="675"
+					loading="lazy"
+				/>
+				<img
+					class="demo-screenshot__img demo-screenshot__img--for-dark"
+					src="/screenshot-light.png"
+					alt=""
+					width="1200"
+					height="675"
+					loading="lazy"
+					aria-hidden="true"
+				/>
+			</>
+		)
+	}
+</figure>

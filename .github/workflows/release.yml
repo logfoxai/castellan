@@ -25,6 +25,13 @@ jobs:
     concurrency:
       group: deploy-${{ github.event.workflow_run.head_branch }}
       cancel-in-progress: true
+    env:
+      # prod CloudFront (main only) — stack: infra/prod/us-east-2/static/castellan
+      PROD_ACCOUNT: ${{ secrets.AWS_ACCOUNT_PROD }}
+      PROD_AWS_REGION: us-east-2
+      PROD_DEPLOY_ROLE: gh-deploy-castellan
+      PROD_SSM_BUCKET_PARAM: /logfox/prod/castellan/assetsBucket
+      PROD_SSM_DISTRIBUTION_PARAM: /logfox/prod/castellan/cloudfrontDistributionId
     steps:
       - uses: actions/checkout@v6
         with:
@@ -66,6 +73,27 @@ jobs:
           gh api --method PATCH \
             "/orgs/${{ github.repository_owner }}/packages/container/castellan" \
             -f visibility=public
+
+      - name: Configure AWS credentials
+        if: github.event.workflow_run.head_branch == 'main'
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-region: ${{ env.PROD_AWS_REGION }}
+          role-to-assume: arn:aws:iam::${{ env.PROD_ACCOUNT }}:role/${{ env.PROD_DEPLOY_ROLE }}
+
+      - name: Load publish targets from SSM
+        if: github.event.workflow_run.head_branch == 'main'
+        run: |
+          set -eux
+          echo "S3_BUCKET=$(aws ssm get-parameter --name "$PROD_SSM_BUCKET_PARAM" --query Parameter.Value --output text)" >> "$GITHUB_ENV"
+          echo "DISTRIBUTION_ID=$(aws ssm get-parameter --name "$PROD_SSM_DISTRIBUTION_PARAM" --query Parameter.Value --output text)" >> "$GITHUB_ENV"
+
+      - name: Deploy docs site
+        if: github.event.workflow_run.head_branch == 'main'
+        run: ./deploy-docs.sh
+        env:
+          S3_BUCKET: ${{ env.S3_BUCKET }}
+          DISTRIBUTION_ID: ${{ env.DISTRIBUTION_ID }}
 
       - run: npx autorel@^2
         env:

@@ -6,6 +6,12 @@ import SplashHeroActions from './SplashHeroActions.astro';
 import SplashFeatures from './SplashFeatures.astro';
 import type {SplashHeroActionList} from '../splashHeroTypes';
 import {splitHeadlineForAccent} from './splashHeadlineAccent';
+import {
+	SPLASH_HERO_EYEBROW,
+	SPLASH_HERO_FOLLOW,
+	SPLASH_HERO_LEAD,
+	SPLASH_HERO_PITCH,
+} from './splashHeroCopy';
 
 const PAGE_TITLE_ID = '_top';
 
@@ -17,7 +23,6 @@ interface Props {
 
 const {title, headline, actions = []} = Astro.props;
 
-const homePitch = 'One compose sidecar → registry polling, rolling deploys, health checks, and rollback.';
 const accentHeadline = splitHeadlineForAccent(headline);
 
 const heroLogLines = [
@@ -32,6 +37,7 @@ const heroLogLines = [
 
 <section class="splash-hero">
 	<h1 id={PAGE_TITLE_ID} class="sr-only" data-page-title set:html={title} />
+	<p class="splash-hero__eyebrow">{SPLASH_HERO_EYEBROW}</p>
 	{accentHeadline ? (
 		<h2 class="splash-hero__headline">
 			<span class="splash-hero__accent">{accentHeadline.phrase}</span>
@@ -40,16 +46,13 @@ const heroLogLines = [
 	) : (
 		headline && <h2 class="splash-hero__headline">{headline}</h2>
 	)}
-	<p class="splash-hero__pitch">{homePitch}</p>
+	<p class="splash-hero__pitch">{SPLASH_HERO_PITCH}</p>
 	<SplashHeroActions actions={actions} />
 	<SplashFeatures />
 	<div class="splash-hero__stage">
 		<div class="splash-hero__band">
 			<div class="splash-hero__lead">
-				<p>
-					Most teams stitch together Watchtower restarts, manual SSH, and hoping healthchecks pass.
-					When a bad digest lands, you find out from PagerDuty — not your deploy tool.
-				</p>
+				<p>{SPLASH_HERO_LEAD}</p>
 			</div>
 			<figure class="splash-hero__browser">
 				<div class="splash-hero__chrome">
@@ -68,40 +71,8 @@ const heroLogLines = [
 				</div>
 			</figure>
 			<div class="splash-hero__follow">
-				<p>
-					Castellan watches your registry tag, rolling-restarts labeled compose services, waits for
-					healthchecks, and rolls back to the last good digest on failure. One sidecar, opt-in labels,
-					optional dashboard and API — or run fully headless.
-				</p>
+				<p>{SPLASH_HERO_FOLLOW}</p>
 			</div>
 		</div>
 	</div>
 </section>
-
-<style>
-	.splash-hero__viewport--terminal {
-		padding: 1rem 1.25rem;
-		font-family: var(--sl-font-mono, ui-monospace, monospace);
-		font-size: 0.78rem;
-		line-height: 1.55;
-	}
-
-	.splash-hero__terminal {
-		margin: 0;
-		display: flex;
-		flex-direction: column;
-		gap: 0.15rem;
-		color: var(--cs-ink);
-	}
-
-	.splash-hero__terminal code {
-		font-family: inherit;
-		white-space: pre-wrap;
-		word-break: break-word;
-	}
-
-	.splash-hero__terminal-comment {
-		color: hsl(0 70% 62%);
-		margin-top: 0.35rem;
-	}
-</style>

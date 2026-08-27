@@ -47,6 +47,7 @@
         "src/components/docsSearchQuery.ts",
         "src/components/splashCtaIcons.ts",
         "src/components/splashHeadlineAccent.ts",
+        "src/components/splashHeroCopy.ts",
         "src/components/wrapPagefindSearch.ts",
         "src/components/isUsefulPagefindMatch.ts",
         "src/splashHeroTypes.ts",

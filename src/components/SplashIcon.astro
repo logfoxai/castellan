@@ -1,23 +1,23 @@
 ---
 /**
- * Splash homepage icons — Phosphor for UI marks, official SVG for MCP brand.
+ * Splash homepage icons — Phosphor marks for deploy/compose concepts.
  */
-import ClipboardText from 'phosphor-astro/ClipboardText.astro';
-import Flask from 'phosphor-astro/Flask.astro';
-import Function from 'phosphor-astro/Function.astro';
+import ArrowCounterClockwise from 'phosphor-astro/ArrowCounterClockwise.astro';
+import ArrowsLeftRight from 'phosphor-astro/ArrowsLeftRight.astro';
 import LockOpen from 'phosphor-astro/LockOpen.astro';
-import Scroll from 'phosphor-astro/Scroll.astro';
 import ShieldCheck from 'phosphor-astro/ShieldCheck.astro';
-import {mcpIcon} from '../ui/icons';
+import Stack from 'phosphor-astro/Stack.astro';
+import Tag from 'phosphor-astro/Tag.astro';
+import TerminalWindow from 'phosphor-astro/TerminalWindow.astro';
 
 export type SplashIconName =
-	| 'mcp'
-	| 'clipboard'
-	| 'skill'
-	| 'unlock'
+	| 'compose'
 	| 'shield'
-	| 'rpc'
-	| 'test';
+	| 'rollback'
+	| 'pipeline'
+	| 'unlock'
+	| 'label'
+	| 'swap';
 
 interface Props {
 	name: SplashIconName;
@@ -28,19 +28,19 @@ const svgProps = {'aria-hidden': 'true' as const};
 ---
 
 {
-	name === 'mcp' ? (
-		<Fragment set:html={mcpIcon()} />
-	) : name === 'clipboard' ? (
-		<ClipboardText {...svgProps} />
-	) : name === 'skill' ? (
-		<Scroll {...svgProps} />
-	) : name === 'unlock' ? (
-		<LockOpen {...svgProps} />
+	name === 'compose' ? (
+		<Stack {...svgProps} />
 	) : name === 'shield' ? (
 		<ShieldCheck {...svgProps} />
-	) : name === 'rpc' ? (
-		<Function {...svgProps} />
-	) : name === 'test' ? (
-		<Flask {...svgProps} />
+	) : name === 'rollback' ? (
+		<ArrowCounterClockwise {...svgProps} />
+	) : name === 'pipeline' ? (
+		<TerminalWindow {...svgProps} />
+	) : name === 'unlock' ? (
+		<LockOpen {...svgProps} />
+	) : name === 'label' ? (
+		<Tag {...svgProps} />
+	) : name === 'swap' ? (
+		<ArrowsLeftRight {...svgProps} />
 	) : null
 }

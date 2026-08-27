@@ -25,8 +25,8 @@ const required = [
 	'splash-flow',
 	'splash-features',
 	'splash-demo',
-	'splash-sdk',
-	'splash-agents',
+	'splash-cli',
+	'splash-migration',
 	'splash-auth',
 	'splash-support',
 	'Gate CI on rollouts',
@@ -36,8 +36,11 @@ const required = [
 	'Need a hand?',
 	'https://discord.gg/2wyYnBDhWQ',
 	'splash-hero__accent',
+	'splash-hero__eyebrow',
 	'>Guard</span>',
 	'health checks and rollback',
+	'For docker-compose production',
+	'cluster is overkill',
 ];
 
 const missing = required.filter((needle) => !html.includes(needle));
