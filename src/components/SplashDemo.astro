@@ -1,0 +1,39 @@
+---
+/**
+ * Dashboard section — screenshot + CTAs.
+ */
+import SplashHeroActions from './SplashHeroActions.astro';
+import DashboardScreenshot from './DashboardScreenshot.astro';
+
+const dashboardShotAttrs = {
+	title: 'Castellan dashboard documentation',
+};
+---
+
+<section class="splash-section splash-band splash-demo" aria-labelledby="splash-demo-title">
+	<header class="splash-demo__intro">
+		<h2 id="splash-demo-title" class="splash-demo__title">Built-in dashboard</h2>
+		<p class="splash-demo__lede">
+			Live service status, deployment history, Docker container metrics, and one-click logs —
+			served from the same container. Disable it for API-only or run fully headless.
+		</p>
+		<SplashHeroActions
+			actions={[
+				{
+					text: 'Get started',
+					link: '/getting-started/',
+					variant: 'primary',
+					icon: {type: 'icon', name: 'open-book'},
+				},
+				{
+					text: 'Dashboard docs',
+					link: '/dashboard/',
+					variant: 'secondary',
+					icon: {type: 'icon', name: 'laptop'},
+				},
+			]}
+		/>
+	</header>
+
+	<DashboardScreenshot link="/dashboard/" linkAttrs={dashboardShotAttrs} class="splash-demo__shot" />
+</section>

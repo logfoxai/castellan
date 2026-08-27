@@ -1,0 +1,25 @@
+---
+import CodeBlockTitles from '../components/CodeBlockTitles.astro';
+import SearchModalPolish from '../components/SearchModalPolish.astro';
+
+const {head} = Astro.locals.starlightRoute;
+---
+
+{head.map(({tag: Tag, attrs, content}) => <Tag {...attrs} set:html={content} />)}
+
+<link
+    rel="preload"
+    href="/fonts/inter-latin-wght-normal.woff2"
+    as="font"
+    type="font/woff2"
+    crossorigin="anonymous"
+/>
+<link
+    rel="preload"
+    href="/fonts/jetbrains-mono-nerd-mono-400.woff2"
+    as="font"
+    type="font/woff2"
+    crossorigin="anonymous"
+/>
+<CodeBlockTitles />
+<SearchModalPolish />

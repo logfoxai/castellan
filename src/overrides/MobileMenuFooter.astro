@@ -1,0 +1,131 @@
+---
+/**
+ * Mobile drawer chrome — search trigger (opens the header dialog) + theme.
+ * Do not mount a second Search component: two site-search elements both handle `/`
+ * and stack two dialogs, so focus, Esc, and outside-click all fail.
+ */
+import {Icon} from '@astrojs/starlight/components';
+import config from 'virtual:starlight/user-config';
+import LanguageSelect from 'virtual:starlight/components/LanguageSelect';
+import SocialIcons from 'virtual:starlight/components/SocialIcons';
+import ThemeSelect from 'virtual:starlight/components/ThemeSelect';
+
+const shouldRenderSearch =
+	config.pagefind || config.components.Search !== '@astrojs/starlight/components/Search.astro';
+---
+
+<div class="cs-mobile-menu-tools">
+	{
+		shouldRenderSearch && (
+			<div class="cs-mobile-menu-tools__search">
+				<button
+					type="button"
+					data-cs-open-docs-search
+					aria-label={Astro.locals.t('search.label')}
+					aria-keyshortcuts="/"
+				>
+					<Icon name="magnifier" />
+					<span class="cs-search-label" aria-hidden="true">{Astro.locals.t('search.label')}</span>
+					<kbd class="cs-search-kbd">/</kbd>
+				</button>
+			</div>
+		)
+	}
+	<div class="mobile-preferences sl-flex">
+		<div class="social-icons">
+			<SocialIcons />
+		</div>
+		<div class="cs-mobile-menu-tools__theme">
+			<span class="cs-mobile-menu-tools__theme-label">Theme</span>
+			<ThemeSelect />
+		</div>
+		<LanguageSelect />
+	</div>
+</div>
+
+<style>
+	@layer starlight.core {
+		.cs-mobile-menu-tools {
+			display: flex;
+			flex-direction: column;
+			gap: 0.85rem;
+			margin-top: auto;
+			padding-top: 0.75rem;
+			border-top: 1px solid var(--sl-color-gray-6);
+		}
+
+		.cs-mobile-menu-tools__search {
+			width: 100%;
+		}
+
+		.cs-mobile-menu-tools__search :global([data-cs-open-docs-search]) {
+			display: flex;
+			align-items: center;
+			width: 100%;
+			max-width: none;
+			height: var(--docs-search-height, 2.25rem);
+			padding-inline: 0.85rem;
+			justify-content: flex-start;
+			gap: 0.55rem;
+			border: 1px solid var(--sl-color-gray-5);
+			border-radius: 0.55rem;
+			background-color: var(--sl-color-gray-6);
+			color: var(--sl-color-gray-2);
+			cursor: pointer;
+			font-size: var(--sl-text-sm);
+		}
+
+		.cs-mobile-menu-tools__search :global(.cs-search-label) {
+			display: inline;
+			overflow: hidden;
+			text-overflow: ellipsis;
+			white-space: nowrap;
+		}
+
+		.cs-mobile-menu-tools__search :global(.cs-search-kbd) {
+			display: inline-flex;
+			align-items: center;
+			margin-inline-start: auto;
+			border-radius: 0.25rem;
+			font-size: var(--sl-text-2xs);
+			padding-inline: 0.375rem;
+			background-color: var(--sl-color-gray-5);
+			border: 0;
+			color: var(--sl-color-gray-2);
+		}
+
+		.social-icons {
+			display: flex;
+			margin-inline-end: auto;
+			gap: 1rem;
+			align-items: center;
+			padding-block: 0;
+		}
+
+		.social-icons:empty {
+			display: none;
+		}
+
+		.mobile-preferences {
+			justify-content: space-between;
+			align-items: center;
+			flex-wrap: wrap;
+			column-gap: 1rem;
+			row-gap: 0.65rem;
+			padding: 0.15rem 0 0.35rem;
+		}
+
+		.cs-mobile-menu-tools__theme {
+			display: inline-flex;
+			align-items: center;
+			gap: 0.65rem;
+		}
+
+		.cs-mobile-menu-tools__theme-label {
+			font-size: 0.8125rem;
+			font-weight: 600;
+			color: var(--sl-color-gray-2);
+			letter-spacing: -0.01em;
+		}
+	}
+</style>

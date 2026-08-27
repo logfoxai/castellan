@@ -1,0 +1,26 @@
+---
+/**
+ * Homepage CLI beat — CI settle gates.
+ */
+const cliCode = `<span class="tok-kw">export</span> CASTELLAN_URL=http://castellan.internal:8443
+<span class="tok-kw">export</span> CASTELLAN_AUTH_TOKEN=…
+
+<span class="tok-fn">castellan</span> <span class="tok-fn">watch</span> api-service
+<span class="tok-cm"># exits 0 when digest is healthy — 1 on rollback or timeout</span>`;
+---
+
+<section class="splash-section splash-cli" aria-labelledby="splash-cli-title">
+	<div class="splash-cli__inner">
+		<header class="splash-cli__intro">
+			<h2 id="splash-cli-title" class="splash-cli__title">Gate CI on rollouts</h2>
+			<p class="splash-cli__lede">
+				After CI pushes a new image, <code>castellan watch</code> forces a registry check and blocks
+				until the rollout settles — or fails the job on rollback. Day-to-day ops stay in the dashboard.
+			</p>
+		</header>
+
+		<figure class="splash-cli__figure" aria-label="Castellan CLI example">
+			<pre class="splash-cli__code" tabindex="0"><code set:html={cliCode} /></pre>
+		</figure>
+	</div>
+</section>

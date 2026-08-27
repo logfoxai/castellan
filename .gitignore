@@ -1,5 +1,7 @@
 node_modules/
 dist/
+docs-site/
+.astro/
 coverage/
 *.log
 .DS_Store

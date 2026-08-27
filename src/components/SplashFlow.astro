@@ -1,0 +1,97 @@
+---
+/**
+ * Homepage product flow — label, poll, deploy, verify.
+ * Each step uses the same body chrome; deploy shows a compact terminal + rollout outcome.
+ */
+
+const labelCode = `<span class="tok-attr">labels</span>:
+  <span class="tok-str">ai.logfox.castellan.autoupdate</span>: <span class="tok-str">"true"</span>`;
+
+const registryItems = [
+	{label: 'ECR', path: '*.dkr.ecr.*'},
+	{label: 'GHCR', path: 'ghcr.io/*'},
+	{label: 'Docker Hub', path: 'docker.io/*'},
+	{label: 'OCI v2', path: 'any registry'},
+] as const;
+
+const verifyItems = [
+	{label: 'Healthcheck wait', path: 'compose health'},
+	{label: 'Auto rollback', path: 'last good digest'},
+	{label: 'Digest reject', path: 'block bad SHA'},
+] as const;
+---
+
+<section class="splash-section splash-how" aria-labelledby="splash-how-title">
+	<h2 id="splash-how-title" class="splash-how__title">How it works</h2>
+	<figure class="splash-flow" aria-label="Castellan flow">
+		<ol class="splash-flow__grid">
+			<li class="splash-flow__step" style="--step: 0">
+				<header class="splash-flow__head">
+					<p class="splash-flow__title">Label</p>
+				</header>
+				<div class="splash-flow__body">
+					<pre class="splash-flow__code" tabindex="0"><code set:html={labelCode} /></pre>
+				</div>
+			</li>
+
+			<li class="splash-flow__step" style="--step: 1">
+				<header class="splash-flow__head">
+					<p class="splash-flow__title">Poll</p>
+				</header>
+				<div class="splash-flow__body">
+					<ul class="splash-flow__surfaces splash-flow__surfaces--plain">
+						{registryItems.map(({label, path}) => (
+							<li>
+								<span class="splash-flow__surface-label">{label}</span>
+								<code class="splash-flow__path">{path}</code>
+							</li>
+						))}
+					</ul>
+				</div>
+			</li>
+
+			<li class="splash-flow__step" style="--step: 2">
+				<header class="splash-flow__head">
+					<p class="splash-flow__title">Deploy</p>
+				</header>
+				<div class="splash-flow__body splash-flow__body--stack">
+					<div class="splash-flow__cli" aria-label="Rolling deploy">
+						<span class="splash-flow__chrome" aria-hidden="true">
+							<span></span><span></span><span></span>
+						</span>
+						<div class="splash-flow__cli-line">
+							<span class="splash-flow__prompt" aria-hidden="true">$</span>
+							<code>
+								<span class="tok-muted">docker compose up</span>{' '}
+								<span class="tok-fn">api</span>
+							</code>
+						</div>
+					</div>
+					<div class="splash-flow__connector" aria-hidden="true">↓</div>
+					<div class="splash-flow__outcome">
+						<div class="splash-flow__outcome-meta">
+							<code class="splash-flow__outcome-call">pull → retag → rolling restart</code>
+							<span class="splash-flow__outcome-hint">one replica at a time</span>
+						</div>
+					</div>
+				</div>
+			</li>
+
+			<li class="splash-flow__step" style="--step: 3">
+				<header class="splash-flow__head">
+					<p class="splash-flow__title">Verify</p>
+				</header>
+				<div class="splash-flow__body">
+					<ul class="splash-flow__surfaces splash-flow__surfaces--plain">
+						{verifyItems.map(({label, path}) => (
+							<li>
+								<span class="splash-flow__surface-label">{label}</span>
+								<code class="splash-flow__path">{path}</code>
+							</li>
+						))}
+					</ul>
+				</div>
+			</li>
+		</ol>
+	</figure>
+</section>

@@ -1,0 +1,77 @@
+---
+/**
+ * Homepage highlight strip — product pillars + OSS trust card.
+ */
+import SplashIcon from './SplashIcon.astro';
+import type {SplashIconName} from './SplashIcon.astro';
+
+const features = [
+	{
+		tone: 'amber',
+		title: 'Open source',
+		copy: 'MIT licensed — free to use and\u00A0fork.',
+		icon: 'unlock',
+		wideOnly: true,
+	},
+	{
+		tone: 'cyan',
+		title: 'Compose-native',
+		copy: 'One sidecar on the host — opt-in labels, no separate controller or\u00A0cluster.',
+		icon: 'compose',
+		wideOnly: false,
+	},
+	{
+		tone: 'rose',
+		title: 'Health\u00A0verification',
+		copy: 'Waits for compose healthchecks before moving to the next\u00A0replica.',
+		icon: 'shield',
+		wideOnly: false,
+	},
+	{
+		tone: 'green',
+		title: 'Automatic\u00A0rollback',
+		copy: 'Failed deploys roll back to the last known-good digest\u00A0automatically.',
+		icon: 'rollback',
+		wideOnly: false,
+	},
+	{
+		tone: 'violet',
+		title: 'CI settle\u00A0gates',
+		copy: '<code>castellan watch</code> blocks your pipeline until rollouts finish — or fail on\u00A0rollback.',
+		copyHtml: true,
+		icon: 'pipeline',
+		wideOnly: false,
+	},
+] as const satisfies ReadonlyArray<{
+	tone: string;
+	title: string;
+	copy: string;
+	copyHtml?: boolean;
+	icon: SplashIconName;
+	wideOnly: boolean;
+}>;
+---
+
+<section class="splash-features" aria-label="Product highlights">
+	<ul class="splash-features__list">
+		{
+			features.map(({tone, title, copy, copyHtml, icon, wideOnly}) => (
+				<li class:list={['splash-features__item', wideOnly && 'splash-features__item--wide-only']}>
+					<span class="splash-features__media">
+						<span class="splash-features__icon" data-tone={tone} aria-hidden="true">
+							<SplashIcon name={icon} />
+						</span>
+					</span>
+					<h3 class="splash-features__title">{title}</h3>
+					{
+						copyHtml ? (
+							<p class="splash-features__copy" set:html={copy} />
+						) : (
+							<p class="splash-features__copy">{copy}</p>
+						)
+					}
+				</li>
+			))
+		}
+	</ul>
+</section>

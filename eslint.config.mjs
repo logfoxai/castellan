@@ -2,7 +2,24 @@ import tseslint from 'typescript-eslint';
 
 export default tseslint.config(
     {
-        ignores: ['dist/**', 'node_modules/**', 'eslint.config.mjs', 'ui/dist/**', 'ui/src/**/*.tsx'],
+        ignores: [
+            'dist/**',
+            '.astro/**',
+            'docs-site/**',
+            'node_modules/**',
+            'eslint.config.mjs',
+            'astro.config.mjs',
+            'ec.config.mjs',
+            'src/components/**',
+            'src/overrides/**',
+            'src/pages/**',
+            'src/content/**',
+            'src/content.config.ts',
+            'src/integrations/**',
+            'src/ui/**',
+            'ui/dist/**',
+            'ui/src/**/*.tsx',
+        ],
     },
     ...tseslint.configs.recommended,
     {

@@ -1,0 +1,2679 @@
+/*
+ * Castellan docs theme
+ * Guide pages and splash home are scoped separately so splash never bleeds into guides.
+ * Splash homepage styles live in src/components/splash.css.
+ * Shared page/sidebar/nav/code tokens: docs-shared.css (also used by Vite UI).
+ */
+
+/* ─── Global tokens (unlayered so they beat Starlight props) ──────────────── */
+
+:root,
+::backdrop {
+    --sl-font: 'Inter Variable', ui-sans-serif, system-ui, sans-serif;
+    --sl-font-mono: var(--font-mono);
+    --sl-color-accent-low: color-mix(in srgb, var(--docs-primary-bg) 22%, var(--docs-bg));
+    --sl-color-accent: var(--docs-primary-bg);
+    --sl-color-accent-high: var(--docs-primary-bg);
+    --sl-color-text-accent: var(--docs-primary-bg);
+    --sl-color-bg-accent: var(--docs-primary-bg);
+    --sl-color-text-invert: hsl(0, 0%, 100%);
+    --sl-color-bg-inline-code: var(--cs-inline-code-bg);
+
+    /* Align Starlight chrome with shared docs palette (not default hue-224 greys). */
+    --sl-color-bg: var(--docs-bg);
+    --sl-color-bg-nav: var(--docs-nav);
+    --sl-color-bg-sidebar: var(--docs-sidebar);
+    /* content-panel / sidebar hairlines — Starlight gray-6 is ~94% and vanishes in light. */
+    --sl-color-hairline: var(--docs-border);
+    --sl-color-hairline-light: var(--docs-border);
+    --sl-color-hairline-shade: var(--docs-border);
+
+    /* --cs-primary-* / --cs-table-bg from docs-shared.css */
+    --cs-font-heading: var(--font-heading);
+
+    --cs-inline-code-bg: hsl(228, 12%, 16%);
+    --cs-inline-code-border: transparent;
+    --cs-inline-code-fg: hsl(228, 10%, 78%);
+
+    --cs-mcp-bg: color-mix(in srgb, var(--cs-mcp) 14%, var(--docs-surface));
+    --cs-mcp-border: color-mix(in srgb, var(--cs-mcp) 38%, var(--docs-border));
+
+    --cs-table-head-bg: hsl(228, 14%, 14%);
+    --cs-table-row-alt: hsl(228, 14%, 11.5%);
+    --cs-table-code-bg: hsl(228, 12%, 16%);
+}
+
+:root[data-theme='light'],
+[data-theme='light'] ::backdrop {
+    --sl-color-accent-low: color-mix(in srgb, var(--docs-primary-bg) 16%, var(--docs-bg));
+    --sl-color-accent: var(--docs-primary-bg);
+    --sl-color-accent-high: var(--docs-primary-bg);
+    --sl-color-text-accent: var(--docs-primary-bg);
+    --sl-color-bg-accent: var(--docs-primary-bg);
+    --sl-color-text-invert: hsl(0, 0%, 100%);
+    --sl-color-bg-inline-code: var(--cs-inline-code-bg);
+
+    --sl-color-bg: var(--docs-bg);
+    --sl-color-bg-nav: var(--docs-nav);
+    --sl-color-bg-sidebar: var(--docs-sidebar);
+    --sl-color-hairline: var(--docs-border);
+    --sl-color-hairline-light: var(--docs-border);
+    --sl-color-hairline-shade: var(--docs-border);
+
+    --cs-inline-code-bg: hsl(228, 16%, 92%);
+    --cs-inline-code-border: transparent;
+    --cs-inline-code-fg: hsl(228, 16%, 34%);
+
+    --cs-mcp-bg: color-mix(in srgb, var(--cs-mcp) 10%, var(--docs-surface));
+    --cs-mcp-border: color-mix(in srgb, var(--cs-mcp) 24%, var(--docs-border));
+
+    --cs-table-head-bg: hsl(228, 22%, 96%);
+    --cs-table-row-alt: hsl(228, 24%, 98.5%);
+    --cs-table-code-bg: hsl(228, 17%, 91%);
+}
+
+/* Primary CTAs — shared across splash hero, docs pages, and search idle chips */
+.sl-link-button.primary {
+    background: var(--cs-primary-bg);
+    border: none;
+    color: var(--cs-primary-fg);
+}
+
+.sl-link-button.primary:hover {
+    background: var(--cs-primary-hover-bg);
+    color: var(--cs-primary-hover-fg);
+}
+
+.sl-link-button.secondary {
+    border: none;
+}
+
+html[data-theme='light'] .sl-link-button.primary,
+[data-theme='light'] .sl-link-button.primary {
+    box-shadow: var(--cs-btn-shadow);
+}
+
+html[data-theme='light'] .sl-link-button.primary:hover,
+[data-theme='light'] .sl-link-button.primary:hover {
+    box-shadow: var(--cs-btn-shadow-hover);
+}
+
+html[data-theme='light'] .sl-link-button.primary:active,
+[data-theme='light'] .sl-link-button.primary:active {
+    box-shadow: var(--cs-btn-shadow-active);
+}
+
+html[data-theme='light'] .sl-link-button.secondary,
+[data-theme='light'] .sl-link-button.secondary {
+    --cs-btn-light-fill: var(--docs-btn-light-fill);
+    background: var(--cs-btn-light-fill);
+    color: var(--cs-ink);
+    box-shadow: var(--cs-btn-light-shadow);
+}
+
+html[data-theme='light'] .sl-link-button.secondary:hover,
+[data-theme='light'] .sl-link-button.secondary:hover {
+    --cs-btn-light-fill: var(--docs-btn-light-fill-hover);
+    background: var(--cs-btn-light-fill);
+    box-shadow: var(--cs-btn-light-shadow-hover);
+}
+
+html[data-theme='light'] .sl-link-button.secondary:active,
+[data-theme='light'] .sl-link-button.secondary:active {
+    box-shadow: var(--cs-btn-light-shadow-active);
+}
+
+html[data-theme='dark'] .sl-link-button.primary,
+[data-theme='dark'] .sl-link-button.primary {
+    --cs-btn-fill: var(--cs-primary-bg);
+    box-shadow: var(--cs-btn-dark-highlight);
+}
+
+html[data-theme='dark'] .sl-link-button.primary:hover,
+[data-theme='dark'] .sl-link-button.primary:hover {
+    --cs-btn-fill: var(--cs-primary-hover-bg);
+    box-shadow: var(--cs-btn-dark-highlight-hover);
+}
+
+html[data-theme='dark'] .sl-link-button.primary:active,
+[data-theme='dark'] .sl-link-button.primary:active {
+    box-shadow: var(--cs-btn-dark-highlight-active);
+}
+
+html[data-theme='dark'] .sl-link-button.secondary,
+[data-theme='dark'] .sl-link-button.secondary {
+    --cs-btn-fill: var(--docs-btn-dark-fill);
+    background: var(--cs-btn-fill);
+    color: var(--cs-ink);
+    box-shadow: var(--cs-btn-dark-highlight);
+}
+
+html[data-theme='dark'] .sl-link-button.secondary:hover,
+[data-theme='dark'] .sl-link-button.secondary:hover {
+    --cs-btn-fill: var(--docs-btn-dark-fill-hover);
+    background: var(--cs-btn-fill);
+    box-shadow: var(--cs-btn-dark-highlight-hover);
+}
+
+html[data-theme='dark'] .sl-link-button.secondary:active,
+[data-theme='dark'] .sl-link-button.secondary:active {
+    box-shadow: var(--cs-btn-dark-highlight-active);
+}
+
+/* ─── Guide pages: readable type + real breathing room ────────────────────── */
+
+html[data-has-sidebar] {
+    /* Keep Starlight pad/width math intact — oversized content pad-x collapses article gutters */
+    --sl-sidebar-pad-x: var(--docs-sidebar-pad-x);
+    --sl-content-width: 52rem;
+    /* Match explorer `--content-pad-x` (1.25 → 1.75 at 90rem). */
+    --sl-content-pad-x: 1.25rem;
+    --sl-content-gap-y: 1.75rem;
+
+    /*
+     * Page title — slightly above explorer route titles; still far below
+     * Starlight’s 50em 5xl billboard.
+     */
+    --sl-text-h1: 1.4rem;
+    --sl-text-h2: 1.25rem;
+    --sl-text-h3: 1.1rem;
+    --sl-text-h4: 1rem;
+    --sl-line-height-headings: 1.25;
+}
+
+@media (min-width: 50em) {
+    html[data-has-sidebar] {
+        /* Keep compact title — do not inherit Starlight’s 5xl billboard. */
+        --sl-text-h1: 1.4rem;
+        --sl-text-h2: 1.35rem;
+        --sl-text-h3: 1.15rem;
+    }
+}
+
+@media (min-width: 90rem) {
+    html[data-has-sidebar] {
+        --sl-content-pad-x: 1.75rem;
+        --sl-text-h1: 1.625rem;
+    }
+}
+
+/* Unlayered — Starlight’s layered content styles were winning and collapsing rhythm */
+html[data-has-sidebar] .sl-markdown-content {
+    font-size: 0.975rem;
+    line-height: 1.7;
+}
+
+html[data-has-sidebar] .sl-markdown-content .sl-heading-wrapper.level-h2 {
+    margin-top: 2.75rem;
+    margin-bottom: 0.85rem;
+    font-weight: 600;
+    letter-spacing: -0.015em;
+}
+
+html[data-has-sidebar] .sl-markdown-content .sl-heading-wrapper.level-h3 {
+    margin-top: 2rem;
+    margin-bottom: 0.65rem;
+}
+
+/* Headings — same Plex Sans stack as body/UI (weight contrast only) */
+html[data-has-sidebar] .content-panel:first-of-type h1,
+html[data-has-sidebar] .sl-markdown-content .sl-heading-wrapper :is(h1, h2, h3, h4),
+.splash-hero__headline,
+.splash-how__title,
+.splash-features__title,
+.splash-demo__title,
+.splash-sdk__title,
+.splash-agents__title {
+    font-family: var(--cs-font-heading);
+}
+
+/* Belt-and-suspenders: heading font must not inherit into chrome or code */
+html[data-has-sidebar] :is(
+        #starlight__sidebar,
+        header.header,
+        .pagination-links,
+        starlight-toc nav,
+        .sl-markdown-content :is(p, li, td, th, dd, dt, blockquote, figcaption)
+    ) {
+    font-family: var(--sl-font);
+}
+
+html[data-has-sidebar] :is(code, pre, kbd, samp, .expressive-code, .sl-badge),
+html[data-has-sidebar] .sl-markdown-content .sl-heading-wrapper :is(h1, h2, h3, h4) :is(code, kbd) {
+    font-family: var(--sl-font-mono);
+}
+
+html[data-has-sidebar] .sl-markdown-content > .sl-heading-wrapper.level-h1:first-child {
+    display: none;
+}
+
+html[data-has-sidebar] .sl-markdown-content > .sl-heading-wrapper:first-child {
+    margin-top: 0;
+}
+
+/* Body pad is the gap under the title hairline — do not rely on first-child margins
+   (.md pages keep a hidden H1 so the lead <p> is not :first-child; MDX often is). */
+html[data-has-sidebar] .sl-markdown-content > :first-child,
+html[data-has-sidebar] .sl-markdown-content > .sl-heading-wrapper.level-h1:first-child + * {
+    margin-top: 0;
+}
+
+html[data-has-sidebar] .sl-markdown-content .sl-heading-wrapper + .expressive-code,
+html[data-has-sidebar] .sl-markdown-content .sl-heading-wrapper + pre {
+    margin-top: 0.85rem;
+}
+
+html[data-has-sidebar] .sl-markdown-content .expressive-code + p,
+html[data-has-sidebar] .sl-markdown-content pre + p {
+    margin-top: 1.15rem;
+}
+
+html[data-has-sidebar] .sl-markdown-content p + .expressive-code,
+html[data-has-sidebar] .sl-markdown-content p + pre {
+    margin-top: 1rem;
+}
+
+/* Inline code — accent pill chips (no filter) */
+html[data-has-sidebar] .sl-markdown-content
+    code:not(:where(.not-content *, pre *, .expressive-code *, .frame *)),
+html[data-has-sidebar] .sl-markdown-content .starlight-aside
+    code:not(:where(pre *, .expressive-code *, .frame *)) {
+    display: inline-block;
+    max-width: 100%;
+    font-family: var(--sl-font-mono);
+    font-size: 0.84em;
+    font-weight: 400;
+    letter-spacing: -0.01em;
+    line-height: 1.4;
+    color: var(--cs-inline-code-fg);
+    background-color: var(--cs-inline-code-bg);
+    border: 0;
+    border-radius: 0.35rem;
+    padding: 0.18em 0.5em;
+    margin-block: -0.08em;
+    margin-inline: 0.08em;
+    vertical-align: baseline;
+    -webkit-box-decoration-break: clone;
+    box-decoration-break: clone;
+}
+
+/* Headings with backtick names — mono title, not inline pill chips */
+html[data-has-sidebar] .sl-markdown-content .sl-heading-wrapper :is(h1, h2, h3, h4, h5, h6)
+    code:not(:where(pre *, .expressive-code *, .frame *)) {
+    display: inline;
+    margin: 0;
+    padding: 0;
+    border: 0;
+    border-radius: 0;
+    background: none;
+    font-family: var(--sl-font-mono);
+    font-size: inherit;
+    font-weight: inherit;
+    letter-spacing: inherit;
+    line-height: inherit;
+    color: inherit;
+    vertical-align: baseline;
+    -webkit-box-decoration-break: initial;
+    box-decoration-break: initial;
+}
+
+/* Tables — real <table> layout (auto columns), optional scroll wrapper */
+html[data-has-sidebar] .sl-markdown-content .cs-table-scroll {
+    width: 100%;
+    margin-block: 1.25rem 1.5rem;
+    overflow-x: auto;
+    overflow-y: hidden;
+    border: 1px solid var(--cs-line);
+    border-radius: calc(var(--cs-radius) - 0.1rem);
+    background: var(--cs-table-bg);
+    -webkit-overflow-scrolling: touch;
+}
+
+html[data-has-sidebar] .sl-markdown-content table:not(:where(.not-content *)) {
+    display: table;
+    width: 100%;
+    margin-block: 1.25rem 1.5rem;
+    border: 1px solid var(--cs-line);
+    border-radius: calc(var(--cs-radius) - 0.1rem);
+    border-collapse: separate;
+    border-spacing: 0;
+    table-layout: auto;
+    background: var(--cs-table-bg);
+}
+
+html[data-has-sidebar] .sl-markdown-content .cs-table-scroll > table:not(:where(.not-content *)) {
+    margin-block: 0;
+    border: 0;
+    border-radius: 0;
+    background: transparent;
+}
+
+/* Dense HTML tables with <colgroup> — fixed columns + room to scroll */
+html[data-has-sidebar] .sl-markdown-content .cs-table-scroll > table:has(colgroup):not(:where(.not-content *)) {
+    min-width: 40rem;
+    table-layout: fixed;
+}
+
+/* Header/footer fills on cells so they follow the rounded frame */
+html[data-has-sidebar] .sl-markdown-content table:not(:where(.not-content *)) thead th {
+    background: var(--cs-table-head-bg);
+}
+
+html[data-has-sidebar] .sl-markdown-content table:not(:where(.not-content *)) thead th:first-child {
+    border-top-left-radius: calc(var(--cs-radius) - 0.1rem);
+}
+
+html[data-has-sidebar] .sl-markdown-content table:not(:where(.not-content *)) thead th:last-child {
+    border-top-right-radius: calc(var(--cs-radius) - 0.1rem);
+}
+
+html[data-has-sidebar] .sl-markdown-content table:not(:where(.not-content *)) tbody tr:last-child td:first-child {
+    border-bottom-left-radius: calc(var(--cs-radius) - 0.1rem);
+}
+
+html[data-has-sidebar] .sl-markdown-content table:not(:where(.not-content *)) tbody tr:last-child td:last-child {
+    border-bottom-right-radius: calc(var(--cs-radius) - 0.1rem);
+}
+
+html[data-has-sidebar] .sl-markdown-content :is(th, td):not(:where(.not-content *)) {
+    border-bottom: 1px solid var(--cs-line);
+    padding: 0.55rem 0.85rem;
+    vertical-align: top;
+    line-height: 1.45;
+}
+
+html[data-has-sidebar] .sl-markdown-content tbody tr:last-child :is(th, td):not(:where(.not-content *)) {
+    border-bottom: 0;
+}
+
+html[data-has-sidebar] .sl-markdown-content :is(th:first-child, td:first-child):not(:where(.not-content *)) {
+    padding-inline-start: 1rem;
+}
+
+html[data-has-sidebar] .sl-markdown-content :is(th:last-child, td:last-child):not(:where(.not-content *)) {
+    padding-inline-end: 1rem;
+}
+
+html[data-has-sidebar] .sl-markdown-content th:not(:where(.not-content *)) {
+    color: var(--cs-muted);
+    font-family: var(--sl-font);
+    font-size: 0.75rem;
+    font-weight: 600;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    white-space: nowrap;
+}
+
+html[data-has-sidebar] .sl-markdown-content tbody tr:nth-child(even):not(:where(.not-content *)) {
+    background: var(--cs-table-row-alt);
+}
+
+html[data-has-sidebar] .sl-markdown-content tbody tr:hover:not(:where(.not-content *)) {
+    background: var(--cs-table-row-hover);
+}
+
+/* Option tables (name | default | …) — first cell is <code> */
+html[data-has-sidebar]
+    .sl-markdown-content
+    table:has(thead th:nth-child(3))
+    td:first-child:has(code):not(:where(.not-content *)) {
+    font-family: var(--sl-font-mono);
+    font-size: 0.875em;
+    color: var(--cs-ink);
+    white-space: nowrap;
+    width: 1%;
+}
+
+html[data-has-sidebar]
+    .sl-markdown-content
+    table:has(thead th:nth-child(3))
+    tr:has(td:first-child code)
+    td:nth-child(2):not(:where(.not-content *)) {
+    color: var(--cs-muted);
+    font-family: var(--sl-font-mono);
+    font-size: 0.875em;
+    white-space: nowrap;
+    width: 1%;
+}
+
+/* 2-column tables — label/token column stays compact; content column can wrap */
+html[data-has-sidebar]
+    .sl-markdown-content
+    table:not(:has(thead th:nth-child(3)))
+    td:first-child:not(:where(.not-content *)) {
+    font-weight: 500;
+    color: var(--cs-ink);
+    width: 1%;
+    white-space: nowrap;
+    vertical-align: top;
+}
+
+html[data-has-sidebar]
+    .sl-markdown-content
+    table:not(:has(thead th:nth-child(3)))
+    td:last-child:not(:where(.not-content *)) {
+    vertical-align: top;
+}
+
+/* Keep tokens intact; .cs-table-scroll provides overflow-x */
+html[data-has-sidebar] .sl-markdown-content table
+    code:not(:where(pre *, .expressive-code *, .frame *)) {
+    font-size: 0.9em;
+    padding: 0.12em 0.38em;
+    background-color: var(--cs-table-code-bg);
+    white-space: nowrap;
+}
+
+@layer starlight.core {
+    html[data-has-sidebar] header.header {
+        background-color: var(--docs-header-bg);
+        backdrop-filter: blur(14px) saturate(1.25);
+        -webkit-backdrop-filter: blur(14px) saturate(1.25);
+    }
+}
+
+/*
+ * Page title band — equal block padding so the H1 is vertically centered
+ * (unlayered: beats ContentPanel `padding: 1.5rem` + PageTitle margin).
+ * Metrics match explorer `.overview-title-panel` / `.route-page__title`.
+ */
+html[data-has-sidebar] .content-panel:first-of-type {
+    padding-block: 1rem;
+    padding-inline: var(--sl-content-pad-x);
+}
+
+html[data-has-sidebar] .content-panel:first-of-type h1 {
+    margin: 0;
+    font-size: var(--sl-text-h1);
+    font-weight: 700;
+    letter-spacing: -0.02em;
+    line-height: 1.25;
+}
+
+html[data-has-sidebar] .main-pane .content-panel + .content-panel {
+    padding-top: 1.25rem;
+}
+
+@media (min-width: 90rem) {
+    html[data-has-sidebar] .content-panel:first-of-type {
+        padding-block: 1.25rem;
+    }
+}
+
+/*
+ * Header chrome — same L/R pad + breakpoints as explorer (`--docs-header-pad-x`).
+ * Re-assert inside Starlight’s 50em media so layered `--sl-nav-pad-x: 1.5rem` can’t win.
+ */
+:root,
+html[data-theme='light'],
+html[data-theme='dark'] {
+    --sl-nav-height: var(--docs-header-height);
+    --sl-nav-pad-y: 0.65rem;
+    --sl-nav-pad-x: var(--docs-header-pad-x);
+    --sl-nav-gap: 1.25rem;
+    --sl-sidebar-pad-x: var(--docs-sidebar-pad-x);
+}
+
+@media (min-width: 50em) {
+    :root,
+    html[data-theme='light'],
+    html[data-theme='dark'] {
+        --sl-nav-height: var(--docs-header-height);
+        --sl-nav-pad-x: var(--docs-header-pad-x);
+    }
+}
+
+header.header {
+    /* Match explorer `.top-header { padding: 0 var(--header-pad-x) }`. */
+    padding-inline: var(--docs-header-pad-x);
+    /* Never border-box a 1px line here — that shrinks the bar and shifts the lockup. */
+    border-bottom: none;
+}
+
+/* Hairline sits *under* the fixed bar so splash ↔ guides keep the same header box. */
+html[data-has-sidebar] header.header::after {
+    content: '';
+    position: absolute;
+    inset-inline: 0;
+    top: 100%;
+    height: 1px;
+    background: var(--docs-border);
+    pointer-events: none;
+}
+
+html[data-has-sidebar] .sidebar-pane {
+    inset-block-start: calc(var(--sl-nav-height) + 1px);
+    border-inline-end-color: var(--sl-color-hairline);
+}
+
+html[data-has-sidebar] .main-frame {
+    padding-top: calc(var(--sl-nav-height) + 1px + var(--sl-mobile-toc-height));
+}
+
+/*
+ * Desktop “On this page” — delay Starlight’s 72rem TOC flip until 90rem.
+ * Mobile TOC lives inside .right-sidebar-container — never display:none that wrapper.
+ */
+@media (max-width: 89.99rem) {
+    html[data-has-toc] {
+        /* Starlight zeros this at 72rem; desktop TOC is delayed to 90rem below. */
+        --sl-mobile-toc-height: 3rem;
+    }
+
+    html[data-has-sidebar][data-has-toc] {
+        --__toc-width: 0rem;
+    }
+
+    html[data-has-sidebar][data-has-toc] .right-sidebar-panel {
+        display: none !important;
+    }
+
+    html[data-has-sidebar][data-has-toc] .right-sidebar-container {
+        flex: 0 0 0 !important;
+        width: 0 !important;
+        min-width: 0 !important;
+        overflow: visible;
+    }
+
+    html[data-has-sidebar][data-has-toc] .right-sidebar {
+        position: static;
+        width: auto !important;
+        height: auto !important;
+        padding-top: 0;
+        border: 0;
+        overflow: visible;
+    }
+}
+
+@media (min-width: 72rem) and (max-width: 89.99rem) {
+    html[data-has-sidebar][data-has-toc] .lg\:sl-hidden {
+        display: block !important;
+    }
+}
+
+html[data-has-toc] {
+    scroll-padding-top: calc(1.5rem + var(--sl-nav-height) + var(--sl-mobile-toc-height));
+}
+
+@media (min-width: 90rem) {
+    html[data-has-toc] {
+        scroll-padding-top: calc(1.5rem + var(--sl-nav-height));
+    }
+
+    html[data-has-sidebar][data-has-toc] .main-frame {
+        padding-top: calc(var(--sl-nav-height) + 1px);
+    }
+}
+
+/*
+ * Guides <50rem: logo + Menu only.
+ * Must be unlayered — Header.astro rules in @layer starlight.core lose to
+ * Starlight’s unlayered .sl-flex { display: flex }.
+ */
+@media (max-width: 49.99rem) {
+    html[data-has-sidebar] header.header .social-icons,
+    html[data-has-sidebar] header.header starlight-theme-select,
+    html[data-has-sidebar] header.header starlight-lang-select {
+        display: none;
+    }
+}
+
+/* Desktop: title | centered search | tools — equal side columns keep search
+   optically centered. Do NOT set display on site-search — Starlight uses
+   display:contents so the <dialog> can center in the viewport top layer. */
+@media (min-width: 50rem) {
+    header.header .header {
+        display: grid;
+        grid-template-columns: 1fr minmax(14rem, var(--docs-search-max-width)) 1fr;
+        align-items: center;
+        column-gap: 0.75rem;
+        width: 100%;
+    }
+
+    header.header .header > .title-wrapper {
+        justify-self: start;
+    }
+
+    header.header .header > .header-search {
+        display: flex;
+        justify-content: center;
+        width: 100%;
+        min-width: 0;
+    }
+
+    header.header .header > .header-tools {
+        justify-self: end;
+        gap: 0.75rem;
+    }
+
+    site-search > button {
+        width: 100%;
+        max-width: var(--docs-search-max-width);
+        height: var(--docs-search-height);
+        border-radius: 0.55rem;
+        border: 1px solid var(--docs-border-strong);
+        background-color: var(--docs-surface);
+        color: var(--sl-color-gray-2);
+        padding-inline: 0.85rem;
+        justify-content: flex-start;
+        gap: 0.55rem;
+    }
+
+    site-search > button:hover {
+        border-color: color-mix(in srgb, var(--docs-border-strong) 70%, var(--docs-text));
+        color: var(--sl-color-white);
+    }
+
+    site-search > button > kbd,
+    site-search > button .cs-search-kbd {
+        margin-inline-start: auto;
+        background-color: var(--sl-color-gray-5);
+        border: 0;
+        color: var(--sl-color-gray-2);
+    }
+}
+
+html[data-theme='light'] site-search > button {
+    background-color: var(--docs-surface);
+    border-color: var(--docs-border-strong);
+    box-shadow: 0 1px 2px hsl(228 25% 40% / 0.08);
+}
+
+html[data-theme='light'] site-search > button > kbd,
+html[data-theme='light'] site-search > button .cs-search-kbd {
+    background-color: var(--sl-color-gray-6);
+    color: var(--sl-color-gray-3);
+}
+
+/*
+ * Small header: search is an icon like GitHub — no chip outline.
+ * Drawer search keeps the full bordered trigger (not under header.header).
+ */
+@media (max-width: 49.99rem) {
+    header.header site-search > button {
+        width: 2.5rem;
+        height: 2.5rem;
+        padding: 0;
+        border: 0;
+        border-radius: 0;
+        background: transparent;
+        box-shadow: none;
+        justify-content: center;
+        gap: 0;
+        color: var(--sl-color-white);
+    }
+
+    header.header site-search > button:hover {
+        border: 0;
+        background: transparent;
+        color: var(--sl-color-white);
+        opacity: 0.82;
+    }
+
+    header.header site-search .cs-search-label,
+    header.header site-search .cs-search-kbd,
+    header.header site-search > button > kbd {
+        display: none;
+    }
+
+    header.header site-search > button svg {
+        width: 1.35rem;
+        height: 1.35rem;
+        flex-shrink: 0;
+    }
+
+    html[data-theme='light'] header.header site-search > button {
+        background: transparent;
+        border: 0;
+        box-shadow: none;
+    }
+}
+
+
+/* Header right icons — GitHub, theme toggle */
+header.header .social-icons::after {
+    display: none;
+    content: none;
+}
+
+header.header .social-icons a {
+    display: grid;
+    place-items: center;
+    width: 2.5rem;
+    height: 2.5rem;
+    padding: 0;
+    margin: 0;
+    /* Neutral — Starlight defaults social icons to accent. */
+    color: var(--sl-color-white);
+    transition: color 120ms ease;
+}
+
+header.header .social-icons a[href*='github']:hover {
+    color: var(--sl-color-gray-3);
+}
+
+header.header .social-icons a[href*='discord']:hover {
+    color: #5865f2;
+}
+
+/* Mobile drawer — same social targets as header. */
+.cs-mobile-menu-tools .social-icons a {
+    transition: color 120ms ease;
+}
+
+.cs-mobile-menu-tools .social-icons a[href*='github']:hover {
+    color: var(--sl-color-gray-3);
+}
+
+.cs-mobile-menu-tools .social-icons a[href*='discord']:hover {
+    color: #5865f2;
+}
+
+header.header .social-icons a svg,
+.cs-mobile-menu-tools .social-icons a svg {
+    display: block;
+    transition: transform 140ms ease;
+    transform-origin: center;
+}
+
+header.header .social-icons a svg {
+    width: 1.35rem;
+    height: 1.35rem;
+}
+
+header.header .social-icons a:hover svg,
+.cs-mobile-menu-tools .social-icons a:hover svg {
+    transform: scale(1.14);
+}
+
+header.header .social-icons a[href*='discord']:hover svg,
+.cs-mobile-menu-tools .social-icons a[href*='discord']:hover svg {
+    animation: cs-discord-shudder 480ms ease-in-out;
+}
+
+@keyframes cs-discord-shudder {
+    0%,
+    100% {
+        transform: scale(1.14) rotate(0deg);
+    }
+
+    18% {
+        transform: scale(1.14) rotate(-11deg);
+    }
+
+    36% {
+        transform: scale(1.14) rotate(9deg);
+    }
+
+    54% {
+        transform: scale(1.14) rotate(-7deg);
+    }
+
+    72% {
+        transform: scale(1.14) rotate(5deg);
+    }
+
+    88% {
+        transform: scale(1.14) rotate(-2deg);
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    header.header .social-icons a svg,
+    .cs-mobile-menu-tools .social-icons a svg {
+        transition: none;
+    }
+
+    header.header .social-icons a:hover svg,
+    .cs-mobile-menu-tools .social-icons a:hover svg {
+        transform: none;
+    }
+
+    header.header .social-icons a[href*='discord']:hover svg,
+    .cs-mobile-menu-tools .social-icons a[href*='discord']:hover svg {
+        animation: none;
+    }
+}
+
+/*
+ * Search dialog — unlayered on purpose.
+ * Starlight sets `margin: 4rem auto auto` in @layer starlight.core, but Vite can
+ * register that layer before layers.css’s order statement, so starlight.reset’s
+ * `* { margin: 0 }` wins and the modal sticks to the top-left.
+ * Also kills the 15rem min-height shell that leaves a hollow void when idle / empty.
+ */
+site-search dialog {
+    border: none;
+    outline: none;
+    user-select: none;
+}
+
+site-search dialog:focus,
+site-search dialog:focus-visible {
+    outline: none;
+}
+
+site-search dialog[open] {
+    background: var(--cs-search-modal-bg);
+    box-shadow: var(--cs-search-modal-shadow);
+}
+
+site-search dialog .pagefind-ui__search-input {
+    user-select: text;
+}
+
+@media (min-width: 50rem) {
+    site-search dialog[open] {
+        margin: 4rem auto auto;
+        width: min(92vw, 36rem);
+        max-width: 36rem;
+        border-radius: 1rem;
+    }
+
+    site-search dialog[open]:not(:has(.pagefind-ui__result)) {
+        min-height: 0;
+    }
+
+    site-search dialog[open] .dialog-frame {
+        padding: 0;
+        gap: var(--cs-search-field-gap, 0.65rem);
+        overflow: hidden;
+        min-height: 0;
+    }
+}
+
+site-search dialog[open] .dialog-frame {
+    --cs-search-dialog-inset: 0.75rem;
+    --cs-search-scrollbar-size: 0.5rem;
+    --cs-search-input-block-size: calc(64px * var(--pagefind-ui-scale, 0.92));
+    --cs-search-icon-size: calc(20px * var(--pagefind-ui-scale, 0.92));
+    --cs-search-icon-inline-start: calc(20px * var(--pagefind-ui-scale, 0.92));
+    --cs-search-clear-size: 1.875rem;
+    --cs-search-clear-icon-size: 1.25rem;
+    --cs-search-clear-inline-end: 0.5rem;
+    --cs-search-content-pad-start: calc(var(--cs-search-dialog-inset) + 0.5rem);
+}
+
+/* Search field inset — flush modal shell, inset components only. */
+[data-cs-pagefind-root] .pagefind-ui__form::before {
+    width: var(--cs-search-icon-size);
+    height: var(--cs-search-icon-size);
+    top: calc(
+        var(--cs-search-dialog-inset) +
+            (var(--cs-search-input-block-size) - var(--cs-search-icon-size)) / 2
+    );
+    left: calc(var(--cs-search-dialog-inset) + var(--cs-search-icon-inline-start));
+    --pagefind-ui-text: var(--cs-muted);
+    opacity: 1;
+}
+
+[data-cs-pagefind-root] .pagefind-ui__search-input {
+    margin: var(--cs-search-dialog-inset) var(--cs-search-dialog-inset) 0;
+    width: auto;
+    height: var(--cs-search-input-block-size);
+    line-height: var(--cs-search-input-block-size);
+    box-sizing: border-box;
+    color: var(--cs-search-field-fg);
+    padding-inline-end: calc(
+        var(--cs-search-clear-size) + var(--cs-search-clear-inline-end) + 0.15rem
+    );
+}
+
+[data-cs-pagefind-root] .pagefind-ui__search-clear {
+    inset-inline-end: calc(var(--cs-search-dialog-inset) + var(--cs-search-clear-inline-end));
+    top: calc(
+        var(--cs-search-dialog-inset) +
+            (var(--cs-search-input-block-size) - var(--cs-search-clear-size)) / 2
+    );
+    transform: none;
+    z-index: 2;
+    width: var(--cs-search-clear-size);
+    height: var(--cs-search-clear-size);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
+    border: 0;
+    border-radius: 999px;
+    background-color: transparent;
+    cursor: pointer;
+    font-size: 0;
+    line-height: 0;
+    color: transparent;
+    overflow: hidden;
+    transition: background-color 0.15s ease;
+}
+
+/*
+ * Scroll lane: left edge aligns with the search bar; scrollbar sits in the right inset.
+ * Left inset lives on the drawer; right inset + gutter live on the scroller.
+ */
+[data-cs-pagefind-root]:has(.pagefind-ui__result) .pagefind-ui__drawer {
+    padding-inline-start: var(--cs-search-dialog-inset);
+    box-sizing: border-box;
+}
+
+[data-cs-pagefind-root]:has(.pagefind-ui__result) .pagefind-ui__drawer .pagefind-ui__results-area,
+[data-cs-pagefind-root]:has(.pagefind-ui__result) .pagefind-ui__drawer [data-cs-search-stale]:not([hidden]) {
+    padding-inline-start: 0;
+    padding-inline-end: var(--cs-search-dialog-inset);
+    box-sizing: border-box;
+}
+
+[data-cs-pagefind-root]:has(.pagefind-ui__result) .pagefind-ui__drawer .pagefind-ui__results-area {
+    scrollbar-gutter: stable;
+}
+
+[data-cs-pagefind-root]:has(.pagefind-ui__result) .pagefind-ui__message {
+    padding-inline-start: var(--cs-search-content-pad-start);
+    padding-inline-end: var(--cs-search-dialog-inset);
+    box-sizing: border-box;
+}
+
+site-search dialog[open] .cs-search-loading {
+    margin: var(--cs-search-dialog-inset) var(--cs-search-dialog-inset) 0;
+    padding: 0;
+}
+
+site-search dialog[open] .cs-search-idle {
+    margin: 0 var(--cs-search-dialog-inset) var(--cs-search-dialog-inset);
+    padding: 0.7rem 0 0.1rem 0.5rem;
+}
+
+/* Idle panel (injected by SearchModalPolish.astro) */
+.cs-search-idle {
+    margin-top: 0;
+    padding: 0;
+    border: 0;
+    background: transparent;
+}
+
+.cs-search-idle[hidden] {
+    display: none !important;
+}
+
+.cs-search-idle__lead {
+    margin: 0;
+    color: var(--docs-text-secondary);
+    font-size: 0.875rem;
+    line-height: 1.5;
+    max-width: 28rem;
+}
+
+.cs-search-idle__try {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.4rem;
+    margin: 0.85rem 0 0;
+}
+
+.cs-search-idle__try-label {
+    color: var(--docs-text-secondary);
+    font-size: 0.8125rem;
+    font-weight: 500;
+    line-height: 1.2;
+}
+
+.cs-search-idle__chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.4rem;
+    list-style: none;
+    margin: 0;
+    padding: 0;
+}
+
+.cs-search-idle__chips button {
+    appearance: none;
+    border: 0;
+    border-radius: 0.55rem;
+    background: var(--cs-search-item-bg);
+    color: var(--cs-ink);
+    padding: 0.35rem 0.75rem;
+    font: inherit;
+    font-size: 0.8125rem;
+    font-weight: 500;
+    line-height: 1.2;
+    letter-spacing: -0.01em;
+    cursor: pointer;
+    box-shadow: none;
+    transition:
+        background-color 0.15s ease,
+        color 0.15s ease,
+        transform 140ms ease;
+}
+
+.cs-search-idle__chips button:hover,
+.cs-search-idle__chips button:focus-visible,
+.cs-search-idle__chips button[data-cs-search-selected='true'] {
+    border: 0;
+    background: var(--cs-search-hover-bg);
+    color: var(--cs-search-hover-fg);
+    outline: none;
+}
+
+.cs-search-idle__chips button:active {
+    transform: translateY(1px);
+}
+
+site-search dialog::backdrop {
+    background: hsl(228 24% 4% / 0.72);
+    -webkit-backdrop-filter: blur(6px) saturate(1.15);
+    backdrop-filter: blur(6px) saturate(1.15);
+}
+
+/* Pagefind field + results inside the dialog */
+[data-cs-pagefind-root] {
+    --pagefind-ui-border-radius: 0.7rem;
+    --pagefind-ui-scale: 0.92;
+    --pagefind-ui-background: var(--cs-search-field-bg);
+    --pagefind-ui-text: var(--cs-search-result-fg);
+    --pagefind-ui-primary: var(--cs-search-result-fg);
+    --pagefind-ui-border-width: 0;
+    --pagefind-ui-border: transparent;
+}
+
+/*
+ * Result sections — rounded group shell; per-row grey + full-width hover live in Search.astro.
+ */
+[data-cs-pagefind-root] .pagefind-ui__result {
+    border: 0;
+    padding: 0;
+}
+
+[data-cs-pagefind-root] .pagefind-ui__result-inner {
+    align-items: stretch;
+    width: 100%;
+    gap: 0;
+    padding: 0;
+    background-color: var(--cs-search-item-bg);
+    border-radius: var(--cs-search-card-radius);
+    overflow: hidden;
+}
+
+[data-cs-pagefind-root] .pagefind-ui__result-inner > .pagefind-ui__result-title,
+[data-cs-pagefind-root] .pagefind-ui__result-inner > .pagefind-ui__result-nested {
+    border-radius: 0;
+}
+
+html[data-theme='light'] [data-cs-pagefind-root] {
+    --pagefind-ui-background: var(--cs-search-field-bg);
+}
+
+html[data-theme='light'] [data-cs-pagefind-root] .pagefind-ui__result-inner > .pagefind-ui__result-title,
+html[data-theme='light'] [data-cs-pagefind-root] .pagefind-ui__result-nested {
+    background-color: var(--cs-search-item-bg);
+}
+
+html[data-theme='light'] [data-cs-pagefind-root] .pagefind-ui__button {
+    background: var(--cs-search-item-bg);
+    border: 0;
+    color: var(--cs-ink);
+}
+
+html[data-theme='light'] [data-cs-pagefind-root] .pagefind-ui__button:hover {
+    background: var(--cs-search-hover-bg);
+    border: 0;
+    color: var(--cs-search-hover-fg);
+}
+
+html[data-theme='light']
+    [data-cs-pagefind-root]
+    .pagefind-ui__result-inner
+    > .pagefind-ui__result-title:is(:hover, [data-cs-search-selected='true']),
+html[data-theme='light']
+    [data-cs-pagefind-root]
+    .pagefind-ui__result-nested:is(:hover, [data-cs-search-selected='true']) {
+    background-color: var(--cs-search-hover-bg);
+}
+
+[data-cs-pagefind-root] .pagefind-ui__result-inner > .pagefind-ui__result-title {
+    display: block;
+    width: 100%;
+    box-sizing: border-box;
+    cursor: pointer;
+}
+
+[data-cs-pagefind-root] .pagefind-ui__result-nested {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    width: 100%;
+    min-width: 0;
+    align-self: stretch;
+    box-sizing: border-box;
+    cursor: pointer;
+    overflow: hidden;
+    padding-block: var(--sl-search-result-nested-pad-block-start, calc(0.375rem * var(--pagefind-ui-scale, 0.92)))
+        var(--sl-search-result-nested-pad-block, calc(0.5rem * var(--pagefind-ui-scale, 0.92)));
+    padding-inline: var(--sl-search-result-pad-inline-start) var(--sl-search-result-pad-inline-end);
+}
+
+/* Pagefind sets nested links position:relative — shrinks the ::after hit target to the title line. */
+[data-cs-pagefind-root] .pagefind-ui__result-nested .pagefind-ui__result-link {
+    position: static;
+    font-size: 0.75rem;
+    line-height: 1.35;
+    color: var(--cs-search-result-fg);
+    text-decoration: none;
+}
+
+[data-cs-pagefind-root] .pagefind-ui__result-nested .pagefind-ui__result-title {
+    display: block;
+    width: 100%;
+}
+
+[data-cs-pagefind-root] .pagefind-ui__result-nested .pagefind-ui__result-link::before {
+    content: none;
+}
+
+/* Page headers — larger type; nested hits stay compact. */
+[data-cs-pagefind-root] .pagefind-ui__result-inner > .pagefind-ui__result-title,
+[data-cs-pagefind-root] .pagefind-ui__result-inner > .pagefind-ui__result-title .pagefind-ui__result-link {
+    font-size: 0.9375rem;
+    line-height: 1.35;
+}
+
+[data-cs-pagefind-root] .pagefind-ui__result-nested .pagefind-ui__result-excerpt {
+    width: 100%;
+    min-width: 0;
+    box-sizing: border-box;
+    font-size: 0.6875rem;
+    font-weight: 400;
+    line-height: 1.45;
+    color: var(--docs-text-secondary);
+    display: -webkit-box;
+    /* autoprefixer strips bare -webkit-box-orient; keep line-clamp working in prod builds. */
+    /* autoprefixer: ignore next */
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+    line-clamp: 2;
+    overflow: hidden;
+    max-height: calc(2 * 1.45 * 0.6875rem);
+    overflow-wrap: break-word;
+    word-break: normal;
+    pointer-events: none;
+}
+
+/* Hover / keyboard focus — full row reads at full contrast. */
+[data-cs-pagefind-root]
+    .pagefind-ui__result-inner
+    > .pagefind-ui__result-title:is(:hover, [data-cs-search-selected='true'])
+    .pagefind-ui__result-link,
+[data-cs-pagefind-root]
+    .pagefind-ui__result-nested:is(:hover, [data-cs-search-selected='true'])
+    .pagefind-ui__result-link,
+[data-cs-pagefind-root]
+    .pagefind-ui__result-nested:is(:hover, [data-cs-search-selected='true'])
+    .pagefind-ui__result-excerpt,
+[data-cs-pagefind-root]
+    .pagefind-ui__result-nested:is(:hover, [data-cs-search-selected='true'])
+    mark,
+[data-cs-pagefind-root]
+    .pagefind-ui__result-inner
+    > .pagefind-ui__result-title:is(:hover, [data-cs-search-selected='true'])
+    mark {
+    color: var(--cs-search-hover-fg);
+}
+
+[data-cs-pagefind-root]
+    .pagefind-ui__result-inner
+    > .pagefind-ui__result-title:is(:hover, [data-cs-search-selected='true'])::before {
+    background: var(--cs-search-hover-fg);
+}
+
+[data-cs-pagefind-root]
+    .pagefind-ui__result-nested:is(:hover, [data-cs-search-selected='true'])::before {
+    background: var(--cs-search-hover-fg);
+}
+
+html[data-theme='light']
+    [data-cs-pagefind-root]
+    .pagefind-ui__result-inner
+    > .pagefind-ui__result-title:is(:hover, [data-cs-search-selected='true'])
+    .pagefind-ui__result-link,
+html[data-theme='light']
+    [data-cs-pagefind-root]
+    .pagefind-ui__result-nested:is(:hover, [data-cs-search-selected='true'])
+    .pagefind-ui__result-link,
+html[data-theme='light']
+    [data-cs-pagefind-root]
+    .pagefind-ui__result-nested:is(:hover, [data-cs-search-selected='true'])
+    .pagefind-ui__result-excerpt,
+html[data-theme='light']
+    [data-cs-pagefind-root]
+    .pagefind-ui__result-nested:is(:hover, [data-cs-search-selected='true'])
+    mark,
+html[data-theme='light']
+    [data-cs-pagefind-root]
+    .pagefind-ui__result-inner
+    > .pagefind-ui__result-title:is(:hover, [data-cs-search-selected='true'])
+    mark {
+    color: var(--cs-search-hover-fg);
+}
+
+html[data-theme='light']
+    [data-cs-pagefind-root]
+    .pagefind-ui__result-inner
+    > .pagefind-ui__result-title:is(:hover, [data-cs-search-selected='true'])::before,
+html[data-theme='light']
+    [data-cs-pagefind-root]
+    .pagefind-ui__result-nested:is(:hover, [data-cs-search-selected='true'])::before {
+    background: var(--cs-search-hover-fg);
+}
+
+[data-cs-pagefind-root] .pagefind-ui__result-inner > .pagefind-ui__result-title .pagefind-ui__result-link {
+    color: var(--cs-search-result-fg);
+    text-decoration: none;
+}
+
+[data-cs-pagefind-root] .pagefind-ui__result-inner > .pagefind-ui__result-title,
+[data-cs-pagefind-root] .pagefind-ui__result-nested {
+    background-color: var(--cs-search-item-bg);
+}
+
+[data-cs-pagefind-root] .pagefind-ui__result-inner > .pagefind-ui__result-title:is(:hover, [data-cs-search-selected='true']),
+[data-cs-pagefind-root] .pagefind-ui__result-nested:is(:hover, [data-cs-search-selected='true']) {
+    background-color: var(--cs-search-hover-bg);
+}
+
+[data-cs-pagefind-root] .pagefind-ui__search-input {
+    font-weight: 500;
+    letter-spacing: -0.01em;
+    border: 0;
+    background-color: var(--cs-search-field-bg);
+    box-shadow: none;
+}
+
+[data-cs-pagefind-root] .pagefind-ui__search-input::placeholder {
+    opacity: 0.45;
+    font-weight: 400;
+}
+
+[data-cs-pagefind-root] .pagefind-ui__search-input:is(:focus, :focus-visible) {
+    outline: none;
+    border: 0;
+    background-color: var(--cs-search-field-bg);
+    box-shadow: none;
+}
+
+[data-cs-pagefind-root] .pagefind-ui__search-clear:hover {
+    background-color: var(--sl-color-gray-5);
+}
+
+[data-cs-pagefind-root] .pagefind-ui__search-clear:is(:focus, :focus-visible, :active) {
+    outline: none;
+    background-color: var(--sl-color-accent);
+}
+
+[data-cs-pagefind-root] .pagefind-ui__search-clear::before {
+    content: '';
+    width: var(--cs-search-clear-icon-size);
+    height: var(--cs-search-clear-icon-size);
+    flex-shrink: 0;
+    -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='m13.41 12 6.3-6.29a1 1 0 1 0-1.42-1.42L12 10.59l-6.29-6.3a1 1 0 0 0-1.42 1.42l6.3 6.29-6.3 6.29a1 1 0 0 0 .33 1.64 1 1 0 0 0 1.09-.22l6.29-6.3 6.29 6.3a1 1 0 0 0 1.64-.33 1 1 0 0 0-.22-1.09L13.41 12Z'/%3E%3C/svg%3E")
+        center / contain no-repeat;
+    mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='m13.41 12 6.3-6.29a1 1 0 1 0-1.42-1.42L12 10.59l-6.29-6.3a1 1 0 0 0-1.42 1.42l6.3 6.29-6.3 6.29a1 1 0 0 0 .33 1.64 1 1 0 0 0 1.09-.22l6.29-6.3 6.29 6.3a1 1 0 0 0 1.64-.33 1 1 0 0 0-.22-1.09L13.41 12Z'/%3E%3C/svg%3E")
+        center / contain no-repeat;
+    background-color: var(--sl-color-gray-2);
+    transition: background-color 0.15s ease;
+}
+
+[data-cs-pagefind-root] .pagefind-ui__search-clear:hover:not(:focus):not(:focus-visible):not(:active)::before {
+    background-color: var(--sl-color-gray-1);
+}
+
+[data-cs-pagefind-root] .pagefind-ui__search-clear:is(:focus, :focus-visible, :active)::before {
+    background-color: var(--sl-color-black);
+}
+
+site-search dialog[open] .search-container {
+    display: flex;
+    flex-direction: column;
+    gap: var(--cs-search-field-gap, 0.65rem);
+}
+
+/* Pagefind nests the drawer inside the form — do not shrink-wrap the form. */
+[data-cs-pagefind-root] .pagefind-ui,
+[data-cs-pagefind-root] .pagefind-ui__form {
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+}
+
+[data-cs-pagefind-root] .pagefind-ui__form {
+    flex: 1 1 auto;
+    gap: var(--cs-search-field-gap, 0.65rem);
+}
+
+[data-cs-pagefind-root] .pagefind-ui__search-input,
+[data-cs-pagefind-root] .pagefind-ui__search-clear {
+    flex-shrink: 0;
+}
+
+[data-cs-pagefind-root] .pagefind-ui__results-area {
+    margin-top: 0;
+}
+
+[data-cs-pagefind-root][data-cs-search-short-query] .pagefind-ui__drawer {
+    display: none !important;
+}
+
+[data-cs-pagefind-root]:has(.pagefind-ui__result) .pagefind-ui__drawer {
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+    max-height: min(28rem, calc(100dvh - 16rem));
+    overflow: hidden;
+    overscroll-behavior: contain;
+    box-sizing: border-box;
+    border-top-left-radius: 0.75rem;
+    border-top-right-radius: 0;
+}
+
+[data-cs-pagefind-root]:has(.pagefind-ui__result) .pagefind-ui__drawer .pagefind-ui__results-area {
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow-x: hidden;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    padding-bottom: 1.25rem;
+    scroll-padding-bottom: 1.25rem;
+    box-sizing: border-box;
+    border-top-left-radius: 0.75rem;
+    border-top-right-radius: 0;
+}
+
+[data-cs-pagefind-root]:has(.pagefind-ui__result) .pagefind-ui__drawer [data-cs-search-stale]:not([hidden]) {
+    flex-shrink: 0;
+    border-top-left-radius: 0.75rem;
+    border-top-right-radius: 0;
+    overflow: hidden;
+}
+
+[data-cs-pagefind-root]:has(.pagefind-ui__result) .pagefind-ui__drawer [data-cs-search-stale]:not([hidden]) + .pagefind-ui__results-area {
+    border-top-left-radius: 0;
+    border-top-right-radius: 0;
+}
+
+[data-cs-pagefind-root] .pagefind-ui__drawer {
+    scrollbar-width: thin;
+    scrollbar-color: color-mix(in srgb, var(--sl-color-gray-4) 75%, transparent) transparent;
+}
+
+[data-cs-pagefind-root]:has(.pagefind-ui__result) .pagefind-ui__drawer .pagefind-ui__results-area {
+    scrollbar-width: thin;
+    scrollbar-color: color-mix(in srgb, var(--sl-color-gray-4) 75%, transparent) transparent;
+}
+
+[data-cs-pagefind-root]:has(.pagefind-ui__result) .pagefind-ui__drawer .pagefind-ui__results-area::-webkit-scrollbar {
+    width: 0.5rem;
+}
+
+[data-cs-pagefind-root]:has(.pagefind-ui__result) .pagefind-ui__drawer .pagefind-ui__results-area::-webkit-scrollbar-thumb {
+    background: color-mix(in srgb, var(--sl-color-gray-4) 70%, transparent);
+    border-radius: 999px;
+    border: 2px solid transparent;
+    background-clip: padding-box;
+}
+
+[data-cs-pagefind-root]:has(.pagefind-ui__result) .pagefind-ui__drawer .pagefind-ui__results-area::-webkit-scrollbar-track {
+    margin-block: 0.15rem;
+    background: transparent;
+}
+
+[data-cs-pagefind-root] .pagefind-ui__drawer::-webkit-scrollbar {
+    width: 0.5rem;
+}
+
+[data-cs-pagefind-root] .pagefind-ui__drawer::-webkit-scrollbar-thumb {
+    background: color-mix(in srgb, var(--sl-color-gray-4) 70%, transparent);
+    border-radius: 999px;
+    border: 2px solid transparent;
+    background-clip: padding-box;
+}
+
+[data-cs-pagefind-root] .pagefind-ui__drawer::-webkit-scrollbar-track {
+    margin-block: 0.15rem;
+    background: transparent;
+}
+
+/* Results-only polish (scrollbar lane, top radii). */
+@media (max-width: 49.99rem) {
+    site-search dialog[open] {
+        display: flex;
+        flex-direction: column;
+        overflow: hidden;
+    }
+
+    site-search dialog[open] .dialog-frame,
+    site-search dialog[open] .search-container {
+        display: flex;
+        flex-direction: column;
+        min-height: 0;
+        flex: 1 1 auto;
+    }
+
+    /*
+     * Idle chips live after the Pagefind root. Growing the root on idle
+     * shoves that card to the bottom of the full-screen dialog.
+     */
+    site-search dialog[open]:has(.pagefind-ui__result) [data-cs-pagefind-root],
+    site-search dialog[open]:has(.pagefind-ui__result) [data-cs-pagefind-root] .pagefind-ui {
+        display: flex;
+        flex-direction: column;
+        min-height: 0;
+        flex: 1 1 auto;
+    }
+
+    site-search dialog[open]:has(.pagefind-ui__result) [data-cs-pagefind-root] .pagefind-ui__form,
+    site-search dialog[open]:has(.pagefind-ui__result) [data-cs-pagefind-root] .pagefind-ui__drawer {
+        flex: 1 1 auto;
+        min-height: 0;
+        max-height: none;
+        overflow: hidden;
+    }
+
+    site-search dialog[open]:has(.pagefind-ui__result) [data-cs-pagefind-root] .pagefind-ui__drawer .pagefind-ui__results-area {
+        overflow-y: auto;
+    }
+}
+
+site-search dialog[open]:has(.pagefind-ui__result) [data-cs-pagefind-root] .pagefind-ui__drawer .pagefind-ui__results-area {
+    overflow-y: auto;
+}
+
+[data-cs-pagefind-root] .pagefind-ui__button[data-cs-search-selected='true'] {
+    border: 0;
+    background: var(--cs-search-hover-bg);
+    color: var(--cs-search-hover-fg);
+}
+
+/*
+ * Starlight reset (`* { margin: 0 }`) beats layered Pagefind/Search margins.
+ * Unlayered so result cards keep a gap under their rounded bottoms, and so the
+ * load-more button isn’t flush with the last result.
+ */
+[data-cs-pagefind-root] .pagefind-ui__button {
+    margin-top: 0.85rem;
+    margin-bottom: 0;
+    height: auto;
+    min-height: 2.35rem;
+    padding: 0.55rem 1.1rem;
+    border: 0;
+    border-radius: 0.55rem;
+    background: var(--cs-search-item-bg);
+    color: var(--cs-ink);
+    font-family: var(--sl-font);
+    font-size: 0.8125rem;
+    font-weight: 500;
+    letter-spacing: -0.01em;
+    box-shadow: none;
+    transition:
+        background-color 0.15s ease,
+        color 0.15s ease;
+}
+
+[data-cs-pagefind-root] .pagefind-ui__button:hover {
+    border: 0;
+    background: var(--cs-search-hover-bg);
+    color: var(--cs-search-hover-fg);
+}
+
+[data-cs-pagefind-root] .pagefind-ui__results > * + * {
+    margin-top: 0.65rem;
+}
+
+[data-cs-search-stale][hidden] {
+    display: none !important;
+}
+
+[data-cs-search-stale]:not([hidden]) {
+    margin-bottom: 0;
+}
+
+[data-cs-pagefind-root]:has([data-cs-search-stale]:not([hidden])) .pagefind-ui__message {
+    display: none !important;
+}
+
+[data-cs-pagefind-root] .pagefind-ui__message {
+    font-size: 0.8125rem;
+    font-weight: 500;
+    letter-spacing: 0.01em;
+    color: var(--cs-muted);
+    height: auto;
+    min-height: 0;
+    padding: 0.35rem 0 0.75rem;
+    box-sizing: border-box;
+}
+
+/* Idle drawer content (searching / no matches) — align with the inset search field. */
+[data-cs-pagefind-root]:not(:has(.pagefind-ui__results > .pagefind-ui__result)):not(
+        :has(.cs-search-pending:not([hidden]))
+    )
+    .pagefind-ui__drawer:not(.pagefind-ui__hidden)
+    .pagefind-ui__results-area {
+    margin-top: 0;
+    padding-inline-start: var(--cs-search-content-pad-start);
+    padding-inline-end: var(--cs-search-dialog-inset);
+    padding-bottom: var(--cs-search-dialog-inset);
+    box-sizing: border-box;
+}
+
+/* Skeleton uses the same scroll lane as live result cards. */
+[data-cs-pagefind-root]:has(.cs-search-pending:not([hidden])) .pagefind-ui__drawer:not(.pagefind-ui__hidden) {
+    padding-inline-start: var(--cs-search-dialog-inset);
+    box-sizing: border-box;
+}
+
+[data-cs-pagefind-root]:has(.cs-search-pending:not([hidden]))
+    .pagefind-ui__drawer:not(.pagefind-ui__hidden)
+    .pagefind-ui__results-area {
+    margin-top: 0;
+    padding-inline-start: 0;
+    padding-inline-end: var(--cs-search-dialog-inset);
+    padding-bottom: var(--cs-search-dialog-inset);
+    box-sizing: border-box;
+}
+
+/* Zero-results — flat stack; left edge comes from results-area inset only */
+[data-cs-pagefind-root]:has(.pagefind-ui__results:not(:has(.pagefind-ui__result))) .pagefind-ui__message {
+    display: block;
+    margin: 0;
+    padding: 0.35rem 0 0;
+    border: 0;
+    background: transparent;
+    color: var(--cs-ink);
+    font-size: 0.9375rem;
+    font-weight: 600;
+    letter-spacing: -0.015em;
+}
+
+[data-cs-pagefind-root] .pagefind-ui__results:not(:has(.pagefind-ui__result)) {
+    margin: 0;
+    padding: 0;
+    min-height: 0;
+    list-style: none;
+}
+
+.cs-search-empty-help {
+    margin: 0.5rem 0 0;
+    padding: 0;
+    color: var(--cs-muted);
+    font-size: 0.8125rem;
+    line-height: 1.45;
+}
+
+.cs-search-empty-help[hidden] {
+    display: none !important;
+}
+
+.cs-search-empty-help a {
+    color: var(--sl-color-text-accent);
+    text-decoration: underline;
+    text-underline-offset: 0.15em;
+}
+
+/* In-flight query skeleton — mirrors Pagefind result cards for a seamless swap-in. */
+[data-cs-pagefind-root]:has(.cs-search-pending:not([hidden])) .pagefind-ui__message {
+    display: none !important;
+}
+
+.cs-search-pending {
+    display: grid;
+    gap: 0;
+    width: 100%;
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+.cs-search-pending__result + .cs-search-pending__result {
+    margin-top: 0.65rem;
+}
+
+.cs-search-pending:not([hidden]) {
+    animation: cs-search-pending-in 220ms ease forwards;
+}
+
+@keyframes cs-search-pending-in {
+    from {
+        opacity: 0;
+    }
+
+    to {
+        opacity: 1;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .cs-search-pending:not([hidden]) {
+        animation: none;
+    }
+}
+
+.cs-search-pending[hidden] {
+    display: none !important;
+}
+
+.cs-search-pending__inner {
+    display: grid;
+    gap: 0;
+    width: 100%;
+    overflow: hidden;
+    border-radius: var(--cs-search-card-radius);
+}
+
+.cs-search-pending__title,
+.cs-search-pending__nested {
+    position: relative;
+    width: 100%;
+    box-sizing: border-box;
+    background: var(--cs-search-item-bg);
+    border-radius: 0;
+}
+
+.cs-search-pending__title {
+    padding: var(--sl-search-result-pad-block, calc(0.9375rem * var(--pagefind-ui-scale, 0.92)))
+        var(--sl-search-result-pad-inline-end, calc(1.25rem * var(--pagefind-ui-scale, 0.92)));
+    padding-inline-start: var(--sl-search-result-pad-inline-start, calc(3.75rem * var(--pagefind-ui-scale, 0.92)));
+}
+
+.cs-search-pending__title::before {
+    content: '';
+    position: absolute;
+    inset-block: 0;
+    inset-inline-start: var(--sl-search-page-icon-inline-start, calc(0.9375rem * var(--pagefind-ui-scale, 0.92)));
+    width: var(--sl-search-page-icon-size, calc(1.875rem * var(--pagefind-ui-scale, 0.92)));
+    background: var(--sl-color-gray-3);
+    -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='currentColor' viewBox='0 0 24 24'%3E%3Cpath d='M9 10h1a1 1 0 1 0 0-2H9a1 1 0 0 0 0 2Zm0 2a1 1 0 0 0 0 2h6a1 1 0 0 0 0-2H9Zm11-3V8l-6-6a1 1 0 0 0-1 0H7a3 3 0 0 0-3 3v14a3 3 0 0 0 3 3h10a3 3 0 0 0 3-3V9Zm-6-4 3 3h-2a1 1 0 0 1-1-1V5Zm4 14a1 1 0 0 1-1 1H7a1 1 0 0 1-1-1V5a1 1 0 0 1 1-1h5v3a3 3 0 0 0 3 3h3v9Zm-3-3H9a1 1 0 0 0 0 2h6a1 1 0 0 0 0-2Z'/%3E%3C/svg%3E")
+        center no-repeat;
+    mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='currentColor' viewBox='0 0 24 24'%3E%3Cpath d='M9 10h1a1 1 0 1 0 0-2H9a1 1 0 0 0 0 2Zm0 2a1 1 0 0 0 0 2h6a1 1 0 0 0 0-2H9Zm11-3V8l-6-6a1 1 0 0 0-1 0H7a3 3 0 0 0-3 3v14a3 3 0 0 0 3 3h10a3 3 0 0 0 3-3V9Zm-6-4 3 3h-2a1 1 0 0 1-1-1V5Zm4 14a1 1 0 0 1-1 1H7a1 1 0 0 1-1-1V5a1 1 0 0 1 1-1h5v3a3 3 0 0 0 3 3h3v9Zm-3-3H9a1 1 0 0 0 0 2h6a1 1 0 0 0 0-2Z'/%3E%3C/svg%3E")
+        center no-repeat;
+    opacity: 0.55;
+}
+
+.cs-search-pending__nested {
+    display: grid;
+    gap: 0.28rem;
+    padding-block: var(--sl-search-result-nested-pad-block-start, calc(0.375rem * var(--pagefind-ui-scale, 0.92)))
+        var(--sl-search-result-nested-pad-block, calc(0.5rem * var(--pagefind-ui-scale, 0.92)));
+    padding-inline: var(--sl-search-result-pad-inline-start, calc(3.75rem * var(--pagefind-ui-scale, 0.92)))
+        var(--sl-search-result-pad-inline-end, calc(1.25rem * var(--pagefind-ui-scale, 0.92)));
+}
+
+.cs-search-pending__nested::before {
+    content: '';
+    position: absolute;
+    inset-block: 0;
+    inset-inline-start: var(--sl-search-tree-diagram-inline-start, calc(0.625rem * var(--pagefind-ui-scale, 0.92)));
+    width: var(--sl-search-tree-diagram-size, calc(2.5rem * var(--pagefind-ui-scale, 0.92)));
+    background: var(--sl-color-gray-4);
+    -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' stroke='currentColor' stroke-linecap='round' viewBox='0 0 16 1000' preserveAspectRatio='xMinYMin slice'%3E%3Cpath d='M8 0v1000m6-988H8'/%3E%3C/svg%3E")
+        0% 0% / 100% no-repeat;
+    mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' stroke='currentColor' stroke-linecap='round' viewBox='0 0 16 1000' preserveAspectRatio='xMinYMin slice'%3E%3Cpath d='M8 0v1000m6-988H8'/%3E%3C/svg%3E")
+        0% 0% / 100% no-repeat;
+    opacity: 0.55;
+}
+
+.cs-search-pending__nested--last::before {
+    -webkit-mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' stroke='currentColor' stroke-linecap='round' stroke-linejoin='round' viewBox='0 0 16 16'%3E%3Cpath d='M8 0v8m6 0H8'/%3E%3C/svg%3E");
+    mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' stroke='currentColor' stroke-linecap='round' stroke-linejoin='round' viewBox='0 0 16 16'%3E%3Cpath d='M8 0v8m6 0H8'/%3E%3C/svg%3E");
+}
+
+.cs-search-pending__bar {
+    display: block;
+    width: 100%;
+    max-width: 100%;
+    border-radius: 999px;
+    background:
+        linear-gradient(
+            110deg,
+            color-mix(in srgb, var(--sl-color-gray-5) 28%, transparent) 0%,
+            color-mix(in srgb, var(--sl-color-gray-4) 55%, transparent) 45%,
+            color-mix(in srgb, var(--sl-color-gray-5) 28%, transparent) 90%
+        );
+    background-size: 200% 100%;
+    animation: cs-search-shimmer 1.15s ease-in-out infinite;
+}
+
+.cs-search-pending__bar--title {
+    height: calc(0.9375rem * 1.35 * 0.72);
+}
+
+.cs-search-pending__bar--hit {
+    height: calc(0.75rem * 1.35 * 0.72);
+}
+
+.cs-search-pending__bar--excerpt {
+    height: calc(0.6875rem * 1.45 * 0.68);
+    opacity: 0.72;
+}
+
+.cs-search-pending__bar--w44 {
+    width: 44%;
+}
+
+.cs-search-pending__bar--w48 {
+    width: 48%;
+}
+
+.cs-search-pending__bar--w52 {
+    width: 52%;
+}
+
+.cs-search-pending__bar--w56 {
+    width: 56%;
+}
+
+.cs-search-pending__bar--w68 {
+    width: 68%;
+}
+
+.cs-search-pending__bar--w72 {
+    width: 72%;
+}
+
+.cs-search-pending__bar--w78 {
+    width: 78%;
+}
+
+.cs-search-pending__bar--w84 {
+    width: 84%;
+}
+
+.cs-search-pending__nested .cs-search-pending__bar--excerpt + .cs-search-pending__bar--excerpt {
+    margin-top: 0.1rem;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .cs-search-pending__bar {
+        animation: none;
+        background: color-mix(in srgb, var(--sl-color-gray-5) 45%, transparent);
+    }
+}
+
+html[data-theme='light'] .cs-search-pending__bar {
+    background:
+        linear-gradient(
+            110deg,
+            color-mix(in srgb, var(--sl-color-gray-5) 35%, hsl(0 0% 100%)) 0%,
+            color-mix(in srgb, var(--sl-color-gray-4) 18%, hsl(0 0% 100%)) 45%,
+            color-mix(in srgb, var(--sl-color-gray-5) 35%, hsl(0 0% 100%)) 90%
+        );
+    background-size: 200% 100%;
+}
+
+html[data-theme='light'] .cs-search-pending__title::before,
+html[data-theme='light'] .cs-search-pending__nested::before {
+    opacity: 0.45;
+}
+
+.cs-search-empty-help a:hover {
+    color: var(--cs-cyan);
+}
+
+[data-cs-pagefind-root] mark {
+    color: var(--sl-color-text-accent);
+    background: transparent;
+    font-weight: 600;
+}
+
+/* Cold-open loading placeholder (Search.astro override) */
+.cs-search-loading {
+    display: grid;
+    gap: 0.85rem;
+    padding: 0.1rem 0 0.25rem;
+}
+
+.cs-search-loading__field {
+    height: calc(64px * 0.92);
+    border-radius: 0.7rem;
+    border: 1px solid var(--sl-color-gray-5);
+    background:
+        linear-gradient(
+            110deg,
+            color-mix(in srgb, var(--sl-color-black) 40%, transparent) 0%,
+            color-mix(in srgb, var(--sl-color-gray-5) 55%, transparent) 45%,
+            color-mix(in srgb, var(--sl-color-black) 40%, transparent) 90%
+        );
+    background-size: 200% 100%;
+    animation: cs-search-shimmer 1.1s ease-in-out infinite;
+}
+
+.cs-search-loading__label {
+    margin: 0;
+    color: var(--cs-muted);
+    font-size: 0.875rem;
+    font-weight: 500;
+    letter-spacing: -0.01em;
+}
+
+.cs-search-loading--error .cs-search-loading__field {
+    animation: none;
+    opacity: 0.45;
+}
+
+.cs-search-loading--error .cs-search-loading__label {
+    color: var(--sl-color-orange-high, var(--cs-ink));
+}
+
+@keyframes cs-search-shimmer {
+    0% {
+        background-position: 100% 0;
+    }
+    100% {
+        background-position: -100% 0;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .cs-search-loading__field {
+        animation: none;
+        background: color-mix(in srgb, var(--sl-color-black) 45%, var(--sl-color-gray-5));
+    }
+}
+
+html[data-theme='light'] .cs-search-loading__field {
+    background:
+        linear-gradient(
+            110deg,
+            #f3f4f8 0%,
+            #ffffff 45%,
+            #f3f4f8 90%
+        );
+    background-size: 200% 100%;
+}
+
+html[data-theme='light'] site-search dialog[open] {
+    background: var(--cs-search-modal-bg);
+}
+
+html[data-theme='light'] site-search dialog::backdrop {
+    background: hsl(228 20% 20% / 0.35);
+}
+
+html[data-theme='light'] .cs-search-idle__chips button {
+    background: var(--cs-search-item-bg);
+    color: var(--cs-ink);
+}
+
+html[data-theme='light'] .cs-search-idle__chips button:hover,
+html[data-theme='light'] .cs-search-idle__chips button:focus-visible,
+html[data-theme='light'] .cs-search-idle__chips button[data-cs-search-selected='true'] {
+    background: var(--cs-search-hover-bg);
+    color: var(--cs-search-hover-fg);
+}
+
+html[data-theme='light'] [data-cs-pagefind-root]:has(.pagefind-ui__results:not(:has(.pagefind-ui__result))) .pagefind-ui__message {
+    color: var(--cs-ink);
+}
+
+/* Unlayered — beat Starlight’s current-page grey fill. */
+html[data-has-sidebar] #starlight__sidebar a[aria-current='page'] {
+    color: var(--docs-primary-fg);
+    background-color: var(--docs-primary-bg);
+    border-radius: 0.45rem;
+}
+
+@layer starlight.components {
+    /* Sidebar: readable labels + clear active state */
+
+    html[data-has-sidebar] #starlight__sidebar a {
+        border-radius: 0.45rem;
+    }
+
+    html[data-has-sidebar] #starlight__sidebar summary {
+        color: var(--sl-color-gray-1);
+        font-family: var(--sl-font);
+        font-weight: 600;
+    }
+}
+
+/* Unlayered — beat any heading-font leakage into sidebar group labels */
+html[data-has-sidebar] #starlight__sidebar summary {
+    font-family: var(--sl-font);
+}
+
+/*
+ * TOC — aligned links, calm spacing (unlayered; beats Starlight PageSidebar layers).
+ */
+html[data-has-sidebar] .right-sidebar-panel {
+    padding-block: 1.35rem 2rem;
+}
+
+html[data-has-sidebar] starlight-toc h2 {
+    margin: 0 0 0.9rem;
+    padding-inline: 0.65rem;
+    font-family: var(--sl-font);
+    font-size: 0.75rem;
+    font-weight: 600;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    line-height: 1.3;
+    color: var(--sl-color-gray-3);
+}
+
+html[data-has-sidebar] starlight-toc :is(ul, li) {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+
+html[data-has-sidebar] starlight-toc a {
+    display: block;
+    padding: 0.4rem 0.5rem 0.4rem 0.65rem;
+    border-left: 2px solid transparent;
+    border-radius: 0 0.3rem 0.3rem 0;
+    font-family: var(--sl-font);
+    font-size: 0.8125rem;
+    font-weight: 400;
+    line-height: 1.45;
+    color: var(--sl-color-gray-2);
+    text-decoration: none;
+    overflow-wrap: anywhere;
+}
+
+html[data-has-sidebar] starlight-toc ul ul a {
+    padding-left: 1.15rem;
+    font-size: 0.78rem;
+    color: var(--sl-color-gray-3);
+}
+
+html[data-has-sidebar] starlight-toc a:hover {
+    color: var(--sl-color-gray-1);
+}
+
+html[data-has-sidebar] starlight-toc a[aria-current='true'] {
+    color: var(--sl-color-text-accent);
+    border-left-color: var(--sl-color-accent);
+    background: color-mix(in srgb, var(--sl-color-accent) 12%, transparent);
+}
+
+/*
+ * Code blocks — match ui-components Code:
+ * flat panel, no border, 0.5rem radius, --color-bg-dark1 panels (#191a20 / #e4e1ef).
+ * Avoid CSS filter on blocks — filter forces a compositor layer per block and janks scroll/nav.
+ */
+.expressive-code {
+    box-sizing: border-box;
+    width: 100%;
+    min-width: 0;
+    max-width: 100%;
+    font-size: 0.9rem;
+    contain: layout style;
+    --ec-codeFontFml: var(--sl-font-mono);
+    --ec-codeFontSize: 0.9rem;
+    --ec-codeLineHt: var(--sl-line-height);
+    --ec-codePadBlk: 0.6rem;
+    --ec-codePadInl: 0.75rem;
+    --ec-codeBg: var(--cs-code-bg);
+    --ec-brdRad: 0.5rem;
+    /* Length token — unitless 0 breaks EC copy-button calc(var(--ec-brdWd) + …) */
+    --ec-brdWd: 0px;
+}
+
+.expressive-code .frame {
+    margin: 0 !important;
+    padding: 0 !important;
+    border: 0 !important;
+    box-shadow: none !important;
+    background: transparent !important;
+    width: 100%;
+    min-width: 0;
+    max-width: 100%;
+    /* Keep copy button clear of padding edge */
+    --button-spacing: 0.5rem !important;
+}
+
+/* Hide empty editor chrome; keep file titles + terminal bars + copy */
+.expressive-code .frame:not(.has-title):not(.is-terminal) > .header {
+    display: none !important;
+}
+
+/*
+ * Minimal window chrome (splash-style dots) + active file tab.
+ * Kill EC’s editor-tab / terminal-dot defaults — we draw our own.
+ * Dark: border matches code bg; frame shell transparent so the titlebar
+ * reads as open to the page. Light: filled panel + stronger edge.
+ */
+.expressive-code .frame.has-title,
+.expressive-code .frame.has-title:not(.is-terminal),
+.expressive-code .frame.is-terminal {
+    --cs-code-border: var(--docs-code-border);
+    --code-background: var(--cs-code-bg) !important;
+    /* Keep copy control inside the chrome bar (EC’s titled default pushes it into the code) */
+    --button-spacing: 0.38rem !important;
+    position: relative;
+    background: transparent !important;
+    border: 1px solid var(--cs-code-border) !important;
+    border-radius: 0.55rem !important;
+    overflow: hidden;
+    box-shadow: none !important;
+    outline: none !important;
+}
+
+html[data-theme='light'] .expressive-code .frame.has-title,
+html[data-theme='light'] .expressive-code .frame.is-terminal {
+    --cs-code-border: var(--docs-code-border);
+    background: var(--cs-code-bg) !important;
+}
+
+.expressive-code .frame.has-title > .header,
+.expressive-code .frame.is-terminal > .header {
+    display: flex !important;
+    flex-direction: row !important;
+    justify-content: flex-start !important;
+    align-items: center !important;
+    gap: 0.55rem !important;
+    position: relative !important;
+    z-index: 1;
+    margin: 0 !important;
+    padding: 0.35rem 0.45rem 0.35rem 0.7rem !important;
+    border: 0 !important;
+    border-bottom: 1px solid var(--cs-code-border) !important;
+    border-radius: 0 !important;
+    color: inherit !important;
+    background: transparent !important;
+    box-shadow: none !important;
+    min-height: 2.25rem !important;
+    font-weight: inherit !important;
+    letter-spacing: normal !important;
+}
+
+/* Light: code titlebar matches the frame border (--docs-code-border), not the site nav. */
+html[data-theme='light'] .expressive-code .frame.has-title > .header,
+html[data-theme='light'] .expressive-code .frame.is-terminal > .header {
+    background: var(--docs-code-border) !important;
+}
+
+/* Kill EC editor/terminal header overlays — we own the chrome */
+.expressive-code .frame.has-title > .header::before,
+.expressive-code .frame.has-title > .header::after,
+.expressive-code .frame.is-terminal > .header::before,
+.expressive-code .frame.is-terminal > .header::after {
+    content: none !important;
+    display: none !important;
+    background: none !important;
+    -webkit-mask-image: none !important;
+    mask-image: none !important;
+    border: 0 !important;
+    opacity: 0 !important;
+    width: 0 !important;
+    height: 0 !important;
+}
+
+/*
+ * Window dots — one mask, same on bash + TS.
+ * (EC’s terminal/editor frames used different chrome; this replaces both.)
+ */
+.expressive-code .cs-code-dots {
+    --cs-dots: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 40 10'%3E%3Ccircle cx='5' cy='5' r='4' fill='black'/%3E%3Ccircle cx='20' cy='5' r='4' fill='black'/%3E%3Ccircle cx='35' cy='5' r='4' fill='black'/%3E%3C/svg%3E");
+    display: block;
+    flex: 0 0 auto;
+    align-self: center;
+    width: 1.85rem;
+    height: 0.45rem;
+    margin: 0;
+    background: hsl(228 10% 48%);
+    -webkit-mask: var(--cs-dots) center / contain no-repeat;
+    mask: var(--cs-dots) center / contain no-repeat;
+}
+
+html[data-theme='light'] .expressive-code .cs-code-dots {
+    background: hsl(228 12% 42%);
+}
+
+/* Active tab */
+.expressive-code .frame.has-title .title,
+.expressive-code .frame.is-terminal .title {
+    position: static !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    align-self: center !important;
+    gap: 0.35rem;
+    flex: 0 1 auto;
+    min-width: 0;
+    max-width: min(100%, 36rem);
+    margin: 0 !important;
+    padding: 0.28rem 0.6rem !important;
+    border: 0 !important;
+    border-radius: 0.35rem !important;
+    background: transparent !important;
+    box-shadow: none !important;
+    font-family: var(--sl-font-mono, ui-monospace, monospace) !important;
+    font-size: 0.74rem !important;
+    font-weight: 500 !important;
+    letter-spacing: 0.01em;
+    line-height: 1.25 !important;
+    color: var(--cs-muted) !important;
+    white-space: nowrap !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+}
+
+.expressive-code .frame.is-terminal .title {
+    color: color-mix(in srgb, var(--cs-cyan) 75%, var(--ec-codeFg, #d4d8e4)) !important;
+}
+
+html[data-theme='light'] .expressive-code .frame.has-title .title {
+    color: hsl(228, 14%, 30%) !important;
+}
+
+html[data-theme='light'] .expressive-code .frame.is-terminal .title {
+    color: var(--docs-primary-bg) !important;
+}
+
+.expressive-code .frame.has-title .title::before,
+.expressive-code .frame.is-terminal .title::before,
+.expressive-code .frame.has-title .title::after,
+.expressive-code .frame.is-terminal .title::after {
+    content: none !important;
+    display: none !important;
+}
+
+/* Path + filename share one flex item — no gap after "/" */
+.expressive-code .cs-code-name {
+    display: inline;
+    min-width: 0;
+    white-space: nowrap;
+}
+
+/* Compact lang chip — same shape for TS/JS/JSON/…; color via data-kind */
+.expressive-code .frame.has-title .cs-code-kind {
+    flex: 0 0 auto;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    box-sizing: border-box;
+    min-width: 1.15rem;
+    height: 1rem;
+    padding: 0 0.22rem;
+    border-radius: 0.18rem;
+    font-family: var(--sl-font-mono, ui-monospace, monospace);
+    font-size: 0.56rem;
+    font-weight: 700;
+    letter-spacing: 0.02em;
+    line-height: 1;
+    color: #fff;
+    background: #3178c6; /* TS / TSX default */
+}
+
+.expressive-code .frame.has-title .cs-code-kind[data-kind='JS'],
+.expressive-code .frame.has-title .cs-code-kind[data-kind='JSX'] {
+    background: #c4a000;
+    color: #111;
+}
+
+.expressive-code .frame.has-title .cs-code-kind[data-kind='JSON'] {
+    background: #8a8a2a;
+    color: #f5f5d0;
+}
+
+.expressive-code .frame.has-title .cs-code-kind[data-kind='MD'] {
+    background: #555b6e;
+}
+
+.expressive-code .frame.has-title .cs-code-kind[data-kind='CSS'] {
+    background: #2b6cb0;
+}
+
+.expressive-code .frame.has-title .cs-code-kind[data-kind='PY'] {
+    background: #3776ab;
+}
+
+.expressive-code .frame.has-title .cs-code-kind[data-kind='GO'] {
+    background: #007d9c;
+}
+
+.expressive-code .frame.has-title .cs-code-kind[data-kind='RS'] {
+    background: #b7410e;
+}
+
+.expressive-code .frame.has-title .cs-code-kind[data-kind='YML'] {
+    background: #6b7280;
+}
+
+.expressive-code .cs-code-path {
+    color: color-mix(in srgb, var(--cs-muted) 65%, transparent);
+    font-weight: 400;
+}
+
+html[data-theme='light'] .expressive-code .cs-code-path {
+    color: hsl(228, 10%, 42%);
+}
+
+.expressive-code .cs-code-file {
+    color: var(--ec-codeFg, #d4d8e4);
+    font-weight: 600;
+}
+
+html[data-theme='light'] .expressive-code .cs-code-file {
+    color: var(--cs-ink);
+}
+
+.expressive-code .frame.has-title > pre,
+.expressive-code .frame.is-terminal > pre {
+    border-radius: 0 !important;
+    /* Code body keeps panel fill; frame/header stay transparent in dark mode */
+    background: var(--cs-code-bg) !important;
+}
+
+/*
+ * Copy control — app-frontend Code / useCopyToClipboard behavior:
+ * idle: icon + “Copy”; copied: green pill + check + “Copied!” for 1.5s.
+ * Kill EC’s floating tooltip — we own the feedback UI.
+ */
+.expressive-code .frame.has-title > .header > .copy,
+.expressive-code .frame.is-terminal > .header > .copy {
+    position: static !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    align-self: center !important;
+    flex: 0 0 auto !important;
+    margin: 0 0 0 auto !important;
+    padding: 0 !important;
+    inset: auto !important;
+    z-index: 3;
+}
+
+.expressive-code .frame.has-title > .header > .copy > [aria-live],
+.expressive-code .frame.is-terminal > .header > .copy > [aria-live] {
+    display: none !important;
+}
+
+.expressive-code .frame.has-title .copy button.cs-copy-btn,
+.expressive-code .frame.is-terminal .copy button.cs-copy-btn,
+.expressive-code .frame.has-title .copy button.cs-copy-btn:not(:hover),
+.expressive-code .frame.is-terminal .copy button.cs-copy-btn:not(:hover),
+.expressive-code .frame.has-title:not(:hover) .copy button.cs-copy-btn,
+.expressive-code .frame.is-terminal:not(:hover) .copy button.cs-copy-btn {
+    opacity: 1 !important;
+    position: relative !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    gap: 0.35rem !important;
+    flex: 0 0 auto !important;
+    width: auto !important;
+    min-width: max-content !important;
+    height: auto !important;
+    margin: 0 !important;
+    padding: 0.28rem 0.55rem !important;
+    border: 0 !important;
+    border-radius: 0.3rem !important;
+    background: transparent !important;
+    box-shadow: none !important;
+    outline: none !important;
+    color: color-mix(in srgb, var(--ec-codeFg, #d4d8e4) 72%, transparent) !important;
+    font-size: 0.75rem !important;
+    font-weight: 500 !important;
+    letter-spacing: 0.01em !important;
+    line-height: 1.2 !important;
+    white-space: nowrap !important;
+    overflow: visible !important;
+    cursor: pointer;
+    transition: background 120ms ease, color 120ms ease;
+}
+
+.expressive-code .frame.has-title .copy button.cs-copy-btn > div,
+.expressive-code .frame.is-terminal .copy button.cs-copy-btn > div {
+    display: none !important;
+}
+
+.expressive-code .frame.has-title .copy button.cs-copy-btn::before,
+.expressive-code .frame.is-terminal .copy button.cs-copy-btn::before,
+.expressive-code .frame.has-title .copy button.cs-copy-btn::after,
+.expressive-code .frame.is-terminal .copy button.cs-copy-btn::after {
+    content: none !important;
+    display: none !important;
+    background: none !important;
+    -webkit-mask-image: none !important;
+    mask-image: none !important;
+    width: 0 !important;
+    height: 0 !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    border: 0 !important;
+    opacity: 0 !important;
+}
+
+.expressive-code .frame.has-title .copy button.cs-copy-btn .cs-copy-icon,
+.expressive-code .frame.is-terminal .copy button.cs-copy-btn .cs-copy-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    width: 0.9rem;
+    height: 0.9rem;
+    overflow: visible;
+}
+
+.expressive-code .frame.has-title .copy button.cs-copy-btn .cs-copy-glyph,
+.expressive-code .frame.is-terminal .copy button.cs-copy-btn .cs-copy-glyph {
+    display: block;
+    width: 100%;
+    height: 100%;
+    overflow: visible;
+}
+
+.expressive-code .frame.has-title .copy button.cs-copy-btn:hover,
+.expressive-code .frame.is-terminal .copy button.cs-copy-btn:hover {
+    color: var(--ec-codeFg, #d4d8e4) !important;
+    background: color-mix(in srgb, var(--ec-codeFg, #d4d8e4) 8%, transparent) !important;
+}
+
+html[data-theme='light'] .expressive-code .frame.has-title .copy button.cs-copy-btn,
+html[data-theme='light'] .expressive-code .frame.is-terminal .copy button.cs-copy-btn,
+html[data-theme='light'] .expressive-code .frame.has-title .copy button.cs-copy-btn:not(:hover),
+html[data-theme='light'] .expressive-code .frame.is-terminal .copy button.cs-copy-btn:not(:hover),
+html[data-theme='light'] .expressive-code .frame.has-title:not(:hover) .copy button.cs-copy-btn,
+html[data-theme='light'] .expressive-code .frame.is-terminal:not(:hover) .copy button.cs-copy-btn {
+    /* Avoid translucent mixes — they read as washed-out on light panels */
+    color: hsl(228, 14%, 30%) !important;
+}
+
+html[data-theme='light'] .expressive-code .frame.has-title .copy button.cs-copy-btn:hover,
+html[data-theme='light'] .expressive-code .frame.is-terminal .copy button.cs-copy-btn:hover {
+    color: var(--cs-ink) !important;
+    background: color-mix(in srgb, var(--cs-ink) 6%, transparent) !important;
+}
+
+/* app-frontend Code.module.scss `.copied` — success green wins over hover */
+.expressive-code .frame.has-title .copy button.cs-copy-btn.cs-copied,
+.expressive-code .frame.is-terminal .copy button.cs-copy-btn.cs-copied,
+.expressive-code .frame.has-title .copy button.cs-copy-btn.cs-copied:hover,
+.expressive-code .frame.is-terminal .copy button.cs-copy-btn.cs-copied:hover,
+.expressive-code .frame.has-title .copy button.cs-copy-btn.cs-copied:focus,
+.expressive-code .frame.is-terminal .copy button.cs-copy-btn.cs-copied:focus,
+.expressive-code .frame.has-title .copy button.cs-copy-btn.cs-copied:active,
+.expressive-code .frame.is-terminal .copy button.cs-copy-btn.cs-copied:active,
+html[data-theme='light'] .expressive-code .frame.has-title .copy button.cs-copy-btn.cs-copied,
+html[data-theme='light'] .expressive-code .frame.is-terminal .copy button.cs-copy-btn.cs-copied,
+html[data-theme='light'] .expressive-code .frame.has-title .copy button.cs-copy-btn.cs-copied:hover,
+html[data-theme='light'] .expressive-code .frame.is-terminal .copy button.cs-copy-btn.cs-copied:hover,
+html[data-theme='light'] .expressive-code .frame.has-title .copy button.cs-copy-btn.cs-copied:focus,
+html[data-theme='light'] .expressive-code .frame.is-terminal .copy button.cs-copy-btn.cs-copied:focus,
+html[data-theme='light'] .expressive-code .frame.has-title .copy button.cs-copy-btn.cs-copied:active,
+html[data-theme='light'] .expressive-code .frame.is-terminal .copy button.cs-copy-btn.cs-copied:active {
+    color: #000 !important;
+    background: #7bee7b !important;
+    box-shadow: none !important;
+}
+
+.expressive-code pre {
+    margin: 0 !important;
+    padding: 0.6rem 0.75rem !important;
+    border: 0 !important;
+    border-radius: 0.5rem !important;
+    box-shadow: none !important;
+    overflow-x: auto !important;
+    overflow-y: hidden !important;
+    background: var(--cs-code-bg) !important;
+    box-sizing: border-box;
+    width: 100%;
+    min-width: 0;
+    max-width: 100%;
+}
+
+.expressive-code pre code {
+    display: block;
+    min-width: min-content;
+    color: var(--ec-codeFg);
+}
+
+html[data-theme='dark'] .expressive-code {
+    --ec-codeFg: #d4d8e4;
+}
+
+html[data-theme='light'] .expressive-code {
+    --ec-codeFg: #24292e;
+}
+
+.expressive-code .ec-line {
+    display: grid;
+    grid-template-columns: auto 1fr;
+}
+
+.expressive-code .ec-line .code {
+    padding-inline: var(--ec-codePadInl, 0.75rem);
+    white-space: pre;
+}
+
+/*
+ * Guide layout — full-width main column, article centered from 72rem.
+ * Right TOC column joins at 90rem (see TOC delay rules above).
+ */
+@media (min-width: 72rem) {
+    html[data-has-sidebar][data-has-toc] .lg\:sl-flex {
+        width: 100%;
+    }
+
+    html[data-has-sidebar][data-has-toc] .main-pane {
+        flex: 1 1 auto;
+        width: auto !important;
+        min-width: 0;
+        max-width: none;
+    }
+
+    html[data-has-sidebar] .main-pane .content-panel .sl-container {
+        margin-inline: auto;
+    }
+}
+
+@media (min-width: 90rem) {
+    html[data-has-sidebar][data-has-toc] .right-sidebar-container {
+        flex: 0 0 var(--sl-sidebar-width);
+        width: var(--sl-sidebar-width) !important;
+        overflow: hidden;
+    }
+
+    html[data-has-sidebar][data-has-toc] .right-sidebar {
+        position: fixed;
+        inset-inline: auto 0;
+        width: var(--sl-sidebar-width);
+        height: 100vh;
+        padding-top: var(--sl-nav-height);
+        border-inline-start: 1px solid var(--sl-color-hairline);
+        overflow-y: auto;
+    }
+
+    html[data-has-sidebar] .right-sidebar-panel .sl-container {
+        max-width: none;
+        width: 100%;
+    }
+}
+
+/* Prev/next page navigation */
+html[data-has-sidebar] .pagination-links {
+    margin-top: 3.25rem;
+    padding-top: 2rem;
+    border-top: 1px solid var(--cs-line);
+    gap: 0.85rem;
+    /* Match explorer — Starlight’s 18rem auto-fit stacks in the article column. */
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+html[data-has-sidebar] .pagination-links > :only-child {
+    grid-column: 1 / -1;
+}
+
+html[data-has-sidebar] .pagination-links a {
+    align-items: center;
+    gap: 0.85rem;
+    border: none;
+    border-radius: calc(var(--cs-radius) - 0.15rem);
+    padding: 1rem 1.15rem;
+    box-shadow: none;
+    background: var(--cs-table-bg);
+    color: var(--cs-muted);
+    transition:
+        background 0.15s ease,
+        color 0.15s ease;
+}
+
+html[data-has-sidebar] .pagination-links a:hover {
+    background: var(--cs-pagination-hover-bg);
+    color: var(--cs-muted);
+}
+
+html[data-theme='light'][data-has-sidebar] .pagination-links a {
+    background: var(--docs-code-bg);
+}
+
+html[data-theme='light'][data-has-sidebar] .pagination-links a:hover {
+    background: var(--cs-pagination-hover-bg);
+}
+
+html[data-has-sidebar] .pagination-links a > span {
+    font-size: 0.66rem;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    line-height: 1.35;
+    text-transform: uppercase;
+    transition: color 0.15s ease;
+}
+
+html[data-has-sidebar] .pagination-links .link-title {
+    color: var(--cs-ink);
+    font-family: var(--cs-font-heading);
+    font-size: 0.95rem;
+    font-weight: 600;
+    letter-spacing: -0.015em;
+    line-height: 1.3;
+    text-transform: none;
+    transition: color 0.15s ease;
+}
+
+html[data-has-sidebar] .pagination-links svg {
+    width: 1.15rem;
+    height: 1.15rem;
+    color: var(--cs-muted);
+    opacity: 0.9;
+    transition:
+        color 0.15s ease,
+        opacity 0.15s ease,
+        transform 0.15s ease;
+}
+
+html[data-has-sidebar] .pagination-links a:hover svg {
+    color: var(--sl-color-accent);
+    opacity: 1;
+}
+
+html[data-has-sidebar] .pagination-links a[rel='next']:hover svg {
+    transform: translateX(0.2rem);
+}
+
+html[data-has-sidebar] .pagination-links a[rel='prev']:hover svg {
+    transform: translateX(-0.2rem);
+}
+
+@media (prefers-reduced-motion: reduce) {
+    html[data-has-sidebar] .pagination-links a:hover svg {
+        transform: none;
+    }
+}
+
+/*
+ * Match explorer `.sidebar-nav`: pull content in by link pad so “Home” text
+ * aligns with brand/search; caret flush on the right of group rows.
+ */
+html[data-has-sidebar] .sidebar-content {
+    padding: 0.65rem calc(var(--sl-sidebar-pad-x) - var(--docs-sidebar-link-pad-inline)) 2.5rem;
+}
+
+html[data-has-sidebar] #starlight__sidebar .top-level > li + li {
+    margin-top: 0.45rem;
+}
+
+html[data-has-sidebar] #starlight__sidebar a {
+    padding-block: 0.35em;
+    padding-inline: var(--docs-sidebar-link-pad-inline);
+    /* Nested + top-level links: grey; hover black (beats SidebarSublist .large). */
+    color: var(--cs-muted);
+}
+
+/* Nested pages under a category — roomier line box (matches explorer). */
+html[data-has-sidebar] #starlight__sidebar ul ul a {
+    line-height: var(--docs-sidebar-subitem-line-height);
+}
+
+html[data-has-sidebar] #starlight__sidebar a .large {
+    color: inherit;
+    font-weight: 600;
+}
+
+html[data-has-sidebar] #starlight__sidebar a:hover,
+html[data-has-sidebar] #starlight__sidebar a:focus-visible {
+    color: var(--docs-sidebar-hover);
+}
+
+html[data-has-sidebar] #starlight__sidebar summary:hover {
+    color: var(--docs-sidebar-hover);
+}
+
+html[data-has-sidebar] #starlight__sidebar a[aria-current='page'],
+html[data-has-sidebar] #starlight__sidebar a[aria-current='page']:hover,
+html[data-has-sidebar] #starlight__sidebar a[aria-current='page']:focus-visible {
+    color: var(--docs-primary-fg);
+    background-color: var(--docs-primary-bg);
+}
+
+html[data-has-sidebar] #starlight__sidebar summary {
+    padding-block: 0.35em;
+    /* Left pad for label; caret flush to the row’s right edge. */
+    padding-inline: var(--docs-sidebar-link-pad-inline) 0;
+    color: var(--cs-ink);
+}
+
+html[data-has-sidebar] #starlight__sidebar summary .large {
+    color: inherit;
+}
+
+/* Caret stays muted until hover (don’t inherit category ink). */
+html[data-has-sidebar] #starlight__sidebar summary .caret {
+    color: var(--docs-text-tertiary);
+}
+
+html[data-has-sidebar] #starlight__sidebar summary:hover .caret {
+    color: var(--docs-sidebar-hover);
+}
+
+/* Drop Starlight nested left hairline (SidebarSublist `ul ul li`). */
+html[data-has-sidebar] #starlight__sidebar ul ul li {
+    border-inline-start: none;
+}
+
+/* Demo UI screenshot — inverted by docs/splash theme for contrast. */
+.demo-screenshot {
+    margin: 1.25rem 0;
+}
+
+.demo-screenshot__link {
+    display: block;
+}
+
+.demo-screenshot__img {
+    display: block;
+    width: 100%;
+    height: auto;
+    border-radius: 0.5rem;
+    border: 1px solid var(--docs-border);
+}
+
+.demo-screenshot__img--for-dark {
+    display: none;
+}
+
+html[data-theme='dark'] .demo-screenshot__img--for-light {
+    display: none;
+}
+
+html[data-theme='dark'] .demo-screenshot__img--for-dark {
+    display: block;
+}
+

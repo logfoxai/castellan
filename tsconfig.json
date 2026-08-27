@@ -24,11 +24,21 @@
     "skipLibCheck": true
   },
   "include": [
-    "src/**/*"
+    "src/**/*.ts",
+    "src/env.d.ts"
   ],
   "exclude": [
     "node_modules",
     "dist",
-    "ui"
+    "ui",
+    "src/**/*.spec.ts",
+    "src/content.config.ts",
+    "src/content/**",
+    "src/components/**",
+    "src/overrides/**",
+    "src/pages/**",
+    "src/integrations/**",
+    "src/ui/**",
+    "src/cs-pagefind/**"
   ]
 }

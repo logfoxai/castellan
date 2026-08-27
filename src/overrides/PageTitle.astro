@@ -1,0 +1,25 @@
+---
+const PAGE_TITLE_ID = '_top';
+const {entry} = Astro.locals.starlightRoute;
+---
+
+{
+	entry.data.template !== 'splash' && (
+		<h1 id={PAGE_TITLE_ID}>{entry.data.title}</h1>
+	)
+}
+
+<style>
+	@layer starlight.core {
+		h1 {
+			/* Vertical rhythm comes from equal content-panel padding (starlight-custom). */
+			margin: 0;
+			font-family: var(--cs-font-heading);
+			font-size: var(--sl-text-h1);
+			line-height: var(--sl-line-height-headings);
+			font-weight: 700;
+			letter-spacing: -0.02em;
+			color: var(--sl-color-white);
+		}
+	}
+</style>

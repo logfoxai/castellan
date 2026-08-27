@@ -1,0 +1,611 @@
+---
+/**
+ * Callspec Search override (from Starlight Search.astro):
+ * - Eager Pagefind load (no idle-callback deferral)
+ * - Loading placeholder until the UI mounts
+ */
+import {Icon} from '@astrojs/starlight/components';
+import project from 'virtual:starlight/project-context';
+
+const pagefindTranslations = {
+	placeholder: Astro.locals.t('search.label'),
+	...Object.fromEntries(
+		Object.entries(Astro.locals.t.all())
+			.filter(([key]) => key.startsWith('pagefind.'))
+			.map(([key, value]) => [key.replace('pagefind.', ''), value])
+	),
+};
+
+const dataAttributes: DOMStringMap = { 'data-translations': JSON.stringify(pagefindTranslations) };
+if (project.trailingSlash === 'never') dataAttributes['data-strip-trailing-slash'] = '';
+---
+
+<site-search class={Astro.props.class} {...dataAttributes}>
+	<button
+		data-open-modal
+		disabled
+		aria-label={Astro.locals.t('search.label')}
+		aria-keyshortcuts="/"
+	>
+		<Icon name="magnifier" />
+		<span class="cs-search-label" aria-hidden="true">{Astro.locals.t('search.label')}</span>
+		<kbd class="cs-search-kbd">/</kbd>
+	</button>
+
+	<dialog style="padding:0" aria-label={Astro.locals.t('search.label')}>
+		<div class="dialog-frame sl-flex">
+			{
+				/* TODO: Make the layout of this button flexible to accommodate different word lengths. Currently hard-coded for English: “Cancel” */
+			}
+			<button data-close-modal class="sl-flex md:sl-hidden">
+				{Astro.locals.t('search.cancelLabel')}
+			</button>
+			<div class="search-container">
+				<div
+					class="cs-search-loading"
+					data-cs-search-loading
+					aria-live="polite"
+					aria-busy="true"
+				>
+					<div class="cs-search-loading__field" aria-hidden="true" />
+					<p class="cs-search-loading__label">Loading search…</p>
+				</div>
+				<div id="starlight__search" data-cs-pagefind-root />
+			</div>
+		</div>
+	</dialog>
+</site-search>
+
+<script>
+	import {pagefindUserConfig} from 'virtual:starlight/pagefind-config';
+	import {DOCS_SEARCH_PAGE_SIZE} from '../components/docsSearchQuery';
+	import {bindPagefindMount} from '../components/pagefindMount';
+	import {
+		isEditableSearchTarget,
+		openPrimaryDocsSearch,
+		shouldCloseOnOutsideClick,
+		shouldCloseSearchOnEscape,
+		shouldHandleGlobalSlash,
+	} from '../components/searchDialog';
+
+	let pagefindMountSeq = 0;
+
+	class SiteSearch extends HTMLElement {
+		constructor() {
+			super();
+			const openBtn = this.querySelector<HTMLButtonElement>('button[data-open-modal]')!;
+			const closeBtn = this.querySelector<HTMLButtonElement>('button[data-close-modal]')!;
+			const dialog = this.querySelector('dialog')!;
+			const dialogFrame = this.querySelector('.dialog-frame')!;
+
+			const focusSearchInput = () => {
+				this.querySelector<HTMLInputElement>('.pagefind-ui__search-input')?.focus();
+			};
+
+			/** Close the modal if a user clicks on a link or outside of the modal. */
+			const onClick = (event: MouseEvent) => {
+				const target = event.target;
+				const targetIsLink =
+					(typeof target === 'object' && target !== null && 'href' in target) ||
+					(target instanceof Element && Boolean(target.closest('a[href]')));
+				if (
+					shouldCloseOnOutsideClick({
+						targetIsLink,
+						targetInDocument: document.body.contains(target as Node),
+						targetInDialogFrame: dialogFrame.contains(target as Node),
+					})
+				) {
+					closeModal();
+				}
+			};
+
+			const openModal = (event?: MouseEvent) => {
+				void loadPagefind();
+				event?.stopPropagation();
+				if (!dialog.open) {
+					dialog.showModal();
+					document.body.toggleAttribute('data-search-modal-open', true);
+					window.addEventListener('click', onClick);
+				}
+				focusSearchInput();
+				requestAnimationFrame(focusSearchInput);
+			};
+
+			const closeModal = () => dialog.close();
+
+			openBtn.addEventListener('click', openModal);
+			openBtn.disabled = false;
+			closeBtn.addEventListener('click', closeModal);
+			// Warm the index as soon as the user shows intent (hover / keyboard focus).
+			openBtn.addEventListener('pointerenter', () => void loadPagefind(), {once: true});
+			openBtn.addEventListener('focus', () => void loadPagefind(), {once: true});
+
+			dialog.addEventListener('close', () => {
+				document.body.toggleAttribute('data-search-modal-open', false);
+				window.removeEventListener('click', onClick);
+			});
+			dialog.addEventListener(
+				'keydown',
+				(event) => {
+					if (!shouldCloseSearchOnEscape(event.key)) return;
+					event.preventDefault();
+					event.stopPropagation();
+					closeModal();
+				},
+				true,
+			);
+
+			// `/` opens search (GitHub-style). Skip when typing in a field or when any search dialog is open.
+			window.addEventListener('keydown', (e) => {
+				const el = e.target;
+				if (
+					!shouldHandleGlobalSlash({
+						key: e.key,
+						metaKey: e.metaKey,
+						ctrlKey: e.ctrlKey,
+						altKey: e.altKey,
+						shiftKey: e.shiftKey,
+						anySearchDialogOpen: Boolean(document.querySelector('site-search dialog[open]')),
+						targetIsEditable: el instanceof HTMLElement && isEditableSearchTarget(el),
+					})
+				) {
+					return;
+				}
+				e.preventDefault();
+				openModal();
+			});
+
+			let translations = {};
+			try {
+				translations = JSON.parse(this.dataset.translations || '{}');
+			} catch {}
+
+			const shouldStrip = this.dataset.stripTrailingSlash !== undefined;
+			const stripTrailingSlash = (path: string) => path.replace(/(.)\/(#.*)?$/, '$1$2');
+			const formatURL = shouldStrip ? stripTrailingSlash : (path: string) => path;
+
+			let pagefindPromise: Promise<void> | null = null;
+			const showSearchLoadError = () => {
+				const loading = this.querySelector<HTMLElement>('[data-cs-search-loading]');
+				if (!loading) return;
+				loading.setAttribute('aria-busy', 'false');
+				loading.classList.add('cs-search-loading--error');
+				const label = loading.querySelector('.cs-search-loading__label');
+				if (label) label.textContent = 'Search failed to load. Close and try again.';
+			};
+			const loadPagefind = () => {
+				if (pagefindPromise) return pagefindPromise;
+				pagefindPromise = (async () => {
+					try {
+						const base = import.meta.env.BASE_URL.replace(/\/$/, '');
+						// Real index + wasm live under /pagefind/. PagefindUI loads JS from
+						// /cs-pagefind/ — a build shim that wraps search (ESM exports are
+						// immutable, so we cannot patch /pagefind/pagefind.js in place).
+						const indexPath = `${base}/pagefind/`;
+						const bundlePath = `${base}/cs-pagefind/`;
+
+						pagefindMountSeq += 1;
+						const element = bindPagefindMount(this, `starlight__search-${pagefindMountSeq}`);
+						if (!element) {
+							showSearchLoadError();
+							return;
+						}
+
+						// @ts-expect-error — Missing types for @pagefind/default-ui package.
+						const {PagefindUI} = await import('@pagefind/default-ui');
+						const pagefindEngineOptions = {
+							...pagefindUserConfig,
+							basePath: indexPath,
+							excerptLength: 12,
+							// Worker init can stall ~5s in dev before falling back to the main thread.
+							noWorker: true,
+						};
+						new PagefindUI({
+							...pagefindEngineOptions,
+							element,
+							baseUrl: import.meta.env.BASE_URL,
+							bundlePath,
+							pageSize: DOCS_SEARCH_PAGE_SIZE,
+							showImages: false,
+							debounceTimeoutMs: 0,
+							translations,
+							showSubResults: true,
+							processResult: (result: {url: string; sub_results: Array<{url: string}>}) => {
+								result.url = formatURL(result.url);
+								result.sub_results = result.sub_results.map((sub_result) => {
+									sub_result.url = formatURL(sub_result.url);
+									return sub_result;
+								});
+							},
+						});
+						const engineUrl = new URL(`${bundlePath}pagefind.js`, window.location.href).href;
+						const pagefindEngine = await import(/* @vite-ignore */ engineUrl);
+						await pagefindEngine.options(pagefindEngineOptions);
+						this.querySelector('[data-cs-search-loading]')?.remove();
+						this.toggleAttribute('data-cs-search-ready', true);
+						if (dialog.open) focusSearchInput();
+					} catch (err) {
+						console.error('Callspec search failed to load', err);
+						pagefindPromise = null;
+						showSearchLoadError();
+					}
+				})();
+				return pagefindPromise;
+			};
+
+			// Start loading immediately — do not wait for an idle callback.
+			if (document.readyState === 'loading') {
+				window.addEventListener('DOMContentLoaded', () => void loadPagefind(), {once: true});
+			} else {
+				void loadPagefind();
+			}
+		}
+	}
+	customElements.define('site-search', SiteSearch);
+
+	function bindDocsSearchTriggers() {
+		document.querySelectorAll('[data-cs-open-docs-search]').forEach((btn) => {
+			if (!(btn instanceof HTMLElement) || btn.dataset.csOpenBound === '1') return;
+			btn.dataset.csOpenBound = '1';
+			btn.addEventListener('click', (event) => {
+				event.stopPropagation();
+				openPrimaryDocsSearch(document);
+			});
+		});
+	}
+	bindDocsSearchTriggers();
+	document.addEventListener('astro:page-load', bindDocsSearchTriggers);
+</script>
+
+<style>
+	@layer starlight.core {
+		site-search {
+			display: contents;
+		}
+		button[data-open-modal] {
+			display: flex;
+			align-items: center;
+			gap: 0.45rem;
+			border: 1px solid var(--sl-color-gray-5);
+			border-radius: 0.55rem;
+			padding-inline: 0.7rem;
+			background-color: var(--sl-color-gray-6);
+			color: var(--sl-color-gray-2);
+			cursor: pointer;
+			height: var(--docs-search-height, 2.25rem);
+			font-size: var(--sl-text-sm);
+			max-width: 100%;
+			min-width: 0;
+		}
+		button[data-open-modal]:hover {
+			border-color: var(--sl-color-gray-4);
+			color: var(--sl-color-white);
+		}
+
+		.cs-search-label {
+			overflow: hidden;
+			text-overflow: ellipsis;
+			white-space: nowrap;
+		}
+
+		.cs-search-kbd {
+			display: none;
+			margin-inline-start: auto;
+			border-radius: 0.25rem;
+			font-size: var(--sl-text-2xs);
+			padding-inline: 0.375rem;
+			background-color: var(--sl-color-gray-5);
+			border: 0;
+			color: var(--sl-color-gray-2);
+		}
+
+		@media (min-width: 50rem) {
+			button[data-open-modal] {
+				width: 100%;
+				max-width: var(--docs-search-max-width, 22rem);
+				padding-inline: 0.85rem;
+			}
+
+			button[data-open-modal] > :last-child {
+				margin-inline-start: auto;
+			}
+
+			.cs-search-kbd {
+				display: inline-flex;
+				align-items: center;
+			}
+		}
+
+		button > kbd {
+			border-radius: 0.25rem;
+			font-size: var(--sl-text-2xs);
+			gap: 0.25em;
+			padding-inline: 0.375rem;
+			background-color: var(--sl-color-gray-6);
+		}
+
+		kbd {
+			font-family: var(--__sl-font);
+		}
+
+		dialog {
+			margin: 0;
+			background-color: var(--sl-color-gray-6);
+			border: 0;
+			width: 100%;
+			max-width: 100%;
+			height: 100%;
+			max-height: 100%;
+			box-shadow: var(--sl-shadow-lg);
+		}
+		dialog[open] {
+			display: flex;
+		}
+
+		dialog::backdrop {
+			background-color: var(--sl-color-backdrop-overlay);
+			-webkit-backdrop-filter: blur(0.25rem);
+			backdrop-filter: blur(0.25rem);
+		}
+
+		.dialog-frame {
+			position: relative;
+			overflow: hidden;
+			flex-direction: column;
+			flex-grow: 1;
+			min-height: 0;
+			gap: var(--cs-search-field-gap, 0.65rem);
+			padding: 0;
+		}
+
+		button[data-close-modal] {
+			position: absolute;
+			z-index: 1;
+			align-items: center;
+			align-self: flex-end;
+			height: calc(64px * var(--pagefind-ui-scale));
+			padding: 0.25rem;
+			border: 0;
+			background: transparent;
+			cursor: pointer;
+			color: var(--sl-color-text-accent);
+		}
+
+		[data-cs-pagefind-root] {
+			--pagefind-ui-primary: var(--cs-ink);
+			--pagefind-ui-text: var(--cs-muted);
+			--pagefind-ui-font: var(--__sl-font);
+			--pagefind-ui-background: var(--cs-search-field-bg, var(--docs-bg));
+			--pagefind-ui-border: transparent;
+			--pagefind-ui-border-width: 0;
+			--pagefind-ui-tag: var(--sl-color-gray-5);
+			--sl-search-cancel-space: 5rem;
+		}
+
+		:root[data-theme='light'] [data-cs-pagefind-root] {
+			--pagefind-ui-tag: var(--docs-code-bg);
+		}
+
+		@media (min-width: 50rem) {
+			[data-cs-pagefind-root] {
+				--sl-search-cancel-space: 0px;
+			}
+
+			dialog {
+				margin: 4rem auto auto;
+				border-radius: 0.5rem;
+				width: 90%;
+				max-width: 40rem;
+				height: max-content;
+				min-height: 15rem;
+				max-height: calc(100% - 8rem);
+			}
+
+			.dialog-frame {
+				padding: 0;
+			}
+		}
+	}
+</style>
+
+<style is:global>
+	@import url('@pagefind/default-ui/css/ui.css') layer(starlight.core);
+
+	@layer starlight.core {
+		[data-search-modal-open] {
+			overflow: hidden;
+		}
+
+		[data-cs-pagefind-root] {
+			--sl-search-result-spacing: calc(0.75rem * var(--pagefind-ui-scale));
+			--sl-search-result-pad-inline-start: calc(3.75rem * var(--pagefind-ui-scale));
+			--sl-search-result-pad-inline-end: calc(1.25rem * var(--pagefind-ui-scale));
+			--sl-search-result-pad-block: calc(0.9375rem * var(--pagefind-ui-scale));
+			--sl-search-result-nested-pad-block: calc(0.5rem * var(--pagefind-ui-scale));
+			--sl-search-result-nested-pad-block-start: calc(0.375rem * var(--pagefind-ui-scale));
+			--sl-search-corners: calc(0.3125rem * var(--pagefind-ui-scale));
+			--sl-search-page-icon-size: calc(1.875rem * var(--pagefind-ui-scale));
+			--sl-search-page-icon-inline-start: calc(
+				(var(--sl-search-result-pad-inline-start) - var(--sl-search-page-icon-size)) / 2
+			);
+			--sl-search-tree-diagram-size: calc(2.5rem * var(--pagefind-ui-scale));
+			--sl-search-tree-diagram-inline-start: calc(
+				(var(--sl-search-result-pad-inline-start) - var(--sl-search-tree-diagram-size)) / 2
+			);
+		}
+
+		[data-cs-pagefind-root] .pagefind-ui__form::before {
+			width: var(--cs-search-icon-size, calc(20px * var(--pagefind-ui-scale, 0.92)));
+			height: var(--cs-search-icon-size, calc(20px * var(--pagefind-ui-scale, 0.92)));
+			top: calc(
+				var(--cs-search-dialog-inset, 0.75rem) +
+					(var(--cs-search-input-block-size, calc(64px * var(--pagefind-ui-scale, 0.92))) -
+						var(--cs-search-icon-size, calc(20px * var(--pagefind-ui-scale, 0.92)))) /
+					2
+			);
+			left: calc(
+				var(--cs-search-dialog-inset, 0.75rem) +
+					var(--cs-search-icon-inline-start, calc(20px * var(--pagefind-ui-scale, 0.92)))
+			);
+			--pagefind-ui-text: var(--cs-muted);
+			opacity: 1;
+		}
+
+		[data-cs-pagefind-root] .pagefind-ui__search-input {
+			color: var(--cs-search-field-fg);
+			font-weight: 400;
+			width: calc(100% - var(--sl-search-cancel-space));
+			height: var(--cs-search-input-block-size, calc(64px * var(--pagefind-ui-scale, 0.92)));
+			line-height: var(--cs-search-input-block-size, calc(64px * var(--pagefind-ui-scale, 0.92)));
+			box-sizing: border-box;
+		}
+
+		[data-cs-pagefind-root] .pagefind-ui__search-clear {
+			inset-inline-end: calc(
+				var(--cs-search-dialog-inset, 0.75rem) + var(--cs-search-clear-inline-end, 0.5rem)
+			);
+			top: calc(
+				var(--cs-search-dialog-inset, 0.75rem) +
+					(var(--cs-search-input-block-size, calc(64px * var(--pagefind-ui-scale, 0.92))) -
+						var(--cs-search-clear-size, 1.875rem)) /
+						2
+			);
+			width: var(--cs-search-clear-size, 1.875rem);
+			height: var(--cs-search-clear-size, 1.875rem);
+		}
+
+		[data-cs-pagefind-root] .pagefind-ui__search-clear::before {
+			width: var(--cs-search-clear-icon-size, 1.25rem);
+			height: var(--cs-search-clear-icon-size, 1.25rem);
+		}
+
+		[data-cs-pagefind-root] .pagefind-ui__results > * + * {
+			margin-top: var(--sl-search-result-spacing);
+		}
+		[data-cs-pagefind-root] .pagefind-ui__result {
+			border: 0;
+			padding: 0;
+		}
+
+		[data-cs-pagefind-root] .pagefind-ui__result-nested {
+			position: relative;
+			padding-block: var(--sl-search-result-nested-pad-block-start)
+				var(--sl-search-result-nested-pad-block);
+			padding-inline: var(--sl-search-result-pad-inline-start)
+				var(--sl-search-result-pad-inline-end);
+		}
+
+		/* Shared row chrome — page headers and nested hits. */
+		[data-cs-pagefind-root] .pagefind-ui__result-inner > .pagefind-ui__result-title,
+		[data-cs-pagefind-root] .pagefind-ui__result-nested {
+			position: relative;
+			background-color: var(--cs-search-item-bg);
+			outline: none;
+		}
+
+		[data-cs-pagefind-root] .pagefind-ui__result-inner > .pagefind-ui__result-title:hover,
+		[data-cs-pagefind-root]
+			.pagefind-ui__result-inner
+			> .pagefind-ui__result-title[data-cs-search-selected='true'],
+		[data-cs-pagefind-root] .pagefind-ui__result-nested:hover,
+		[data-cs-pagefind-root] .pagefind-ui__result-nested[data-cs-search-selected='true'] {
+			outline: none;
+			background-color: var(--cs-search-hover-bg);
+		}
+
+		[data-cs-pagefind-root] .pagefind-ui__result-thumb,
+		[data-cs-pagefind-root] .pagefind-ui__result-inner {
+			margin-top: 0;
+		}
+
+		[data-cs-pagefind-root] .pagefind-ui__result-inner > .pagefind-ui__result-title,
+		[data-cs-pagefind-root] .pagefind-ui__result-inner > .pagefind-ui__result-nested {
+			border-radius: 0;
+		}
+
+		[data-cs-pagefind-root] .pagefind-ui__result-inner > .pagefind-ui__result-title {
+			padding: var(--sl-search-result-pad-block) var(--sl-search-result-pad-inline-end);
+			padding-inline-start: var(--sl-search-result-pad-inline-start);
+		}
+		[data-cs-pagefind-root] .pagefind-ui__result-inner > .pagefind-ui__result-title::before {
+			content: '';
+			position: absolute;
+			inset-block: 0;
+			inset-inline-start: var(--sl-search-page-icon-inline-start);
+			width: var(--sl-search-page-icon-size);
+			background: var(--sl-color-gray-3);
+			-webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='currentColor' viewBox='0 0 24 24'%3E%3Cpath d='M9 10h1a1 1 0 1 0 0-2H9a1 1 0 0 0 0 2Zm0 2a1 1 0 0 0 0 2h6a1 1 0 0 0 0-2H9Zm11-3V8l-6-6a1 1 0 0 0-1 0H7a3 3 0 0 0-3 3v14a3 3 0 0 0 3 3h10a3 3 0 0 0 3-3V9Zm-6-4 3 3h-2a1 1 0 0 1-1-1V5Zm4 14a1 1 0 0 1-1 1H7a1 1 0 0 1-1-1V5a1 1 0 0 1 1-1h5v3a3 3 0 0 0 3 3h3v9Zm-3-3H9a1 1 0 0 0 0 2h6a1 1 0 0 0 0-2Z'/%3E%3C/svg%3E")
+				center no-repeat;
+			mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='currentColor' viewBox='0 0 24 24'%3E%3Cpath d='M9 10h1a1 1 0 1 0 0-2H9a1 1 0 0 0 0 2Zm0 2a1 1 0 0 0 0 2h6a1 1 0 0 0 0-2H9Zm11-3V8l-6-6a1 1 0 0 0-1 0H7a3 3 0 0 0-3 3v14a3 3 0 0 0 3 3h10a3 3 0 0 0 3-3V9Zm-6-4 3 3h-2a1 1 0 0 1-1-1V5Zm4 14a1 1 0 0 1-1 1H7a1 1 0 0 1-1-1V5a1 1 0 0 1 1-1h5v3a3 3 0 0 0 3 3h3v9Zm-3-3H9a1 1 0 0 0 0 2h6a1 1 0 0 0 0-2Z'/%3E%3C/svg%3E")
+				center no-repeat;
+		}
+
+		[data-cs-pagefind-root] .pagefind-ui__result-inner {
+			align-items: stretch;
+			gap: 0;
+			border-radius: var(--cs-search-card-radius);
+			overflow: hidden;
+		}
+
+		[data-cs-pagefind-root] .pagefind-ui__result-link {
+			position: unset;
+			--pagefind-ui-text: var(--cs-search-result-fg);
+			font-weight: 600;
+			text-decoration: none;
+		}
+
+		[data-cs-pagefind-root] .pagefind-ui__result-link:hover {
+			text-decoration: none;
+		}
+
+		[data-cs-pagefind-root] .pagefind-ui__result-nested .pagefind-ui__result-link::before {
+			content: unset;
+		}
+
+		[data-cs-pagefind-root] .pagefind-ui__result-nested::before {
+			content: '';
+			position: absolute;
+			inset-block: 0;
+			inset-inline-start: var(--sl-search-tree-diagram-inline-start);
+			width: var(--sl-search-tree-diagram-size);
+			background: var(--sl-color-gray-4);
+			-webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' stroke='currentColor' stroke-linecap='round' viewBox='0 0 16 1000' preserveAspectRatio='xMinYMin slice'%3E%3Cpath d='M8 0v1000m6-988H8'/%3E%3C/svg%3E")
+				0% 0% / 100% no-repeat;
+			mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' stroke='currentColor' stroke-linecap='round' viewBox='0 0 16 1000' preserveAspectRatio='xMinYMin slice'%3E%3Cpath d='M8 0v1000m6-988H8'/%3E%3C/svg%3E")
+				0% 0% / 100% no-repeat;
+		}
+		[data-cs-pagefind-root] .pagefind-ui__result-nested:last-of-type::before {
+			-webkit-mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' stroke='currentColor' stroke-linecap='round' stroke-linejoin='round' viewBox='0 0 16 16'%3E%3Cpath d='M8 0v8m6 0H8'/%3E%3C/svg%3E");
+			mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' stroke='currentColor' stroke-linecap='round' stroke-linejoin='round' viewBox='0 0 16 16'%3E%3Cpath d='M8 0v8m6 0H8'/%3E%3C/svg%3E");
+		}
+
+		/* Flip page and tree icons around the vertical axis when in an RTL layout. */
+		[dir='rtl'] .pagefind-ui__result-title::before,
+		[dir='rtl'] .pagefind-ui__result-nested::before {
+			transform: matrix(-1, 0, 0, 1, 0, 0);
+		}
+
+		[data-cs-pagefind-root] .pagefind-ui__result-link::after {
+			content: '';
+			position: absolute;
+			inset: 0;
+			z-index: 1;
+			cursor: pointer;
+		}
+
+		[data-cs-pagefind-root] mark {
+			background-color: transparent;
+			font-weight: 600;
+		}
+
+		[data-cs-pagefind-root] .pagefind-ui__filter-value::before {
+			border-color: var(--sl-color-text-invert);
+		}
+
+		[data-cs-pagefind-root] .pagefind-ui__result-tags {
+			background-color: var(--sl-color-black);
+			margin-top: 0;
+			padding: var(--sl-search-result-nested-pad-block) var(--sl-search-result-pad-inline-end);
+		}
+	}
+</style>

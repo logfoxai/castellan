@@ -8,6 +8,14 @@
   <p><strong>Lightweight deployment control &amp; monitoring for docker-compose</strong></p>
 
   <p>
+    <a href="https://castellan.logfox.ai">Docs</a>
+    ·
+    <a href="https://github.com/logfoxai/castellan">GitHub</a>
+    ·
+    <a href="https://github.com/logfoxai/castellan/pkgs/container/castellan">GHCR</a>
+  </p>
+
+  <p>
     <img src="https://img.shields.io/badge/SemVer-2.0.0-blue" alt="SemVer" />
     <img src="https://img.shields.io/badge/Conventional%20Commits-1.0.0-yellow.svg" alt="Conventional Commits" />
     <a href="https://github.com/mhweiner/autorel"><img src="https://img.shields.io/badge/%F0%9F%9A%80%20AutoRel-2D4DDE" alt="AutoRel" /></a>

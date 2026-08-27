@@ -1,0 +1,77 @@
+---
+/**
+ * Watchtower migration beat.
+ */
+import SplashIcon from './SplashIcon.astro';
+import type {SplashIconName} from './SplashIcon.astro';
+import SplashHeroActions from './SplashHeroActions.astro';
+
+const cards = [
+	{
+		tone: 'amber',
+		title: 'Swap the sidecar',
+		copy: 'Remove Watchtower, add the Castellan service — same docker.sock and compose file mounts.',
+		icon: 'swap',
+	},
+	{
+		tone: 'cyan',
+		title: 'Change the\u00A0label',
+		copy:
+			'Replace <code>com.centurylinklabs.watchtower.enable</code><br>with <code>ai.logfox.castellan.autoupdate</code> on each managed\u00A0service.',
+		copyHtml: true,
+		icon: 'label',
+	},
+	{
+		tone: 'green',
+		title: 'Gain a safety net',
+		copy: 'Health waits, automatic rollback, per-digest reject, and deployment history — in one lightweight container.',
+		icon: 'shield',
+	},
+] as const satisfies ReadonlyArray<{
+	tone: string;
+	title: string;
+	copy: string;
+	copyHtml?: boolean;
+	icon: SplashIconName;
+}>;
+---
+
+<section class="splash-section splash-band splash-migration" aria-labelledby="splash-watchtower-title">
+	<header class="splash-migration__intro">
+		<h2 id="splash-watchtower-title" class="splash-migration__title">Migrating from Watchtower</h2>
+		<p class="splash-migration__lede">
+			Watchtower is archived and no longer in development. Castellan is compose-native, MIT-licensed,
+			and safety-first — the drop-in sidecar for hosts that want rollback without a fleet controller.
+		</p>
+		<SplashHeroActions
+			actions={[
+				{
+					text: 'Migration guide',
+					link: '/watchtower/',
+					variant: 'secondary',
+					icon: {type: 'icon', name: 'open-book'},
+				},
+			]}
+		/>
+	</header>
+
+	<ul class="splash-migration__grid">
+		{
+			cards.map(({tone, title, copy, copyHtml, icon}) => (
+				<li class="splash-migration__card">
+					<span class="splash-migration__icon" data-tone={tone} aria-hidden="true">
+						<SplashIcon name={icon} />
+					</span>
+					<h3 class="splash-migration__card-title">{title}</h3>
+					{
+						copyHtml ? (
+							<p class="splash-migration__card-copy" set:html={copy} />
+						) : (
+							<p class="splash-migration__card-copy">{copy}</p>
+						)
+					}
+				</li>
+			))
+		}
+	</ul>
+</section>

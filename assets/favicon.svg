@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" role="img" aria-label="Castellan">
+  <rect width="32" height="32" rx="6" fill="#0f1117"/>
+  <path fill="#f59e0b" d="M8 22V12l8-5 8 5v10h-4v-6h-8v6H8z"/>
+  <rect x="13" y="16" width="6" height="6" rx="1" fill="#0f1117"/>
+</svg>

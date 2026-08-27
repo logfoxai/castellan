@@ -1,0 +1,78 @@
+---
+/**
+ * Marketing homepage hero — headline, pitch, lead, and terminal graphic.
+ */
+import SplashHeroActions from './SplashHeroActions.astro';
+import SplashFeatures from './SplashFeatures.astro';
+import type {SplashHeroActionList} from '../splashHeroTypes';
+import {splitHeadlineForAccent} from './splashHeadlineAccent';
+import {
+	SPLASH_HERO_EYEBROW,
+	SPLASH_HERO_FOLLOW,
+	SPLASH_HERO_LEAD,
+	SPLASH_HERO_PITCH,
+} from './splashHeroCopy';
+
+const PAGE_TITLE_ID = '_top';
+
+interface Props {
+	title: string;
+	headline: string;
+	actions: SplashHeroActionList;
+}
+
+const {title, headline, actions = []} = Astro.props;
+
+const accentHeadline = splitHeadlineForAccent(headline);
+
+const heroLogLines = [
+	'$ docker compose pull && docker compose up -d',
+	'Pulling api ... done',
+	'Recreating api-1 ... done',
+	'Container api-1  Error',
+	'dependency failed to start: container api-1 is unhealthy',
+	'# no rollback — prod is down, paging on-call',
+];
+---
+
+<section class="splash-hero">
+	<h1 id={PAGE_TITLE_ID} class="sr-only" data-page-title set:html={title} />
+	<p class="splash-hero__eyebrow">{SPLASH_HERO_EYEBROW}</p>
+	{accentHeadline ? (
+		<h2 class="splash-hero__headline">
+			<span class="splash-hero__accent">{accentHeadline.phrase}</span>
+			{accentHeadline.after}
+		</h2>
+	) : (
+		headline && <h2 class="splash-hero__headline">{headline}</h2>
+	)}
+	<p class="splash-hero__pitch">{SPLASH_HERO_PITCH}</p>
+	<SplashHeroActions actions={actions} />
+	<SplashFeatures />
+	<div class="splash-hero__stage">
+		<div class="splash-hero__band">
+			<div class="splash-hero__lead">
+				<p>{SPLASH_HERO_LEAD}</p>
+			</div>
+			<figure class="splash-hero__browser">
+				<div class="splash-hero__chrome">
+					<span class="splash-hero__dots" aria-hidden="true"></span>
+					<div class="splash-hero__url">
+						<span class="splash-hero__method">ssh</span>
+						<span class="splash-hero__path">prod-host — docker compose up</span>
+					</div>
+				</div>
+				<div class="splash-hero__viewport splash-hero__viewport--terminal">
+					<pre class="splash-hero__terminal" aria-label="Failed deploy without rollback">
+						{heroLogLines.map((line) => (
+							<code class:list={line.startsWith('#') && 'splash-hero__terminal-comment'}>{line}</code>
+						))}
+					</pre>
+				</div>
+			</figure>
+			<div class="splash-hero__follow">
+				<p>{SPLASH_HERO_FOLLOW}</p>
+			</div>
+		</div>
+	</div>
+</section>

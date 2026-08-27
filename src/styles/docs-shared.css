@@ -1,0 +1,448 @@
+/*
+ * Shared docs chrome tokens — Astro/Starlight guides + Vite callspec-ui.
+ * Splash stays separate (src/components/splash.css). Keep this file the single source of truth
+ * for page/sidebar/nav/code colors and header metrics.
+ *
+ * :root defaults to light (avoids dark FOUC before theme JS). Dark is
+ * html[data-theme='dark'] / [data-theme='dark'] only.
+ */
+
+/* Mobile-first html scale — both surfaces inherit rem from this. */
+html {
+    font-size: 0.875rem;
+    /* Same reserved gutter on splash + guides so the header never shifts. */
+    scrollbar-gutter: stable;
+}
+
+@media (min-width: 40em) {
+    html {
+        font-size: 0.9375rem;
+    }
+}
+
+@media (min-width: 50em) {
+    html {
+        font-size: 1rem;
+    }
+}
+
+/*
+ * Wide type bumps — start after MacBook Neo (~1204–1408 CSS px).
+ * 72rem (1152px) was firing on Neo and scaled the whole UI up.
+ * Desktop “On this page” TOC also waits until 90rem (starlight-custom.css).
+ */
+@media (min-width: 90rem) {
+    html {
+        font-size: 1.03125rem;
+    }
+}
+
+@media (min-width: 110rem) {
+    html {
+        font-size: 1.0625rem;
+    }
+}
+
+@media (min-width: 140rem) {
+    html {
+        font-size: 1.075rem;
+    }
+}
+
+:root,
+::backdrop,
+html[data-theme='light'],
+[data-theme='light'],
+[data-theme='light'] ::backdrop {
+    color-scheme: light;
+
+    --docs-bg: hsl(228, 24%, 97%);
+    --docs-surface: #ffffff;
+    /* Light chrome — white top bar + sidebar (content stays soft grey). */
+    --docs-sidebar: #ffffff;
+    --docs-nav: #ffffff;
+    --docs-border: hsl(228, 15%, 85%);
+    --docs-border-strong: hsl(228, 13%, 75%);
+    --docs-text: hsl(228, 25%, 12%);
+    --docs-text-secondary: hsl(228, 10%, 40%);
+    --docs-text-tertiary: hsl(228, 8%, 52%);
+
+    /* Primary fill — sidebar selected, links, TOC, splash accent, footer hover. */
+    --docs-primary-bg: hsl(32, 90%, 42%);
+    --docs-primary-fg: #f8fafc;
+    --docs-primary-hover-bg: var(--docs-primary-bg);
+    --docs-primary-hover-fg: var(--docs-primary-fg);
+
+    --docs-accent: var(--docs-primary-bg);
+    --docs-accent-soft: color-mix(in srgb, var(--docs-primary-bg) 14%, var(--docs-bg));
+    --docs-link: var(--docs-primary-bg);
+    /* Castellan hex mark — ink (host --accent must not override). */
+    --docs-castellan-mark: #000;
+    /* Mark ↔ label gap — explorer contract chips + docs nav lockup. */
+    --docs-mark-label-gap: 0.18rem;
+    /* Neutral inset — slightly cooler/darker than page chrome so blocks read as panels. */
+    --docs-code-bg: hsl(228, 18%, 91%);
+    --docs-code-border: var(--docs-border);
+    --docs-mcp: #9333ea;
+    --docs-radius: 0.75rem;
+    --docs-code-radius: 0.5rem;
+    --docs-header-height: 3.5rem;
+    --docs-header-pad-x: 1.25rem;
+    --docs-search-height: 2.25rem;
+    --docs-search-max-width: 22rem;
+    /* Track header brand edge; wide screens bump both via --docs-header-pad-x. */
+    --docs-sidebar-pad-x: var(--docs-header-pad-x);
+    /* Inline pad inside Home / group / route rows (docs + explorer). */
+    --docs-sidebar-link-pad-inline: 0.7rem;
+    /* Nested route/page rows under a category (docs + explorer). */
+    --docs-sidebar-subitem-line-height: 1.65;
+    /* Sidebar link/category hover — pure black in light. */
+    --docs-sidebar-hover: #000;
+    --docs-header-bg: #ffffff;
+
+    --docs-table-bg: hsl(0, 0%, 100%);
+    --docs-table-row-hover: hsl(228, 14%, 90%);
+    --docs-pagination-hover: color-mix(in srgb, var(--docs-primary-bg) 34%, var(--docs-code-bg));
+    --docs-pagination-hover-fg: var(--docs-text);
+
+    --docs-elevated: #ffffff;
+    /*
+     * Search modal stack — field inset darker than result cards (modal → field → cards).
+     */
+    --docs-search-field: hsl(228, 14%, 90%);
+    --docs-search-item: var(--docs-code-bg);
+    --docs-search-hover: color-mix(in srgb, var(--docs-primary-bg) 34%, var(--docs-search-item));
+    --docs-search-hover-fg: var(--docs-text);
+    --docs-search-modal-shadow:
+        0 6px 16px hsl(228 25% 25% / 0.1),
+        0 20px 56px hsl(228 30% 25% / 0.16),
+        0 36px 88px hsl(228 30% 30% / 0.22);
+
+    /* Flat CTA depth — primary: black; light secondary: softer grey from fill. */
+    --docs-btn-shadow: 2px 2px 0 0 #000;
+    --docs-btn-shadow-hover: 2px 2px 0 0 #000;
+    --docs-btn-shadow-active: 1px 1px 0 0 #000;
+    --docs-btn-light-fill: hsl(228 14% 84%);
+    --docs-btn-light-fill-hover: hsl(228 12% 78%);
+}
+
+html[data-theme='dark'],
+[data-theme='dark'],
+[data-theme='dark'] ::backdrop {
+    color-scheme: dark;
+
+    --docs-bg: hsl(228, 22%, 6%);
+    --docs-surface: hsl(228, 18%, 9%);
+    --docs-sidebar: hsl(228, 16%, 11%);
+    /* Same plane as sidebar — top bar shouldn’t read as a different grey. */
+    --docs-nav: var(--docs-sidebar);
+    --docs-border: hsl(228, 12%, 22%);
+    --docs-border-strong: hsl(228, 10%, 32%);
+    --docs-text: hsl(228, 20%, 98%);
+    --docs-text-secondary: hsl(228, 12%, 68%);
+    --docs-text-tertiary: hsl(228, 10%, 52%);
+    --docs-sidebar-hover: var(--docs-text);
+
+    /* Rich iris — same 262° axis as light, higher chroma, mid tone for dark UI. */
+    --docs-primary-bg: hsl(32, 52%, 62%);
+    --docs-primary-fg: hsl(32, 28%, 8%);
+    --docs-primary-hover-bg: var(--docs-primary-bg);
+    --docs-primary-hover-fg: var(--docs-primary-fg);
+
+    --docs-accent: var(--docs-primary-bg);
+    --docs-accent-soft: color-mix(in oklab, var(--docs-primary-bg) 26%, var(--docs-surface));
+    --docs-link: var(--docs-primary-bg);
+    /* Castellan hex mark — assets/mark-dark.svg */
+    --docs-castellan-mark: #fff;
+    --docs-code-bg: hsl(228, 14%, 15%);
+    --docs-code-border: color-mix(in srgb, var(--docs-code-bg) 88%, white);
+    --docs-mcp: hsl(32, 58%, 72%);
+    --docs-header-bg: var(--docs-sidebar);
+
+    --docs-table-bg: hsl(228, 16%, 10%);
+    --docs-table-row-hover: hsl(228, 14%, 13%);
+    --docs-pagination-hover: color-mix(in srgb, var(--docs-primary-bg) 48%, var(--docs-table-bg));
+    --docs-pagination-hover-fg: var(--docs-text);
+
+    /*
+     * Search modal stack — neutral grey planes; primary tint only on hover/selection.
+     */
+    --docs-elevated: hsl(228, 11%, 15%);
+    --docs-search-inner: hsl(228, 8%, 20%);
+    --docs-search-field: color-mix(in srgb, var(--docs-search-inner) 93%, white);
+    --docs-search-item: var(--docs-search-inner);
+    --docs-search-hover: color-mix(in srgb, var(--docs-primary-bg) 48%, var(--docs-search-item));
+    --docs-search-hover-fg: var(--docs-text);
+    --docs-search-modal-shadow:
+        0 6px 18px hsl(228 40% 2% / 0.42),
+        0 22px 52px hsl(228 40% 2% / 0.48),
+        0 44px 112px hsl(228 40% 2% / 0.62);
+
+    --docs-btn-dark-fill: hsl(228 12% 32%);
+    --docs-btn-dark-fill-hover: hsl(228 12% 34%);
+    --docs-btn-dark-highlight: inset 0 2px 0 0 hsl(0 0% 100% / 0.14);
+    --docs-btn-dark-highlight-hover: inset 0 2px 0 0 hsl(0 0% 100% / 0.2);
+    --docs-btn-dark-highlight-active: inset 0 1px 0 0 hsl(0 0% 100% / 0.1);
+}
+
+/* Roomier L/R chrome — past MacBook Neo widths (see html type scale above). */
+@media (min-width: 90rem) {
+    /* Match token selectors — `:root` alone loses to `html[data-theme]`. */
+    :root,
+    html[data-theme='light'],
+    html[data-theme='dark'],
+    [data-theme='light'],
+    [data-theme='dark'] {
+        --docs-header-pad-x: 1.5rem;
+    }
+}
+
+/* Aliases — Starlight / cs-* + Vite callspec-ui */
+:root,
+::backdrop,
+html[data-theme='dark'],
+html[data-theme='light'],
+[data-theme='dark'],
+[data-theme='light'] {
+    --cs-radius: var(--docs-radius);
+    --cs-ink: var(--docs-text);
+    --cs-muted: var(--docs-text-secondary);
+    --cs-line: var(--docs-border);
+    --cs-surface: var(--docs-surface);
+    --cs-mcp: var(--docs-mcp);
+    --cs-code-bg: var(--docs-code-bg);
+    --cs-code-border: var(--docs-code-border);
+    --cs-cyan: var(--docs-primary-bg);
+    --cs-link: var(--docs-primary-bg);
+    --cs-primary-bg: var(--docs-primary-bg);
+    --cs-primary-fg: var(--docs-primary-fg);
+    --cs-primary-hover-bg: var(--docs-primary-hover-bg);
+    --cs-primary-hover-fg: var(--docs-primary-hover-fg);
+    --cs-table-bg: var(--docs-table-bg);
+    --cs-table-row-hover: var(--docs-table-row-hover);
+    --cs-pagination-hover-bg: var(--docs-pagination-hover);
+    --cs-pagination-hover-fg: var(--docs-pagination-hover-fg);
+    --cs-search-modal-bg: var(--docs-elevated);
+    --cs-search-modal-shadow: var(--docs-search-modal-shadow);
+    --cs-search-field-bg: var(--docs-search-field);
+    --cs-search-item-bg: var(--docs-search-item);
+    --cs-search-hover-bg: var(--docs-search-hover);
+    --cs-search-hover-fg: var(--docs-search-hover-fg);
+    --cs-search-field-fg: var(--docs-text);
+    --cs-search-result-fg: var(--docs-text);
+    --cs-search-card-radius: 0.75rem;
+    --cs-btn-shadow: var(--docs-btn-shadow);
+    --cs-btn-shadow-hover: var(--docs-btn-shadow-hover);
+    --cs-btn-shadow-active: var(--docs-btn-shadow-active);
+    --cs-btn-light-fill: var(--docs-btn-light-fill);
+    --cs-btn-light-shadow-color: color-mix(in srgb, var(--cs-btn-light-fill) 70%, hsl(228 14% 38%));
+    --cs-btn-light-shadow: 2px 2px 0 0 var(--cs-btn-light-shadow-color);
+    --cs-btn-light-shadow-hover: 2px 2px 0 0 color-mix(in srgb, var(--cs-btn-light-shadow-color) 88%, hsl(228 14% 28%));
+    --cs-btn-light-shadow-active: 1px 1px 0 0 var(--cs-btn-light-shadow-color);
+    --cs-btn-dark-highlight: var(--docs-btn-dark-highlight);
+    --cs-btn-dark-highlight-hover: var(--docs-btn-dark-highlight-hover);
+    --cs-btn-dark-highlight-active: var(--docs-btn-dark-highlight-active);
+
+    --bg: var(--docs-bg);
+    --surface: var(--docs-surface);
+    --sidebar-bg: var(--docs-sidebar);
+    --border: var(--docs-border);
+    --border-strong: var(--docs-border-strong);
+    --text: var(--docs-text);
+    --text-secondary: var(--docs-text-secondary);
+    --text-tertiary: var(--docs-text-tertiary);
+    --accent: var(--docs-accent);
+    /* Derive from --accent so brand theme overrides (inline --accent) tint soft too. */
+    --accent-soft: color-mix(in srgb, var(--accent) 16%, var(--surface));
+    --hljs-bg: var(--docs-code-bg);
+    --radius: var(--docs-radius);
+    --header-height: var(--docs-header-height);
+    --header-pad-x: var(--docs-header-pad-x);
+    --sidebar-link-pad-inline: var(--docs-sidebar-link-pad-inline);
+    --sidebar-subitem-line-height: var(--docs-sidebar-subitem-line-height);
+    --sidebar-hover: var(--docs-sidebar-hover);
+    --nav-active-bg: var(--docs-primary-bg);
+    --nav-active-fg: var(--docs-primary-fg);
+    --castellan-mark: var(--docs-castellan-mark);
+    --mark-label-gap: var(--docs-mark-label-gap);
+    --font-heading: 'Inter Variable', ui-sans-serif, system-ui, sans-serif;
+    --font-lockup: 'Inter Variable', ui-sans-serif, system-ui, sans-serif;
+    --font-mono: 'JetBrainsMono Nerd Font Mono', ui-monospace, 'SF Mono', Menlo, Monaco, Consolas, monospace;
+}
+
+/* Shared lockup — docs header/footer + explorer powered-by. */
+.cs-lockup {
+    --cs-mark: var(--docs-castellan-mark);
+    --cs-word: var(--docs-text);
+    --cs-lockup-mark-size: 1.8rem;
+    --cs-lockup-word-size: 1.3rem;
+    display: inline-flex;
+    align-items: center;
+    gap: var(--docs-mark-label-gap);
+    text-decoration: none;
+    line-height: 1;
+}
+
+.cs-lockup__mark {
+    display: block;
+    flex: none;
+    width: var(--cs-lockup-mark-size);
+    height: var(--cs-lockup-mark-size);
+    color: var(--cs-mark);
+    transition: color 0.25s ease;
+}
+
+.cs-hex {
+    fill: currentColor;
+}
+
+.cs-eq {
+    transform-box: fill-box;
+    transform-origin: left center;
+}
+
+/* Explorer overlay marks — eq bars paint over hex; match the page behind. */
+.cs-lockup[data-holes='overlay'] .cs-eq {
+    fill: var(--bg);
+}
+
+.cs-lockup__word {
+    font-family: var(--font-lockup);
+    font-size: var(--cs-lockup-word-size);
+    font-weight: 600;
+    letter-spacing: -0.02em;
+    color: var(--cs-word);
+    transition: color 0.25s ease;
+    display: flex;
+    align-items: center;
+    height: var(--cs-lockup-mark-size);
+    line-height: 1;
+    transform: translateY(-0.06em);
+}
+
+@media (hover: hover) {
+    .cs-lockup:hover .cs-eq--top {
+        animation: cs-eq-type 0.34s cubic-bezier(0.22, 0.7, 0.24, 1) both;
+    }
+
+    .cs-lockup:hover .cs-eq--bottom {
+        animation: cs-eq-type 0.34s cubic-bezier(0.22, 0.7, 0.24, 1) 0.09s both;
+    }
+}
+
+@keyframes cs-eq-type {
+    0% {
+        transform: scaleX(0);
+    }
+
+    100% {
+        transform: scaleX(1);
+    }
+}
+
+.cs-lockup:focus-visible {
+    outline: 2px solid var(--cs-mark);
+    outline-offset: 3px;
+    border-radius: 6px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .cs-lockup:hover .cs-eq--top,
+    .cs-lockup:hover .cs-eq--bottom {
+        animation: none;
+    }
+}
+
+/* Shared frosted header treatment (guides + explorer). */
+.docs-frosted-header {
+    background: var(--docs-header-bg);
+    backdrop-filter: blur(14px) saturate(1.25);
+    -webkit-backdrop-filter: blur(14px) saturate(1.25);
+}
+
+/* Theme toggle crossfade (document.startViewTransition in ThemeSelect / theme.ts). */
+@media (prefers-reduced-motion: no-preference) {
+    ::view-transition-old(root),
+    ::view-transition-new(root) {
+        animation-duration: 0.2s;
+        animation-timing-function: ease;
+    }
+}
+
+/* Docs code chrome + explorer copy controls — icon + Copy / green Copied! */
+.cs-copy-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.35rem;
+    flex: 0 0 auto;
+    width: auto;
+    min-width: max-content;
+    height: auto;
+    margin: 0;
+    padding: 0.28rem 0.55rem;
+    border: 0;
+    border-radius: 0.3rem;
+    background: transparent;
+    box-shadow: none;
+    outline: none;
+    color: color-mix(in srgb, var(--cs-ink) 72%, transparent);
+    font-family: inherit;
+    font-size: 0.75rem;
+    font-weight: 500;
+    letter-spacing: 0.01em;
+    line-height: 1.2;
+    white-space: nowrap;
+    cursor: pointer;
+    transition: background 120ms ease, color 120ms ease;
+}
+
+.cs-copy-btn .cs-copy-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    width: 0.9rem;
+    height: 0.9rem;
+    overflow: visible;
+}
+
+.cs-copy-btn .cs-copy-glyph {
+    display: block;
+    width: 100%;
+    height: 100%;
+    overflow: visible;
+}
+
+.cs-copy-btn:hover {
+    color: var(--cs-ink);
+    background: color-mix(in srgb, var(--cs-ink) 8%, transparent);
+}
+
+html[data-theme='light'] .cs-copy-btn,
+[data-theme='light'] .cs-copy-btn {
+    color: hsl(228, 14%, 30%);
+}
+
+html[data-theme='light'] .cs-copy-btn:hover,
+[data-theme='light'] .cs-copy-btn:hover {
+    color: var(--cs-ink);
+    background: color-mix(in srgb, var(--cs-ink) 6%, transparent);
+}
+
+.cs-copy-btn.cs-copied,
+.cs-copy-btn.cs-copied:hover,
+.cs-copy-btn.cs-copied:focus,
+.cs-copy-btn.cs-copied:active,
+html[data-theme='light'] .cs-copy-btn.cs-copied,
+html[data-theme='light'] .cs-copy-btn.cs-copied:hover,
+html[data-theme='light'] .cs-copy-btn.cs-copied:focus,
+html[data-theme='light'] .cs-copy-btn.cs-copied:active,
+[data-theme='light'] .cs-copy-btn.cs-copied,
+[data-theme='light'] .cs-copy-btn.cs-copied:hover,
+[data-theme='light'] .cs-copy-btn.cs-copied:focus,
+[data-theme='light'] .cs-copy-btn.cs-copied:active {
+    color: #000;
+    background: #7bee7b;
+    box-shadow: none;
+}
