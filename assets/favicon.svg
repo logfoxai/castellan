@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+  <style>
+    .ink { color: #10131a; }
+    @media (prefers-color-scheme: dark) { .ink { color: #f4f6fb; } }
+  </style>
+  <path class="ink" fill="currentColor" fill-rule="evenodd" d="M10 4H21V10H27V4H37V10H43V4H54V17L50.5 21L53 53H56V60H8V53H11L13.5 21L10 17ZM28 43V34A4 4 0 0 1 36 34V43Z"/>
+</svg>
