@@ -112,33 +112,20 @@ body {
   align-items: center;
   justify-content: space-between;
   gap: 16px;
-  padding: 10px 28px;
-  min-height: 52px;
+  padding: 0.65rem 28px;
+  min-height: 4.25rem;
 }
 
 .header-lockup {
   display: inline-flex;
   align-items: center;
-  gap: 0;
   min-width: 0;
 }
 
-.header-mark {
-  position: relative;
-  flex: 0 0 28px;
-  width: 28px;
-  height: 28px;
-  transform: translateY(-0.5px);
-}
-
 .header-logo {
-  position: absolute;
-  inset: 0;
-  width: 100%;
-  height: 100%;
   display: block;
-  object-fit: contain;
-  object-position: center 46%;
+  height: calc(4.25rem - 1.3rem);
+  width: auto;
 }
 
 .header-logo.logo-dark {
@@ -151,17 +138,6 @@ html[data-theme="dark"] .header-logo.logo-light {
 
 html[data-theme="dark"] .header-logo.logo-dark {
   display: block;
-}
-
-.header-wordmark {
-  margin: 0 0 0 -2px;
-  font-family: var(--font-ui);
-  font-size: 1.125rem;
-  font-weight: 700;
-  letter-spacing: -0.03em;
-  line-height: 1;
-  white-space: nowrap;
-  transform: translateY(2px);
 }
 
 .header-controls {
@@ -1073,20 +1049,6 @@ html[data-theme="light"] .usage-ring-memory .usage-ring-fill {
 }
 
 @media (max-width: 480px) {
-  .header-wordmark {
-    font-size: 1rem;
-  }
-
-  .header-mark {
-    flex-basis: 24px;
-    width: 24px;
-    height: 24px;
-  }
-
-  .header-lockup {
-    gap: 0;
-  }
-
   .theme-select {
     min-width: 88px;
   }

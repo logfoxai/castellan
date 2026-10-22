@@ -1,8 +1,8 @@
 <div align="center">
   <picture>
-    <source srcset="assets/castellan-lockup-light.svg" media="(prefers-color-scheme: light)" />
     <source srcset="assets/castellan-lockup-dark.svg" media="(prefers-color-scheme: dark)" />
-    <img src="assets/castellan-lockup-dark.svg" alt="Castellan" />
+    <source srcset="assets/castellan-lockup-light.svg" media="(prefers-color-scheme: light)" />
+    <img src="assets/castellan-lockup-light.svg" height="56" alt="castellan" />
   </picture>
 
   <p><strong>Lightweight deployment control &amp; monitoring for docker-compose</strong></p>

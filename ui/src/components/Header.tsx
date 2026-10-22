@@ -7,11 +7,8 @@ export function Header(): JSX.Element {
         <header className="header">
             <div className="container header-content">
                 <div className="header-lockup" aria-label="Castellan">
-                    <span className="header-mark" aria-hidden="true">
-                        <img src="/assets/castellan-logo-light.png" alt="" className="header-logo logo-light" />
-                        <img src="/assets/castellan-logo-dark.png" alt="" className="header-logo logo-dark" />
-                    </span>
-                    <h1 className="header-wordmark">Castellan</h1>
+                    <img src="/assets/castellan-lockup-light.svg" alt="" className="header-logo logo-light" />
+                    <img src="/assets/castellan-lockup-dark.svg" alt="" className="header-logo logo-dark" />
                 </div>
                 <div className="header-controls">
                     <select
